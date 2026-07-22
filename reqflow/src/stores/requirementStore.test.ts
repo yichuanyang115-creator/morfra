@@ -203,3 +203,121 @@ describe("requirementStore 产出（deliverable）CRUD", () => {
     expect(loaded?.name).toBe("旧需求");
   });
 });
+
+describe("requirementStore 任务（task）CRUD", () => {
+  beforeEach(() => {
+    files.clear();
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+  });
+
+  it("addTask 新增一条任务，默认状态待开始、未阻塞，落盘后可从 frontmatter 读回", async () => {
+    const { createRequirement, addTask } = useRequirementStore.getState();
+    await createRequirement("proj-1", "dev", "需求 A");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await addTask("proj-1", created.id, { name: "单测覆盖", assignee: "吴桐", deadline: "", progress: null });
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.tasks).toHaveLength(1);
+    expect(updated?.tasks[0].name).toBe("单测覆盖");
+    expect(updated?.tasks[0].assignee).toBe("吴桐");
+    expect(updated?.tasks[0].status).toBe("todo");
+    expect(updated?.tasks[0].blocked).toBe(false);
+    expect(updated?.tasks[0].blockNote).toBe("");
+
+    const filePath = `/app-local-data/projects/proj-1/${created.id}.md`;
+    const raw = files.get(filePath) ?? "";
+    expect(raw).toContain("单测覆盖");
+  });
+
+  it("updateTask 循环状态只影响目标任务的 status，不影响其他任务和其他字段", async () => {
+    const { createRequirement, addTask, updateTask } = useRequirementStore.getState();
+    await createRequirement("proj-1", "dev", "需求 B");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await addTask("proj-1", created.id, { name: "任务一", assignee: "", deadline: "", progress: null });
+    await addTask("proj-1", created.id, { name: "任务二", assignee: "", deadline: "", progress: null });
+    const [first, second] = useRequirementStore.getState().requirements[0].tasks;
+
+    await updateTask("proj-1", created.id, first.id, { status: "progress" });
+
+    const tasks = useRequirementStore.getState().requirements[0].tasks;
+    expect(tasks.find((t) => t.id === first.id)?.status).toBe("progress");
+    expect(tasks.find((t) => t.id === second.id)?.status).toBe("todo");
+    expect(tasks.find((t) => t.id === second.id)?.name).toBe("任务二");
+  });
+
+  it("updateTask 可以在任意状态下独立设置 blocked，不影响 status", async () => {
+    const { createRequirement, addTask, updateTask } = useRequirementStore.getState();
+    await createRequirement("proj-1", "dev", "需求 C");
+    const created = useRequirementStore.getState().requirements[0];
+    await addTask("proj-1", created.id, { name: "任务", assignee: "", deadline: "", progress: null });
+    const task = useRequirementStore.getState().requirements[0].tasks[0];
+
+    await updateTask("proj-1", created.id, task.id, { status: "progress" });
+    await updateTask("proj-1", created.id, task.id, { blocked: true, blockNote: "等待依赖" });
+
+    const updated = useRequirementStore.getState().requirements[0].tasks[0];
+    expect(updated.status).toBe("progress");
+    expect(updated.blocked).toBe(true);
+    expect(updated.blockNote).toBe("等待依赖");
+  });
+
+  it("removeTask 删除任务后该任务不再出现在列表和落盘文件中", async () => {
+    const { createRequirement, addTask, removeTask } = useRequirementStore.getState();
+    await createRequirement("proj-1", "dev", "需求 D");
+    const created = useRequirementStore.getState().requirements[0];
+    await addTask("proj-1", created.id, { name: "要被删除的任务", assignee: "", deadline: "", progress: null });
+    const task = useRequirementStore.getState().requirements[0].tasks[0];
+
+    await removeTask("proj-1", created.id, task.id);
+
+    const updated = useRequirementStore.getState().requirements[0];
+    expect(updated.tasks).toHaveLength(0);
+    const filePath = `/app-local-data/projects/proj-1/${created.id}.md`;
+    expect(files.get(filePath) ?? "").not.toContain("要被删除的任务");
+  });
+
+  it("重开应用后（loadForProject 重新读盘）任务列表、状态、阻塞和进度原样还原", async () => {
+    const { createRequirement, addTask, updateTask, loadForProject } = useRequirementStore.getState();
+    await createRequirement("proj-1", "dev", "需求 E");
+    const created = useRequirementStore.getState().requirements[0];
+    await addTask("proj-1", created.id, { name: "任务甲", assignee: "吴桐", deadline: "2026-08-01", progress: 40 });
+    const task = useRequirementStore.getState().requirements[0].tasks[0];
+    await updateTask("proj-1", created.id, task.id, { status: "progress", blocked: true, blockNote: "等待接口" });
+
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+    const { readDir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readDir).mockResolvedValueOnce([
+      { name: `${created.id}.md`, isFile: true, isDirectory: false, isSymlink: false },
+    ] as never);
+    await loadForProject("proj-1");
+
+    const reloaded = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(reloaded?.tasks).toHaveLength(1);
+    expect(reloaded?.tasks[0].name).toBe("任务甲");
+    expect(reloaded?.tasks[0].status).toBe("progress");
+    expect(reloaded?.tasks[0].blocked).toBe(true);
+    expect(reloaded?.tasks[0].blockNote).toBe("等待接口");
+    expect(reloaded?.tasks[0].progress).toBe(40);
+  });
+
+  it("没有 tasks 字段的旧格式文件加载时不报错，tasks 兜底为空数组", async () => {
+    const { loadForProject } = useRequirementStore.getState();
+    const legacyId = "legacy-req-2";
+    files.set(
+      `/app-local-data/projects/proj-1/${legacyId}.md`,
+      "---\nid: legacy-req-2\nname: 旧需求\nstage: dev\npriority: P1\nsource: 内部想法\nassignee: ''\ndeadline: ''\nprogress: null\nclosureType: null\ncreatedAt: '2026-01-01T00:00:00.000Z'\ndeliverables: []\n---\n\n旧正文",
+    );
+    const { readDir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readDir).mockResolvedValueOnce([
+      { name: `${legacyId}.md`, isFile: true, isDirectory: false, isSymlink: false },
+    ] as never);
+
+    await loadForProject("proj-1");
+
+    const loaded = useRequirementStore.getState().requirements.find((r) => r.id === legacyId);
+    expect(loaded?.tasks).toEqual([]);
+    expect(loaded?.name).toBe("旧需求");
+  });
+});

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type { Deliverable, Priority, Requirement, Stage } from "../types/models";
+import type { Deliverable, Priority, Requirement, Stage, Task } from "../types/models";
 import { ensureDir, listFileNames, readFile, writeFile } from "../lib/fs";
 import { parseFrontmatter, stringifyFrontmatter } from "../lib/frontmatter";
 import { projectDir, requirementPath } from "../lib/paths";
@@ -17,6 +17,7 @@ interface RequirementFrontmatter {
   closureType: "completed" | "abandoned" | null;
   createdAt: string;
   deliverables: Deliverable[];
+  tasks: Task[];
 }
 
 type EditableField = "name" | "priority" | "source" | "assignee" | "deadline" | "progress";
@@ -43,6 +44,18 @@ interface RequirementState {
     patch: Partial<Pick<Deliverable, "name" | "checked" | "attach">>,
   ) => Promise<void>;
   removeDeliverable: (projectId: string, requirementId: string, deliverableId: string) => Promise<void>;
+  addTask: (
+    projectId: string,
+    requirementId: string,
+    task: Pick<Task, "name" | "assignee" | "deadline" | "progress">,
+  ) => Promise<void>;
+  updateTask: (
+    projectId: string,
+    requirementId: string,
+    taskId: string,
+    patch: Partial<Pick<Task, "name" | "assignee" | "deadline" | "progress" | "status" | "blocked" | "blockNote">>,
+  ) => Promise<void>;
+  removeTask: (projectId: string, requirementId: string, taskId: string) => Promise<void>;
 }
 
 function toFrontmatter(r: Requirement): RequirementFrontmatter {
@@ -58,6 +71,7 @@ function toFrontmatter(r: Requirement): RequirementFrontmatter {
     closureType: r.closureType,
     createdAt: r.createdAt,
     deliverables: r.deliverables,
+    tasks: r.tasks,
   };
 }
 
@@ -75,6 +89,7 @@ function fromFrontmatter(data: RequirementFrontmatter, fallbackId: string, body:
     createdAt: data.createdAt ?? new Date().toISOString(),
     body,
     deliverables: data.deliverables ?? [],
+    tasks: data.tasks ?? [],
   };
 }
 
@@ -130,6 +145,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       createdAt: new Date().toISOString(),
       body: "",
       deliverables: [],
+      tasks: [],
     };
     await saveRequirement(projectId, requirement);
     set((state) => ({ requirements: [...state.requirements, requirement] }));
@@ -191,6 +207,53 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     const updated: Requirement = {
       ...requirement,
       deliverables: requirement.deliverables.filter((d) => d.id !== deliverableId),
+    };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  addTask: async (projectId, requirementId, task) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const newTask: Task = {
+      id: nanoid(),
+      name: task.name,
+      assignee: task.assignee,
+      deadline: task.deadline,
+      progress: task.progress,
+      status: "todo",
+      blocked: false,
+      blockNote: "",
+      createdAt: new Date().toISOString(),
+    };
+    const updated: Requirement = { ...requirement, tasks: [...requirement.tasks, newTask] };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  updateTask: async (projectId, requirementId, taskId, patch) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const updated: Requirement = {
+      ...requirement,
+      tasks: requirement.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
+    };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  removeTask: async (projectId, requirementId, taskId) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const updated: Requirement = {
+      ...requirement,
+      tasks: requirement.tasks.filter((t) => t.id !== taskId),
     };
     await saveRequirement(projectId, updated);
     set((state) => ({

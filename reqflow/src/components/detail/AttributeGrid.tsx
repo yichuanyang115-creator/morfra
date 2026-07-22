@@ -56,8 +56,10 @@ function stageSlot(requirement: Requirement): { label: string; value: string } {
       const done = requirement.deliverables.filter((d) => d.checked).length;
       return { label: "产出", value: `${done}/${requirement.deliverables.length}` };
     }
-    case "dev":
-      return { label: "任务", value: "0/0" };
+    case "dev": {
+      const done = requirement.tasks.filter((t) => t.status === "done").length;
+      return { label: "任务", value: `${done}/${requirement.tasks.length}` };
+    }
     case "verify":
       return { label: "验收", value: "0/0" };
     case "release":

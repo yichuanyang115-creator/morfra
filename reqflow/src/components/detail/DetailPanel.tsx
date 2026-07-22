@@ -1,12 +1,13 @@
 import { useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import type { Deliverable, Requirement } from "../../types/models";
+import type { Deliverable, Requirement, Task } from "../../types/models";
 import type { DetailTab } from "../../stores/uiStore";
 import { DetailHeader } from "./DetailHeader";
 import { AttributeGrid } from "./AttributeGrid";
 import { TabBar } from "./TabBar";
 import { BodyTab } from "./tabs/BodyTab";
 import { DeliverablesTab } from "./tabs/DeliverablesTab";
+import { TasksTab } from "./tabs/TasksTab";
 import { TemplateDrawer } from "../editor/TemplateDrawer";
 
 function PlusIcon() {
@@ -38,10 +39,15 @@ interface DetailPanelProps {
     patch: Partial<Pick<Deliverable, "name" | "checked" | "attach">>,
   ) => void;
   onRemoveDeliverable: (deliverableId: string) => void;
+  onCreateTask: (task: Pick<Task, "name" | "assignee" | "deadline" | "progress">) => void;
+  onUpdateTask: (
+    taskId: string,
+    patch: Partial<Pick<Task, "name" | "assignee" | "deadline" | "progress" | "status" | "blocked" | "blockNote">>,
+  ) => void;
+  onRemoveTask: (taskId: string) => void;
 }
 
-const TAB_PLACEHOLDER: Record<Exclude<DetailTab, "body" | "produce">, string> = {
-  tasks: "任务将在后续 Phase 实现",
+const TAB_PLACEHOLDER: Record<Exclude<DetailTab, "body" | "produce" | "tasks">, string> = {
   acceptance: "验收将在后续 Phase 实现",
   activity: "活动将在后续 Phase 实现",
 };
@@ -61,9 +67,13 @@ export function DetailPanel({
   onCreateDeliverable,
   onUpdateDeliverable,
   onRemoveDeliverable,
+  onCreateTask,
+  onUpdateTask,
+  onRemoveTask,
 }: DetailPanelProps) {
   const editorRef = useRef<Editor | null>(null);
   const [produceDraftOpen, setProduceDraftOpen] = useState(false);
+  const [taskDraftOpen, setTaskDraftOpen] = useState(false);
 
   if (!requirement) {
     return (
@@ -111,6 +121,16 @@ export function DetailPanel({
             >
               <PlusIcon />
             </button>
+          ) : activeTab === "tasks" ? (
+            <button
+              type="button"
+              title="新建任务"
+              aria-label="新建任务"
+              onClick={() => setTaskDraftOpen(true)}
+              className="grid size-6.5 place-items-center rounded-full border border-(--border-strong) bg-(--surface) text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
+            >
+              <PlusIcon />
+            </button>
           ) : undefined
         }
       />
@@ -134,6 +154,18 @@ export function DetailPanel({
             onCancelDraft={() => setProduceDraftOpen(false)}
             onUpdate={onUpdateDeliverable}
             onRemove={onRemoveDeliverable}
+          />
+        ) : activeTab === "tasks" ? (
+          <TasksTab
+            tasks={requirement.tasks}
+            draftOpen={taskDraftOpen}
+            onCreate={(task) => {
+              onCreateTask(task);
+              setTaskDraftOpen(false);
+            }}
+            onCancelDraft={() => setTaskDraftOpen(false)}
+            onUpdate={onUpdateTask}
+            onRemove={onRemoveTask}
           />
         ) : (
           <div className="text-[13px] text-(--muted-2)">{TAB_PLACEHOLDER[activeTab]}</div>

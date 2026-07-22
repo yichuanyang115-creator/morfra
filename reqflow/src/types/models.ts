@@ -22,6 +22,20 @@ export interface Deliverable {
   createdAt: string;
 }
 
+export type TaskStatus = "todo" | "progress" | "done";
+
+export interface Task {
+  id: string;
+  name: string;
+  assignee: string;
+  deadline: string;
+  progress: number | null;
+  status: TaskStatus;
+  blocked: boolean;
+  blockNote: string;
+  createdAt: string;
+}
+
 export interface Requirement {
   id: string;
   name: string;
@@ -35,7 +49,14 @@ export interface Requirement {
   createdAt: string;
   body: string;
   deliverables: Deliverable[];
+  tasks: Task[];
 }
+
+export const TASK_STATUSES: { key: TaskStatus; label: string }[] = [
+  { key: "todo", label: "待开始" },
+  { key: "progress", label: "进行中" },
+  { key: "done", label: "完成" },
+];
 
 export const STAGES: { key: Stage; label: string }[] = [
   { key: "collect", label: "收集" },
