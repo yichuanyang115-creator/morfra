@@ -1,0 +1,50 @@
+/*
+ * Design tokens — 数值搬自设计稿《需求管理系统原型.html》的 :root 变量块。
+ * 设计稿优先级高于 Design-Brief，命名沿用设计稿原名，方便后续 Phase 逐处对照像素值。
+ */
+:root {
+  --bg: oklch(96% 0.012 238);
+  --surface: oklch(99% 0.006 235);
+  --surface-2: oklch(94% 0.014 238);
+  --fg: oklch(23% 0.022 250);
+  --muted: oklch(50% 0.02 245);
+  --muted-2: oklch(52% 0.016 240);
+  --border: oklch(88% 0.014 235);
+  --border-strong: oklch(79% 0.018 235);
+
+  --accent: #e88330;
+  --accent-text: color-mix(in oklch, #e88330 62%, black 38%);
+  --accent-soft: color-mix(in oklch, #e88330 14%, white 86%);
+  --accent-soft-strong: color-mix(in oklch, #e88330 24%, white 76%);
+  --accent-solid: #e88330;
+  --accent-solid-fg: oklch(20% 0.02 40);
+
+  --sev-p0: oklch(53% 0.20 24);
+  --sev-p0-soft: oklch(94% 0.03 24);
+  --sev-p1: oklch(52% 0.14 78);
+  --sev-p1-soft: oklch(94% 0.045 78);
+  --sev-p2: var(--muted-2);
+  --sev-p2-soft: oklch(95% 0.004 255);
+
+  --st-todo: var(--muted-2);
+  --st-todo-soft: oklch(95% 0.004 255);
+  --st-progress: oklch(50% 0.16 250);
+  --st-progress-soft: oklch(94% 0.03 250);
+  --st-done: oklch(49% 0.13 150);
+  --st-done-soft: oklch(94% 0.035 150);
+  --st-blocked: oklch(53% 0.19 22);
+  --st-blocked-soft: oklch(94% 0.03 22);
+
+  --font-display: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-body: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --topbar-h: 34px;
+  --board-w: 821px;
+  --detail-max-w: 660px;
+  --board-header-h: 34px;
+  --board-row-max-w: 776px;
+}

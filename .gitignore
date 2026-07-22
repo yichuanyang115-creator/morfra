@@ -1,0 +1,19 @@
+# 规划文档（Markdown 单一真相源，不随代码提交历史走）
+/Product-Spec.md
+/Product-Spec-CHANGELOG.md
+/Design-Brief.md
+/DEV-PLAN.md
+/需求管理系统原型.html
+
+# 系统文件
+.DS_Store
+
+# 构建产物 / 依赖（reqflow/ 自带 .gitignore，这里兜底）
+reqflow/node_modules/
+reqflow/dist/
+reqflow/src-tauri/target/
+
+# 环境变量
+.env
+.env.local
+*.local
