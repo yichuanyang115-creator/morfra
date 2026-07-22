@@ -11,9 +11,10 @@ const TABS: { key: DetailTab; label: string }[] = [
 interface TabBarProps {
   activeTab: DetailTab;
   onSelectTab: (tab: DetailTab) => void;
+  slot?: React.ReactNode;
 }
 
-export function TabBar({ activeTab, onSelectTab }: TabBarProps) {
+export function TabBar({ activeTab, onSelectTab, slot }: TabBarProps) {
   return (
     <div className="flex flex-none items-center justify-between gap-2 border-b border-(--border) py-1 pr-2 pl-3" role="tablist">
       <div className="flex min-w-0 flex-1 gap-0.5">
@@ -34,7 +35,7 @@ export function TabBar({ activeTab, onSelectTab }: TabBarProps) {
           </button>
         ))}
       </div>
-      <div className="flex min-h-6.5 min-w-6.5 flex-none items-center" />
+      <div className="flex min-h-6.5 min-w-6.5 flex-none items-center">{slot}</div>
     </div>
   );
 }

@@ -19,6 +19,7 @@ export interface Requirement {
   progress: number | null;
   closureType: "completed" | "abandoned" | null;
   createdAt: string;
+  body: string;
 }
 
 export const STAGES: { key: Stage; label: string }[] = [

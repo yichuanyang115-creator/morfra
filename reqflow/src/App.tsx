@@ -26,6 +26,7 @@ function App() {
   const loadForProject = useRequirementStore((s) => s.loadForProject);
   const createRequirement = useRequirementStore((s) => s.createRequirement);
   const updateField = useRequirementStore((s) => s.updateField);
+  const updateBody = useRequirementStore((s) => s.updateBody);
 
   const selectedRequirementId = useUiStore((s) => s.selectedRequirementId);
   const detailMode = useUiStore((s) => s.detailMode);
@@ -110,6 +111,11 @@ function App() {
             }}
             onAddSource={(source) => {
               if (currentProjectId) void addSource(currentProjectId, source);
+            }}
+            onBodyChange={(body) => {
+              if (currentProjectId && selectedRequirementId) {
+                void updateBody(currentProjectId, selectedRequirementId, body);
+              }
             }}
           />
         }

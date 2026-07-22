@@ -1,8 +1,12 @@
+import { useRef } from "react";
+import type { Editor } from "@tiptap/react";
 import type { Requirement } from "../../types/models";
 import type { DetailTab } from "../../stores/uiStore";
 import { DetailHeader } from "./DetailHeader";
 import { AttributeGrid } from "./AttributeGrid";
 import { TabBar } from "./TabBar";
+import { BodyTab } from "./tabs/BodyTab";
+import { TemplateDrawer } from "../editor/TemplateDrawer";
 
 interface DetailPanelProps {
   requirement: Requirement | null;
@@ -18,10 +22,10 @@ interface DetailPanelProps {
   ) => void;
   onProgressChange: (progress: number | null) => void;
   onAddSource: (source: string) => void;
+  onBodyChange: (markdown: string) => void;
 }
 
-const TAB_PLACEHOLDER: Record<DetailTab, string> = {
-  body: "",
+const TAB_PLACEHOLDER: Record<Exclude<DetailTab, "body">, string> = {
   produce: "产出将在后续 Phase 实现",
   tasks: "任务将在后续 Phase 实现",
   acceptance: "验收将在后续 Phase 实现",
@@ -39,7 +43,9 @@ export function DetailPanel({
   onFieldChange,
   onProgressChange,
   onAddSource,
+  onBodyChange,
 }: DetailPanelProps) {
+  const editorRef = useRef<Editor | null>(null);
   if (!requirement) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-5 text-center text-(--muted-2)">
@@ -66,10 +72,28 @@ export function DetailPanel({
         onProgressChange={onProgressChange}
         onAddSource={onAddSource}
       />
-      <TabBar activeTab={activeTab} onSelectTab={onSelectTab} />
+      <TabBar
+        activeTab={activeTab}
+        onSelectTab={onSelectTab}
+        slot={
+          activeTab === "body" ? (
+            <TemplateDrawer
+              onInsert={(templateMarkdown) => {
+                editorRef.current?.chain().focus().insertContent(templateMarkdown, { contentType: "markdown" }).run();
+              }}
+            />
+          ) : undefined
+        }
+      />
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {activeTab === "body" ? (
-          <div className="text-[13px] text-(--muted-2)">正文编辑器将在下个 Phase 实现</div>
+          <BodyTab
+            markdown={requirement.body}
+            onChange={onBodyChange}
+            onEditorReady={(editor) => {
+              editorRef.current = editor;
+            }}
+          />
         ) : (
           <div className="text-[13px] text-(--muted-2)">{TAB_PLACEHOLDER[activeTab]}</div>
         )}

@@ -33,6 +33,7 @@ interface RequirementState {
     field: EditableField,
     value: Requirement[EditableField],
   ) => Promise<void>;
+  updateBody: (projectId: string, requirementId: string, body: string) => Promise<void>;
 }
 
 function toFrontmatter(r: Requirement): RequirementFrontmatter {
@@ -50,7 +51,7 @@ function toFrontmatter(r: Requirement): RequirementFrontmatter {
   };
 }
 
-function fromFrontmatter(data: RequirementFrontmatter, fallbackId: string): Requirement {
+function fromFrontmatter(data: RequirementFrontmatter, fallbackId: string, body: string): Requirement {
   return {
     id: data.id ?? fallbackId,
     name: data.name ?? "",
@@ -62,6 +63,7 @@ function fromFrontmatter(data: RequirementFrontmatter, fallbackId: string): Requ
     progress: data.progress ?? null,
     closureType: data.closureType ?? null,
     createdAt: data.createdAt ?? new Date().toISOString(),
+    body,
   };
 }
 
@@ -70,13 +72,13 @@ async function loadRequirement(projectId: string, fileName: string): Promise<Req
   const path = await requirementPath(projectId, id);
   const raw = await readFile(path);
   if (raw === null) return null;
-  const { data } = parseFrontmatter<RequirementFrontmatter>(raw);
-  return fromFrontmatter(data, id);
+  const { data, content } = parseFrontmatter<RequirementFrontmatter>(raw);
+  return fromFrontmatter(data, id, content);
 }
 
 async function saveRequirement(projectId: string, requirement: Requirement): Promise<void> {
   const path = await requirementPath(projectId, requirement.id);
-  await writeFile(path, stringifyFrontmatter(toFrontmatter(requirement), ""));
+  await writeFile(path, stringifyFrontmatter(toFrontmatter(requirement), requirement.body));
 }
 
 export const useRequirementStore = create<RequirementState>((set, get) => ({
@@ -115,6 +117,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       progress: null,
       closureType: null,
       createdAt: new Date().toISOString(),
+      body: "",
     };
     await saveRequirement(projectId, requirement);
     set((state) => ({ requirements: [...state.requirements, requirement] }));
@@ -124,6 +127,16 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     const requirement = get().requirements.find((r) => r.id === requirementId);
     if (!requirement) return;
     const updated: Requirement = { ...requirement, [field]: value };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  updateBody: async (projectId, requirementId, body) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const updated: Requirement = { ...requirement, body };
     await saveRequirement(projectId, updated);
     set((state) => ({
       requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
