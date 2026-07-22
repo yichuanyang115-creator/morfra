@@ -10,11 +10,21 @@ interface BoardProps {
   requirements: Requirement[];
   loading: boolean;
   error: boolean;
+  selectedRequirementId: string | null;
   onCreate: (stage: Stage, name: string) => void;
+  onSelectRequirement: (id: string) => void;
   onProgressChange: (requirementId: string, progress: number | null) => void;
 }
 
-export function Board({ requirements, loading, error, onCreate, onProgressChange }: BoardProps) {
+export function Board({
+  requirements,
+  loading,
+  error,
+  selectedRequirementId,
+  onCreate,
+  onSelectRequirement,
+  onProgressChange,
+}: BoardProps) {
   if (loading) {
     return <Skeleton />;
   }
@@ -49,7 +59,9 @@ export function Board({ requirements, loading, error, onCreate, onProgressChange
           stage={s.key}
           label={s.label}
           requirements={requirements.filter((r) => r.stage === s.key)}
+          selectedRequirementId={selectedRequirementId}
           onCreate={(name) => onCreate(s.key, name)}
+          onSelectRequirement={onSelectRequirement}
           onProgressChange={onProgressChange}
         />
       ))}

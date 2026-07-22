@@ -23,11 +23,21 @@ interface StageSectionProps {
   stage: Stage;
   label: string;
   requirements: Requirement[];
+  selectedRequirementId: string | null;
   onCreate: (name: string) => void;
+  onSelectRequirement: (id: string) => void;
   onProgressChange: (requirementId: string, progress: number | null) => void;
 }
 
-export function StageSection({ stage, label, requirements, onCreate, onProgressChange }: StageSectionProps) {
+export function StageSection({
+  stage,
+  label,
+  requirements,
+  selectedRequirementId,
+  onCreate,
+  onSelectRequirement,
+  onProgressChange,
+}: StageSectionProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [draftOpen, setDraftOpen] = useState(false);
 
@@ -84,6 +94,8 @@ export function StageSection({ stage, label, requirements, onCreate, onProgressC
               <RequirementRow
                 key={r.id}
                 requirement={r}
+                selected={r.id === selectedRequirementId}
+                onSelect={() => onSelectRequirement(r.id)}
                 onProgressChange={(progress) => onProgressChange(r.id, progress)}
               />
             ))

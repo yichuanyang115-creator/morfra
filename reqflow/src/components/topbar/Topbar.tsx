@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useProjectStore, currentProject } from "../../stores/projectStore";
+import { useUiStore } from "../../stores/uiStore";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 
 function ChevDownIcon() {
@@ -48,14 +49,12 @@ function PanelToggleIcon({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-interface TopbarProps {
-  detailCollapsed: boolean;
-  onTogglePanel: () => void;
-}
-
-export function Topbar({ detailCollapsed, onTogglePanel }: TopbarProps) {
+export function Topbar() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const project = useProjectStore(currentProject);
+  const detailMode = useUiStore((s) => s.detailMode);
+  const toggleCollapsed = useUiStore((s) => s.toggleCollapsed);
+  const detailCollapsed = detailMode === "collapsed";
 
   return (
     <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--surface-2) px-2.5 border-b border-(--border)">
@@ -95,7 +94,7 @@ export function Topbar({ detailCollapsed, onTogglePanel }: TopbarProps) {
         <button
           type="button"
           aria-label={detailCollapsed ? "展开详情" : "收起详情"}
-          onClick={onTogglePanel}
+          onClick={toggleCollapsed}
           className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
         >
           <PanelToggleIcon collapsed={detailCollapsed} />

@@ -18,6 +18,8 @@ interface RequirementFrontmatter {
   createdAt: string;
 }
 
+type EditableField = "name" | "priority" | "source" | "assignee" | "deadline" | "progress";
+
 interface RequirementState {
   requirements: Requirement[];
   loadedProjectId: string | null;
@@ -25,7 +27,12 @@ interface RequirementState {
   error: boolean;
   loadForProject: (projectId: string) => Promise<void>;
   createRequirement: (projectId: string, stage: Stage, name: string) => Promise<void>;
-  updateProgress: (projectId: string, requirementId: string, progress: number | null) => Promise<void>;
+  updateField: (
+    projectId: string,
+    requirementId: string,
+    field: EditableField,
+    value: Requirement[EditableField],
+  ) => Promise<void>;
 }
 
 function toFrontmatter(r: Requirement): RequirementFrontmatter {
@@ -113,10 +120,10 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     set((state) => ({ requirements: [...state.requirements, requirement] }));
   },
 
-  updateProgress: async (projectId, requirementId, progress) => {
+  updateField: async (projectId, requirementId, field, value) => {
     const requirement = get().requirements.find((r) => r.id === requirementId);
     if (!requirement) return;
-    const updated: Requirement = { ...requirement, progress };
+    const updated: Requirement = { ...requirement, [field]: value };
     await saveRequirement(projectId, updated);
     set((state) => ({
       requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),

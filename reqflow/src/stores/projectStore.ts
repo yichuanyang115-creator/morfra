@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type { Project } from "../types/models";
+import { DEFAULT_SOURCES, type Project } from "../types/models";
 import { ensureDir, listDirNames, readFile, removeDir, writeFile } from "../lib/fs";
 import { parseFrontmatter, stringifyFrontmatter } from "../lib/frontmatter";
 import { projectDir, projectMetaPath, projectsRootDir } from "../lib/paths";
@@ -10,6 +10,7 @@ const DEFAULT_PROJECT_NAME = "默认项目";
 interface ProjectFrontmatter {
   id: string;
   name: string;
+  sources?: string[];
 }
 
 interface ProjectState {
@@ -22,6 +23,7 @@ interface ProjectState {
   createProject: (name: string) => Promise<void>;
   renameProject: (id: string, name: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
+  addSource: (projectId: string, source: string) => Promise<void>;
 }
 
 async function loadProject(id: string): Promise<Project | null> {
@@ -29,19 +31,19 @@ async function loadProject(id: string): Promise<Project | null> {
   const raw = await readFile(metaPath);
   if (raw === null) return null;
   const { data } = parseFrontmatter<ProjectFrontmatter>(raw);
-  return { id: data.id ?? id, name: data.name ?? id };
+  return { id: data.id ?? id, name: data.name ?? id, sources: data.sources ?? DEFAULT_SOURCES };
 }
 
 async function saveProject(project: Project): Promise<void> {
   const dir = await projectDir(project.id);
   await ensureDir(dir);
   const metaPath = await projectMetaPath(project.id);
-  const frontmatter: ProjectFrontmatter = { id: project.id, name: project.name };
+  const frontmatter: ProjectFrontmatter = { id: project.id, name: project.name, sources: project.sources };
   await writeFile(metaPath, stringifyFrontmatter(frontmatter, ""));
 }
 
 async function createDefaultProject(): Promise<Project> {
-  const project: Project = { id: nanoid(), name: DEFAULT_PROJECT_NAME };
+  const project: Project = { id: nanoid(), name: DEFAULT_PROJECT_NAME, sources: DEFAULT_SOURCES };
   await saveProject(project);
   return project;
 }
@@ -78,7 +80,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   createProject: async (name) => {
-    const project: Project = { id: nanoid(), name };
+    const project: Project = { id: nanoid(), name, sources: DEFAULT_SOURCES };
     await saveProject(project);
     set((state) => ({
       projects: [...state.projects, project],
@@ -108,6 +110,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       projects: remaining,
       currentProjectId: currentProjectId === id ? remaining[0].id : currentProjectId,
     });
+  },
+
+  addSource: async (projectId, source) => {
+    const project = get().projects.find((p) => p.id === projectId);
+    if (!project || project.sources.includes(source)) return;
+    const updated: Project = { ...project, sources: [...project.sources, source] };
+    await saveProject(updated);
+    set((state) => ({
+      projects: state.projects.map((p) => (p.id === projectId ? updated : p)),
+    }));
   },
 }));
 

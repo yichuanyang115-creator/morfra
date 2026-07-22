@@ -1,6 +1,7 @@
 export interface Project {
   id: string;
   name: string;
+  sources: string[];
 }
 
 export type Stage = "collect" | "need" | "design" | "dev" | "verify" | "release" | "archive";
@@ -29,3 +30,5 @@ export const STAGES: { key: Stage; label: string }[] = [
   { key: "release", label: "发布" },
   { key: "archive", label: "归档" },
 ];
+
+export const DEFAULT_SOURCES = ["用户反馈", "竞品分析", "内部想法", "数据分析", "客户定制"];

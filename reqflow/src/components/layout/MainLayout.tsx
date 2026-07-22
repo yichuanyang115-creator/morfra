@@ -1,6 +1,5 @@
 import { type ReactNode } from "react";
-
-type DetailMode = "expanded" | "collapsed" | "fullscreen";
+import type { DetailMode } from "../../stores/uiStore";
 
 interface MainLayoutProps {
   detailMode: DetailMode;

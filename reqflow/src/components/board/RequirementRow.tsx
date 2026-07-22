@@ -31,10 +31,12 @@ function clampProgress(value: string): number | null {
 
 interface RequirementRowProps {
   requirement: Requirement;
+  selected: boolean;
+  onSelect: () => void;
   onProgressChange: (progress: number | null) => void;
 }
 
-export function RequirementRow({ requirement, onProgressChange }: RequirementRowProps) {
+export function RequirementRow({ requirement, selected, onSelect, onProgressChange }: RequirementRowProps) {
   const [progressInput, setProgressInput] = useState(requirement.progress == null ? "" : String(requirement.progress));
   // 停留天数口径是"进入当前阶段的时间到今天"（Product-Spec §6.3），Phase 3 还没有流转记录
   // （TransitionRecord 是 Phase 9 范围），暂用 createdAt 代替——新建需求从未流转，两者数值相等。
@@ -44,7 +46,12 @@ export function RequirementRow({ requirement, onProgressChange }: RequirementRow
 
   return (
     <div
-      className="grid max-w-(--board-row-max-w) items-center gap-3 border-b border-(--border) px-2 py-2 hover:bg-(--surface)"
+      onClick={onSelect}
+      className={`grid max-w-(--board-row-max-w) cursor-pointer items-center gap-3 border-b border-(--border) px-2 py-2 ${
+        selected
+          ? "border-(--accent-soft-strong) bg-(--accent-soft) shadow-[inset_2px_0_0_0_var(--accent-solid)]"
+          : "hover:bg-(--surface)"
+      }`}
       style={{ gridTemplateColumns: "minmax(140px, 320px) 40px 56px 56px 52px 56px 56px 40px" }}
     >
       <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-(--fg)">
