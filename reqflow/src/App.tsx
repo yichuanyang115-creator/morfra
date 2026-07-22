@@ -27,6 +27,9 @@ function App() {
   const createRequirement = useRequirementStore((s) => s.createRequirement);
   const updateField = useRequirementStore((s) => s.updateField);
   const updateBody = useRequirementStore((s) => s.updateBody);
+  const addDeliverable = useRequirementStore((s) => s.addDeliverable);
+  const updateDeliverable = useRequirementStore((s) => s.updateDeliverable);
+  const removeDeliverable = useRequirementStore((s) => s.removeDeliverable);
 
   const selectedRequirementId = useUiStore((s) => s.selectedRequirementId);
   const detailMode = useUiStore((s) => s.detailMode);
@@ -115,6 +118,21 @@ function App() {
             onBodyChange={(body) => {
               if (currentProjectId && selectedRequirementId) {
                 void updateBody(currentProjectId, selectedRequirementId, body);
+              }
+            }}
+            onCreateDeliverable={(name) => {
+              if (currentProjectId && selectedRequirementId) {
+                void addDeliverable(currentProjectId, selectedRequirementId, name);
+              }
+            }}
+            onUpdateDeliverable={(deliverableId, patch) => {
+              if (currentProjectId && selectedRequirementId) {
+                void updateDeliverable(currentProjectId, selectedRequirementId, deliverableId, patch);
+              }
+            }}
+            onRemoveDeliverable={(deliverableId) => {
+              if (currentProjectId && selectedRequirementId) {
+                void removeDeliverable(currentProjectId, selectedRequirementId, deliverableId);
               }
             }}
           />

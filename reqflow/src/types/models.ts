@@ -8,6 +8,20 @@ export type Stage = "collect" | "need" | "design" | "dev" | "verify" | "release"
 
 export type Priority = "P0" | "P1" | "P2";
 
+export interface DeliverableAttach {
+  type: "file" | "link";
+  url: string;
+  label: string;
+}
+
+export interface Deliverable {
+  id: string;
+  name: string;
+  checked: boolean;
+  attach: DeliverableAttach | null;
+  createdAt: string;
+}
+
 export interface Requirement {
   id: string;
   name: string;
@@ -20,6 +34,7 @@ export interface Requirement {
   closureType: "completed" | "abandoned" | null;
   createdAt: string;
   body: string;
+  deliverables: Deliverable[];
 }
 
 export const STAGES: { key: Stage; label: string }[] = [

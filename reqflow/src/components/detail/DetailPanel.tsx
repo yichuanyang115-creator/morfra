@@ -1,12 +1,21 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import type { Requirement } from "../../types/models";
+import type { Deliverable, Requirement } from "../../types/models";
 import type { DetailTab } from "../../stores/uiStore";
 import { DetailHeader } from "./DetailHeader";
 import { AttributeGrid } from "./AttributeGrid";
 import { TabBar } from "./TabBar";
 import { BodyTab } from "./tabs/BodyTab";
+import { DeliverablesTab } from "./tabs/DeliverablesTab";
 import { TemplateDrawer } from "../editor/TemplateDrawer";
+
+function PlusIcon() {
+  return (
+    <svg className="size-3.5" viewBox="0 0 20 20" fill="none">
+      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 interface DetailPanelProps {
   requirement: Requirement | null;
@@ -23,10 +32,15 @@ interface DetailPanelProps {
   onProgressChange: (progress: number | null) => void;
   onAddSource: (source: string) => void;
   onBodyChange: (markdown: string) => void;
+  onCreateDeliverable: (name: string) => void;
+  onUpdateDeliverable: (
+    deliverableId: string,
+    patch: Partial<Pick<Deliverable, "name" | "checked" | "attach">>,
+  ) => void;
+  onRemoveDeliverable: (deliverableId: string) => void;
 }
 
-const TAB_PLACEHOLDER: Record<Exclude<DetailTab, "body">, string> = {
-  produce: "产出将在后续 Phase 实现",
+const TAB_PLACEHOLDER: Record<Exclude<DetailTab, "body" | "produce">, string> = {
   tasks: "任务将在后续 Phase 实现",
   acceptance: "验收将在后续 Phase 实现",
   activity: "活动将在后续 Phase 实现",
@@ -44,8 +58,13 @@ export function DetailPanel({
   onProgressChange,
   onAddSource,
   onBodyChange,
+  onCreateDeliverable,
+  onUpdateDeliverable,
+  onRemoveDeliverable,
 }: DetailPanelProps) {
   const editorRef = useRef<Editor | null>(null);
+  const [produceDraftOpen, setProduceDraftOpen] = useState(false);
+
   if (!requirement) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-5 text-center text-(--muted-2)">
@@ -82,6 +101,16 @@ export function DetailPanel({
                 editorRef.current?.chain().focus().insertContent(templateMarkdown, { contentType: "markdown" }).run();
               }}
             />
+          ) : activeTab === "produce" ? (
+            <button
+              type="button"
+              title="新建产出"
+              aria-label="新建产出"
+              onClick={() => setProduceDraftOpen(true)}
+              className="grid size-6.5 place-items-center rounded-full border border-(--border-strong) bg-(--surface) text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
+            >
+              <PlusIcon />
+            </button>
           ) : undefined
         }
       />
@@ -93,6 +122,18 @@ export function DetailPanel({
             onEditorReady={(editor) => {
               editorRef.current = editor;
             }}
+          />
+        ) : activeTab === "produce" ? (
+          <DeliverablesTab
+            deliverables={requirement.deliverables}
+            draftOpen={produceDraftOpen}
+            onCreate={(name) => {
+              onCreateDeliverable(name);
+              setProduceDraftOpen(false);
+            }}
+            onCancelDraft={() => setProduceDraftOpen(false)}
+            onUpdate={onUpdateDeliverable}
+            onRemove={onRemoveDeliverable}
           />
         ) : (
           <div className="text-[13px] text-(--muted-2)">{TAB_PLACEHOLDER[activeTab]}</div>

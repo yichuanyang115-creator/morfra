@@ -52,8 +52,10 @@ function AttrRow({ label, children }: { label: string; children: React.ReactNode
 
 function stageSlot(requirement: Requirement): { label: string; value: string } {
   switch (requirement.stage) {
-    case "design":
-      return { label: "产出", value: "0/0" };
+    case "design": {
+      const done = requirement.deliverables.filter((d) => d.checked).length;
+      return { label: "产出", value: `${done}/${requirement.deliverables.length}` };
+    }
     case "dev":
       return { label: "任务", value: "0/0" };
     case "verify":

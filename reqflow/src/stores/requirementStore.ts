@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type { Priority, Requirement, Stage } from "../types/models";
+import type { Deliverable, Priority, Requirement, Stage } from "../types/models";
 import { ensureDir, listFileNames, readFile, writeFile } from "../lib/fs";
 import { parseFrontmatter, stringifyFrontmatter } from "../lib/frontmatter";
 import { projectDir, requirementPath } from "../lib/paths";
@@ -16,6 +16,7 @@ interface RequirementFrontmatter {
   progress: number | null;
   closureType: "completed" | "abandoned" | null;
   createdAt: string;
+  deliverables: Deliverable[];
 }
 
 type EditableField = "name" | "priority" | "source" | "assignee" | "deadline" | "progress";
@@ -34,6 +35,14 @@ interface RequirementState {
     value: Requirement[EditableField],
   ) => Promise<void>;
   updateBody: (projectId: string, requirementId: string, body: string) => Promise<void>;
+  addDeliverable: (projectId: string, requirementId: string, name: string) => Promise<void>;
+  updateDeliverable: (
+    projectId: string,
+    requirementId: string,
+    deliverableId: string,
+    patch: Partial<Pick<Deliverable, "name" | "checked" | "attach">>,
+  ) => Promise<void>;
+  removeDeliverable: (projectId: string, requirementId: string, deliverableId: string) => Promise<void>;
 }
 
 function toFrontmatter(r: Requirement): RequirementFrontmatter {
@@ -48,6 +57,7 @@ function toFrontmatter(r: Requirement): RequirementFrontmatter {
     progress: r.progress,
     closureType: r.closureType,
     createdAt: r.createdAt,
+    deliverables: r.deliverables,
   };
 }
 
@@ -64,6 +74,7 @@ function fromFrontmatter(data: RequirementFrontmatter, fallbackId: string, body:
     closureType: data.closureType ?? null,
     createdAt: data.createdAt ?? new Date().toISOString(),
     body,
+    deliverables: data.deliverables ?? [],
   };
 }
 
@@ -118,6 +129,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       closureType: null,
       createdAt: new Date().toISOString(),
       body: "",
+      deliverables: [],
     };
     await saveRequirement(projectId, requirement);
     set((state) => ({ requirements: [...state.requirements, requirement] }));
@@ -137,6 +149,49 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     const requirement = get().requirements.find((r) => r.id === requirementId);
     if (!requirement) return;
     const updated: Requirement = { ...requirement, body };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  addDeliverable: async (projectId, requirementId, name) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const deliverable: Deliverable = {
+      id: nanoid(),
+      name,
+      checked: false,
+      attach: null,
+      createdAt: new Date().toISOString(),
+    };
+    const updated: Requirement = { ...requirement, deliverables: [...requirement.deliverables, deliverable] };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  updateDeliverable: async (projectId, requirementId, deliverableId, patch) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const updated: Requirement = {
+      ...requirement,
+      deliverables: requirement.deliverables.map((d) => (d.id === deliverableId ? { ...d, ...patch } : d)),
+    };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  removeDeliverable: async (projectId, requirementId, deliverableId) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const updated: Requirement = {
+      ...requirement,
+      deliverables: requirement.deliverables.filter((d) => d.id !== deliverableId),
+    };
     await saveRequirement(projectId, updated);
     set((state) => ({
       requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
