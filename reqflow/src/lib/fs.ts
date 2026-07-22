@@ -32,3 +32,11 @@ export async function listDirNames(path: string): Promise<string[]> {
   const entries = await readDir(path);
   return entries.filter((e) => e.isDirectory).map((e) => e.name);
 }
+
+export async function listFileNames(path: string): Promise<string[]> {
+  if (!(await exists(path))) {
+    return [];
+  }
+  const entries = await readDir(path);
+  return entries.filter((e) => e.isFile).map((e) => e.name);
+}

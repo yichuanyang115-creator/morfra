@@ -17,3 +17,12 @@ export async function projectMetaPath(projectId: string): Promise<string> {
   const dir = await projectDir(projectId);
   return join(dir, PROJECT_META_FILE);
 }
+
+export function requirementFileName(requirementId: string): string {
+  return `${requirementId}.md`;
+}
+
+export async function requirementPath(projectId: string, requirementId: string): Promise<string> {
+  const dir = await projectDir(projectId);
+  return join(dir, requirementFileName(requirementId));
+}
