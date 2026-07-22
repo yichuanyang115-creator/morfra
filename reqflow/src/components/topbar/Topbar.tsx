@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { useProjectStore, currentProject } from "../../stores/projectStore";
+import { ProjectSwitcher } from "./ProjectSwitcher";
+
 function ChevDownIcon() {
   return (
     <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
@@ -45,20 +49,23 @@ function PanelToggleIcon({ collapsed }: { collapsed: boolean }) {
 }
 
 interface TopbarProps {
-  projectName: string;
   detailCollapsed: boolean;
   onTogglePanel: () => void;
 }
 
-export function Topbar({ projectName, detailCollapsed, onTogglePanel }: TopbarProps) {
+export function Topbar({ detailCollapsed, onTogglePanel }: TopbarProps) {
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const project = useProjectStore(currentProject);
+
   return (
     <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--surface-2) px-2.5 border-b border-(--border)">
       <button
         type="button"
+        onClick={() => setSwitcherOpen((v) => !v)}
         className="inline-flex max-w-80 flex-none items-center gap-[5px] rounded-(--r-md) border-none bg-transparent px-1.5 py-1 font-(family-name:--font-display) text-[12px] font-[590] text-(--fg) hover:bg-(--surface)"
         aria-haspopup="true"
       >
-        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{projectName}</span>
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{project?.name ?? "项目"}</span>
         <span className="flex-none text-(--muted-2)">
           <ChevDownIcon />
         </span>
@@ -94,6 +101,13 @@ export function Topbar({ projectName, detailCollapsed, onTogglePanel }: TopbarPr
           <PanelToggleIcon collapsed={detailCollapsed} />
         </button>
       </div>
+
+      {switcherOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setSwitcherOpen(false)} />
+          <ProjectSwitcher onClose={() => setSwitcherOpen(false)} />
+        </>
+      )}
     </header>
   );
 }
