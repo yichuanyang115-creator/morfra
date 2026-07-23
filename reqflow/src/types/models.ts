@@ -65,6 +65,7 @@ export interface Requirement {
   createdAt: string;
   releaseMethod: string;
   releaseDate: string;
+  manualOrder: number;
   body: string;
   deliverables: Deliverable[];
   tasks: Task[];

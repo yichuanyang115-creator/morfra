@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import * as dndCore from "@dnd-kit/core";
+import * as dndSortable from "@dnd-kit/sortable";
 import { RequirementRow } from "./RequirementRow";
 import type { Requirement } from "../../types/models";
 
@@ -19,6 +19,7 @@ function makeRequirement(overrides: Partial<Requirement> = {}): Requirement {
     createdAt: "2026-01-01T00:00:00.000Z",
     releaseMethod: "",
     releaseDate: "",
+    manualOrder: 0,
     body: "",
     deliverables: [],
     tasks: [],
@@ -30,13 +31,15 @@ function makeRequirement(overrides: Partial<Requirement> = {}): Requirement {
 }
 
 describe("RequirementRow", () => {
-  it("useDraggable 返回 isDragging=true 时行整体降低透明度", () => {
-    const spy = vi.spyOn(dndCore, "useDraggable").mockReturnValue({
+  it("useSortable 返回 isDragging=true 时行整体降低透明度", () => {
+    const spy = vi.spyOn(dndSortable, "useSortable").mockReturnValue({
       attributes: {},
       listeners: {},
       setNodeRef: vi.fn(),
       isDragging: true,
-    } as unknown as ReturnType<typeof dndCore.useDraggable>);
+      transform: null,
+      transition: undefined,
+    } as unknown as ReturnType<typeof dndSortable.useSortable>);
 
     const { container } = render(
       <RequirementRow
@@ -53,13 +56,15 @@ describe("RequirementRow", () => {
     spy.mockRestore();
   });
 
-  it("useDraggable 返回 isDragging=false 时不带透明度样式", () => {
-    const spy = vi.spyOn(dndCore, "useDraggable").mockReturnValue({
+  it("useSortable 返回 isDragging=false 时不带透明度样式", () => {
+    const spy = vi.spyOn(dndSortable, "useSortable").mockReturnValue({
       attributes: {},
       listeners: {},
       setNodeRef: vi.fn(),
       isDragging: false,
-    } as unknown as ReturnType<typeof dndCore.useDraggable>);
+      transform: null,
+      transition: undefined,
+    } as unknown as ReturnType<typeof dndSortable.useSortable>);
 
     const { container } = render(
       <RequirementRow
@@ -76,8 +81,8 @@ describe("RequirementRow", () => {
     spy.mockRestore();
   });
 
-  it("useDraggable 用需求 id 作为拖拽标识注册", () => {
-    const spy = vi.spyOn(dndCore, "useDraggable");
+  it("useSortable 用需求 id 作为拖拽/排序标识注册", () => {
+    const spy = vi.spyOn(dndSortable, "useSortable");
 
     render(
       <RequirementRow
@@ -90,18 +95,38 @@ describe("RequirementRow", () => {
       />,
     );
 
-    expect(spy).toHaveBeenCalledWith({ id: "r-42" });
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ id: "r-42" }));
     spy.mockRestore();
   });
 
-  it("useDraggable 返回的 listeners（拖拽把手事件）被挂载到行元素上", () => {
+  it("归档阶段的行禁用排序拖拽", () => {
+    const spy = vi.spyOn(dndSortable, "useSortable");
+
+    render(
+      <RequirementRow
+        requirement={makeRequirement({ stage: "archive" })}
+        selected={false}
+        onSelect={vi.fn()}
+        onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
+      />,
+    );
+
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ disabled: true }));
+    spy.mockRestore();
+  });
+
+  it("useSortable 返回的 listeners（拖拽把手事件）被挂载到行元素上", () => {
     const onPointerDown = vi.fn();
-    const spy = vi.spyOn(dndCore, "useDraggable").mockReturnValue({
+    const spy = vi.spyOn(dndSortable, "useSortable").mockReturnValue({
       attributes: {},
       listeners: { onPointerDown },
       setNodeRef: vi.fn(),
       isDragging: false,
-    } as unknown as ReturnType<typeof dndCore.useDraggable>);
+      transform: null,
+      transition: undefined,
+    } as unknown as ReturnType<typeof dndSortable.useSortable>);
 
     const { container } = render(
       <RequirementRow

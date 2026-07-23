@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useDraggable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import type { Priority, Requirement } from "../../types/models";
 import { RELEASE_METHODS } from "../../types/models";
 import { fmtDate } from "../../lib/dates";
@@ -35,9 +36,12 @@ export function RequirementRow({
   onReleaseDateChange,
 }: RequirementRowProps) {
   const [progressInput, setProgressInput] = useState(requirement.progress == null ? "" : String(requirement.progress));
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: requirement.id });
-  const isRelease = requirement.stage === "release";
   const isArchive = requirement.stage === "archive";
+  const { attributes, listeners, setNodeRef, isDragging, transform, transition } = useSortable({
+    id: requirement.id,
+    disabled: isArchive,
+  });
+  const isRelease = requirement.stage === "release";
   const stayDays = computeStayDays(requirement);
   const totalDays = computeTotalDays(requirement);
 
@@ -47,6 +51,11 @@ export function RequirementRow({
       {...listeners}
       {...attributes}
       onClick={onSelect}
+      style={{
+        gridTemplateColumns: "minmax(140px, 320px) 40px 56px 56px 52px 56px 56px 40px",
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
       className={`grid max-w-(--board-row-max-w) cursor-pointer items-center gap-3 border-b border-(--border) px-2 py-2 ${
         isDragging ? "opacity-40" : ""
       } ${
@@ -54,7 +63,6 @@ export function RequirementRow({
           ? "border-(--accent-soft-strong) bg-(--accent-soft) shadow-[inset_2px_0_0_0_var(--accent-solid)]"
           : "hover:bg-(--surface)"
       }`}
-      style={{ gridTemplateColumns: "minmax(140px, 320px) 40px 56px 56px 52px 56px 56px 40px" }}
     >
       <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-(--fg)">
         <span className="overflow-hidden text-ellipsis whitespace-nowrap">{requirement.name}</span>

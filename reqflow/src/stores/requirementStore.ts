@@ -59,6 +59,7 @@ interface RequirementState {
   updateTransitionNote: (projectId: string, requirementId: string, transitionId: string, note: string) => Promise<void>;
   addComment: (projectId: string, requirementId: string, transitionId: string, content: string) => Promise<void>;
   removeTransition: (projectId: string, requirementId: string, transitionId: string) => Promise<void>;
+  reorderManually: (projectId: string, updates: { requirementId: string; manualOrder: number }[]) => Promise<void>;
 }
 
 type Get = () => RequirementState;
@@ -105,6 +106,9 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
   },
 
   createRequirement: async (projectId, stage, name) => {
+    // 新建置顶：manualOrder 落到该阶段现有最小值之前，手动模式下新建的需求排在最前面
+    const existingInStage = get().requirements.filter((r) => r.stage === stage);
+    const minOrder = existingInStage.reduce((min, r) => Math.min(min, r.manualOrder), 0);
     const requirement: Requirement = {
       id: nanoid(),
       name,
@@ -118,6 +122,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       createdAt: new Date().toISOString(),
       releaseMethod: "",
       releaseDate: "",
+      manualOrder: minOrder - 1,
       body: "",
       deliverables: [],
       tasks: [],
@@ -223,7 +228,12 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       const progress = restoringFromArchive ? null : r.progress;
       // 发布时间默认当前日期（Product-Spec FLOW-006 边界情况），仅在尚未填写时补默认值
       const releaseDate = targetStage === "release" && !r.releaseDate ? todayIso() : r.releaseDate;
-      return { ...r, stage: targetStage, closureType, progress, releaseDate, transitions: [...r.transitions, record] };
+      // 换阶段后 manualOrder 是老阶段的值，跟目标阶段已有值不是同一套参照系，
+      // 落到目标阶段最小值之前，跟新建置顶体感一致（Product-Spec REQ-001 §426）
+      const existingInTarget = get().requirements.filter((req) => req.stage === targetStage && req.id !== r.id);
+      const minOrder = existingInTarget.reduce((min, req) => Math.min(min, req.manualOrder), 0);
+      const manualOrder = targetStage !== "archive" ? minOrder - 1 : r.manualOrder;
+      return { ...r, stage: targetStage, closureType, progress, releaseDate, manualOrder, transitions: [...r.transitions, record] };
     }),
 
   updateTransitionNote: (projectId, requirementId, transitionId, note) =>
@@ -244,4 +254,14 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       transitions: r.transitions.filter((t) => t.id !== transitionId),
       comments: r.comments.filter((c) => c.transitionId !== transitionId),
     })),
+
+  reorderManually: async (projectId, updates) => {
+    const byId = new Map(updates.map((u) => [u.requirementId, u.manualOrder]));
+    const current = get().requirements;
+    const updated = current.map((r) => (byId.has(r.id) ? { ...r, manualOrder: byId.get(r.id)! } : r));
+    await Promise.all(
+      updated.filter((r) => byId.has(r.id)).map((r) => saveRequirement(projectId, r)),
+    );
+    set({ requirements: updated });
+  },
 }));

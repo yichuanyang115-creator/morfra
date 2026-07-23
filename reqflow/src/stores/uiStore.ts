@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import type { Stage } from "../types/models";
+import { defaultStageSort, type StageSort, type SortField } from "../lib/requirementSort";
 
 export type DetailMode = "expanded" | "collapsed" | "fullscreen";
 
@@ -8,16 +10,24 @@ interface UiState {
   selectedRequirementId: string | null;
   detailMode: DetailMode;
   activeTab: DetailTab;
+  boardSort: Partial<Record<Stage, StageSort>>;
   selectRequirement: (id: string) => void;
   toggleCollapsed: () => void;
   toggleFullscreen: () => void;
   setActiveTab: (tab: DetailTab) => void;
+  getStageSort: (stage: Stage) => StageSort;
+  setStageSortField: (stage: Stage, slot: "primary", field: SortField) => void;
+  setStageSortSecondaryField: (stage: Stage, field: SortField | null) => void;
+  toggleStageSortDir: (stage: Stage, slot: "primary" | "secondary") => void;
+  restoreStageSort: (stage: Stage) => void;
+  setStageSortManual: (stage: Stage) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
   selectedRequirementId: null,
   detailMode: "expanded",
   activeTab: "body",
+  boardSort: {},
 
   selectRequirement: (id) => {
     const current = get().detailMode;
@@ -40,5 +50,44 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   setActiveTab: (tab) => {
     set({ activeTab: tab });
+  },
+
+  getStageSort: (stage) => get().boardSort[stage] ?? defaultStageSort(),
+
+  setStageSortField: (stage, slot, field) => {
+    set((state) => {
+      const sort = state.getStageSort(stage);
+      return { boardSort: { ...state.boardSort, [stage]: { ...sort, [slot]: field, mode: "rule" } } };
+    });
+  },
+
+  setStageSortSecondaryField: (stage, field) => {
+    set((state) => {
+      const sort = state.getStageSort(stage);
+      return { boardSort: { ...state.boardSort, [stage]: { ...sort, secondary: field, mode: "rule" } } };
+    });
+  },
+
+  toggleStageSortDir: (stage, slot) => {
+    set((state) => {
+      const sort = state.getStageSort(stage);
+      const dirKey = slot === "primary" ? "primaryDir" : "secondaryDir";
+      const nextDir = sort[dirKey] === "desc" ? "asc" : "desc";
+      return { boardSort: { ...state.boardSort, [stage]: { ...sort, [dirKey]: nextDir, mode: "rule" } } };
+    });
+  },
+
+  restoreStageSort: (stage) => {
+    set((state) => {
+      const sort = state.getStageSort(stage);
+      return { boardSort: { ...state.boardSort, [stage]: { ...sort, mode: "rule" } } };
+    });
+  },
+
+  setStageSortManual: (stage) => {
+    set((state) => {
+      const sort = state.getStageSort(stage);
+      return { boardSort: { ...state.boardSort, [stage]: { ...sort, mode: "manual" } } };
+    });
   },
 }));

@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Requirement, Stage } from "../../types/models";
 import { RequirementRow } from "./RequirementRow";
 import { QuickAddInput } from "./QuickAddInput";
 import { ArchiveSearch } from "./ArchiveSearch";
+import { SortControl } from "./SortControl";
 import { lastTransitionTimestamp } from "../../lib/requirementMetrics";
+import { sortRequirementsForStage } from "../../lib/requirementSort";
+import { useUiStore } from "../../stores/uiStore";
 
 function ChevronIcon() {
   return (
@@ -50,13 +54,19 @@ export function StageSection({
   const [archiveSearch, setArchiveSearch] = useState("");
   const { setNodeRef, isOver } = useDroppable({ id: stage });
 
+  const sort = useUiStore((s) => s.getStageSort(stage));
+  const setStageSortField = useUiStore((s) => s.setStageSortField);
+  const setStageSortSecondaryField = useUiStore((s) => s.setStageSortSecondaryField);
+  const toggleStageSortDir = useUiStore((s) => s.toggleStageSortDir);
+  const restoreStageSort = useUiStore((s) => s.restoreStageSort);
+
   const isArchive = stage === "archive";
 
   const visibleRequirements = isArchive
     ? requirements
         .filter((r) => r.name.toLowerCase().includes(archiveSearch.trim().toLowerCase()))
         .sort((a, b) => lastTransitionTimestamp(b).localeCompare(lastTransitionTimestamp(a)))
-    : requirements;
+    : sortRequirementsForStage(requirements, sort);
 
   const emptyText = isArchive
     ? archiveSearch.trim()
@@ -90,15 +100,24 @@ export function StageSection({
         {isArchive ? (
           <ArchiveSearch value={archiveSearch} onChange={setArchiveSearch} />
         ) : (
-          <button
-            type="button"
-            onClick={() => setDraftOpen(true)}
-            aria-label="新建需求"
-            className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-transparent px-1.75 py-1 text-[12px] text-(--muted) hover:bg-(--surface-2) hover:text-(--accent-text)"
-          >
-            <PlusIcon />
-            新建
-          </button>
+          <>
+            <SortControl
+              sort={sort}
+              onSetPrimaryField={(field) => setStageSortField(stage, "primary", field)}
+              onSetSecondaryField={(field) => setStageSortSecondaryField(stage, field)}
+              onToggleDir={(slot) => toggleStageSortDir(stage, slot)}
+              onRestore={() => restoreStageSort(stage)}
+            />
+            <button
+              type="button"
+              onClick={() => setDraftOpen(true)}
+              aria-label="新建需求"
+              className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-transparent px-1.75 py-1 text-[12px] text-(--muted) hover:bg-(--surface-2) hover:text-(--accent-text)"
+            >
+              <PlusIcon />
+              新建
+            </button>
+          </>
         )}
       </div>
 
@@ -117,17 +136,23 @@ export function StageSection({
           {visibleRequirements.length === 0 && !draftOpen ? (
             <div className="px-1 py-3.5 text-[12.5px] text-(--muted-2)">{emptyText}</div>
           ) : (
-            visibleRequirements.map((r) => (
-              <RequirementRow
-                key={r.id}
-                requirement={r}
-                selected={r.id === selectedRequirementId}
-                onSelect={() => onSelectRequirement(r.id)}
-                onProgressChange={(progress) => onProgressChange(r.id, progress)}
-                onReleaseMethodChange={(method) => onReleaseMethodChange(r.id, method)}
-                onReleaseDateChange={(date) => onReleaseDateChange(r.id, date)}
-              />
-            ))
+            <SortableContext
+              items={visibleRequirements.map((r) => r.id)}
+              strategy={verticalListSortingStrategy}
+              disabled={isArchive}
+            >
+              {visibleRequirements.map((r) => (
+                <RequirementRow
+                  key={r.id}
+                  requirement={r}
+                  selected={r.id === selectedRequirementId}
+                  onSelect={() => onSelectRequirement(r.id)}
+                  onProgressChange={(progress) => onProgressChange(r.id, progress)}
+                  onReleaseMethodChange={(method) => onReleaseMethodChange(r.id, method)}
+                  onReleaseDateChange={(date) => onReleaseDateChange(r.id, date)}
+                />
+              ))}
+            </SortableContext>
           )}
         </>
       )}

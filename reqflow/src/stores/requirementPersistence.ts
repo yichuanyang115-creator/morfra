@@ -25,6 +25,7 @@ export interface RequirementFrontmatter {
   createdAt: string;
   releaseMethod: string;
   releaseDate: string;
+  manualOrder: number;
   deliverables: Deliverable[];
   tasks: Task[];
   acceptance: AcceptanceCriterion[];
@@ -46,6 +47,7 @@ export function toFrontmatter(r: Requirement): RequirementFrontmatter {
     createdAt: r.createdAt,
     releaseMethod: r.releaseMethod,
     releaseDate: r.releaseDate,
+    manualOrder: r.manualOrder,
     deliverables: r.deliverables,
     tasks: r.tasks,
     acceptance: r.acceptance,
@@ -68,6 +70,7 @@ export function fromFrontmatter(data: RequirementFrontmatter, fallbackId: string
     createdAt: data.createdAt ?? new Date().toISOString(),
     releaseMethod: data.releaseMethod ?? "",
     releaseDate: data.releaseDate ?? "",
+    manualOrder: data.manualOrder ?? 0,
     body,
     deliverables: data.deliverables ?? [],
     tasks: data.tasks ?? [],

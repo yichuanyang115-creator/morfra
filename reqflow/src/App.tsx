@@ -40,6 +40,7 @@ function App() {
   const updateTransitionNote = useRequirementStore((s) => s.updateTransitionNote);
   const addComment = useRequirementStore((s) => s.addComment);
   const removeTransition = useRequirementStore((s) => s.removeTransition);
+  const reorderManually = useRequirementStore((s) => s.reorderManually);
 
   const selectedRequirementId = useUiStore((s) => s.selectedRequirementId);
   const detailMode = useUiStore((s) => s.detailMode);
@@ -105,6 +106,9 @@ function App() {
             }}
             onReleaseDateChange={(requirementId, date) => {
               if (currentProjectId) void updateField(currentProjectId, requirementId, "releaseDate", date);
+            }}
+            onReorder={(updates) => {
+              if (currentProjectId) void reorderManually(currentProjectId, updates);
             }}
           />
         }

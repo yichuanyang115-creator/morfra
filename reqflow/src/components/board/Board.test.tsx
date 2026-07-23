@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
-import { Board } from "./Board";
+import { Board, resolveDropTransition, resolveReorder } from "./Board";
 import type { Requirement } from "../../types/models";
+import { defaultStageSort } from "../../lib/requirementSort";
+import { useUiStore } from "../../stores/uiStore";
 
 let capturedOnDragEnd: ((event: DragEndEvent) => void) | null = null;
 
@@ -32,6 +34,7 @@ function makeRequirement(overrides: Partial<Requirement> = {}): Requirement {
     createdAt: "2026-01-01T00:00:00.000Z",
     releaseMethod: "",
     releaseDate: "",
+    manualOrder: 0,
     body: "",
     deliverables: [],
     tasks: [],
@@ -49,7 +52,122 @@ const noop = {
   onTransition: vi.fn(),
   onReleaseMethodChange: vi.fn(),
   onReleaseDateChange: vi.fn(),
+  onReorder: vi.fn(),
 };
+
+describe("resolveDropTransition", () => {
+  it("拖到不同阶段区域时返回目标需求 id 和目标阶段", () => {
+    const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
+
+    const result = resolveDropTransition(requirements, "r-1", "dev");
+
+    expect(result).toEqual({ requirementId: "r-1", toStage: "dev" });
+  });
+
+  it("拖拽落点没有命中任何可放置区域（over 为 undefined）时不触发流转", () => {
+    const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
+
+    const result = resolveDropTransition(requirements, "r-1", undefined);
+
+    expect(result).toBeNull();
+  });
+
+  it("拖回同一阶段（原位）时不触发流转", () => {
+    const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
+
+    const result = resolveDropTransition(requirements, "r-1", "design");
+
+    expect(result).toBeNull();
+  });
+
+  it("被拖拽的需求 id 在列表中找不到对应需求时不触发流转（边界：需求已被删除）", () => {
+    const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
+
+    const result = resolveDropTransition(requirements, "non-existent-id", "dev");
+
+    expect(result).toBeNull();
+  });
+
+  it("拖到归档区域时正常返回流转结果，不被特殊排除", () => {
+    const requirements = [makeRequirement({ id: "r-1", stage: "release" })];
+
+    const result = resolveDropTransition(requirements, "r-1", "archive");
+
+    expect(result).toEqual({ requirementId: "r-1", toStage: "archive" });
+  });
+
+  it("over 是同阶段另一行需求的 id（悬停在行上而非区域容器上）时不触发流转", () => {
+    const requirements = [
+      makeRequirement({ id: "r-1", stage: "design" }),
+      makeRequirement({ id: "r-2", stage: "design" }),
+    ];
+
+    const result = resolveDropTransition(requirements, "r-1", "r-2");
+
+    expect(result).toBeNull();
+  });
+
+  it("over 是不同阶段另一行需求的 id 时按该行所属阶段触发流转", () => {
+    const requirements = [
+      makeRequirement({ id: "r-1", stage: "design" }),
+      makeRequirement({ id: "r-2", stage: "dev" }),
+    ];
+
+    const result = resolveDropTransition(requirements, "r-1", "r-2");
+
+    expect(result).toEqual({ requirementId: "r-1", toStage: "dev" });
+  });
+});
+
+describe("resolveReorder", () => {
+  it("同阶段内拖到另一行时返回按新顺序排列的该阶段完整列表", () => {
+    const requirements = [
+      makeRequirement({ id: "r-1", stage: "design", createdAt: "2026-01-01T00:00:00.000Z" }),
+      makeRequirement({ id: "r-2", stage: "design", createdAt: "2026-01-02T00:00:00.000Z" }),
+      makeRequirement({ id: "r-3", stage: "design", createdAt: "2026-01-03T00:00:00.000Z" }),
+    ];
+    // 默认排序按创建时间降序：r-3, r-2, r-1
+
+    const result = resolveReorder(requirements, "r-1", "r-3", defaultStageSort());
+
+    expect(result?.map((r) => r.id)).toEqual(["r-1", "r-3", "r-2"]);
+  });
+
+  it("over 是阶段容器 id（不是同阶段的行）时不触发重排", () => {
+    const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
+
+    const result = resolveReorder(requirements, "r-1", "design", defaultStageSort());
+
+    expect(result).toBeNull();
+  });
+
+  it("active 和 over 不同阶段时不触发重排", () => {
+    const requirements = [
+      makeRequirement({ id: "r-1", stage: "design" }),
+      makeRequirement({ id: "r-2", stage: "dev" }),
+    ];
+
+    const result = resolveReorder(requirements, "r-1", "r-2", defaultStageSort());
+
+    expect(result).toBeNull();
+  });
+
+  it("拖到自己身上时不触发重排", () => {
+    const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
+
+    const result = resolveReorder(requirements, "r-1", "r-1", defaultStageSort());
+
+    expect(result).toBeNull();
+  });
+
+  it("over 为 undefined 时不触发重排", () => {
+    const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
+
+    const result = resolveReorder(requirements, "r-1", undefined, defaultStageSort());
+
+    expect(result).toBeNull();
+  });
+});
 
 describe("Board", () => {
   it("loading 为 true 时渲染骨架屏，不渲染阶段列表", () => {
@@ -144,5 +262,57 @@ describe("Board", () => {
     } as unknown as DragEndEvent);
 
     expect(onTransition).not.toHaveBeenCalled();
+  });
+
+  it("拖拽结束落在同阶段另一行上时调用 onReorder 并把该阶段切到手动排序", () => {
+    const onReorder = vi.fn();
+    useUiStore.setState({ boardSort: {} });
+
+    render(
+      <Board
+        requirements={[
+          makeRequirement({ id: "r-1", stage: "design", createdAt: "2026-01-01T00:00:00.000Z" }),
+          makeRequirement({ id: "r-2", stage: "design", createdAt: "2026-01-02T00:00:00.000Z" }),
+        ]}
+        loading={false}
+        error={false}
+        selectedRequirementId={null}
+        {...noop}
+        onReorder={onReorder}
+      />,
+    );
+
+    capturedOnDragEnd?.({
+      active: { id: "r-1" },
+      over: { id: "r-2" },
+    } as unknown as DragEndEvent);
+
+    expect(onReorder).toHaveBeenCalled();
+    expect(useUiStore.getState().getStageSort("design").mode).toBe("manual");
+  });
+
+  it("归档阶段的需求拖拽不触发 onReorder（归档不参与手动排序）", () => {
+    const onReorder = vi.fn();
+
+    render(
+      <Board
+        requirements={[
+          makeRequirement({ id: "r-1", stage: "archive" }),
+          makeRequirement({ id: "r-2", stage: "archive" }),
+        ]}
+        loading={false}
+        error={false}
+        selectedRequirementId={null}
+        {...noop}
+        onReorder={onReorder}
+      />,
+    );
+
+    capturedOnDragEnd?.({
+      active: { id: "r-1" },
+      over: { id: "r-2" },
+    } as unknown as DragEndEvent);
+
+    expect(onReorder).not.toHaveBeenCalled();
   });
 });

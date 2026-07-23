@@ -644,3 +644,78 @@ describe("requirementStore 流转（transition）与评论", () => {
     expect(loaded?.name).toBe("旧需求");
   });
 });
+
+describe("requirementStore manualOrder（手动排序）", () => {
+  beforeEach(() => {
+    files.clear();
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+  });
+
+  it("createRequirement 新建需求的 manualOrder 落到该阶段现有最小值之前（新建置顶）", async () => {
+    const { createRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "design", "第一条");
+    const first = useRequirementStore.getState().requirements[0];
+    expect(first.manualOrder).toBe(-1);
+
+    await createRequirement("proj-1", "design", "第二条");
+    const requirements = useRequirementStore.getState().requirements;
+    const second = requirements.find((r) => r.name === "第二条");
+    expect(second?.manualOrder).toBe(-2);
+  });
+
+  it("createRequirement 不同阶段的 manualOrder 互不影响", async () => {
+    const { createRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "design", "设计阶段需求");
+    await createRequirement("proj-1", "dev", "开发阶段需求");
+
+    const requirements = useRequirementStore.getState().requirements;
+    expect(requirements.find((r) => r.name === "设计阶段需求")?.manualOrder).toBe(-1);
+    expect(requirements.find((r) => r.name === "开发阶段需求")?.manualOrder).toBe(-1);
+  });
+
+  it("transitionRequirement 流转到新阶段后 manualOrder 落到目标阶段最小值之前，不沿用原阶段的值", async () => {
+    const { createRequirement, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "dev", "已有的开发需求");
+    const existing = useRequirementStore.getState().requirements[0];
+    expect(existing.manualOrder).toBe(-1);
+
+    await createRequirement("proj-1", "design", "待流转的设计需求");
+    const moving = useRequirementStore.getState().requirements.find((r) => r.name === "待流转的设计需求")!;
+
+    await transitionRequirement("proj-1", moving.id, "dev");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === moving.id);
+    expect(updated?.manualOrder).toBe(-2);
+  });
+
+  it("transitionRequirement 流转到归档阶段时不重新计算 manualOrder（归档不参与手动排序）", async () => {
+    const { createRequirement, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "release", "待归档需求");
+    const created = useRequirementStore.getState().requirements[0];
+    const originalOrder = created.manualOrder;
+
+    await transitionRequirement("proj-1", created.id, "archive");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.manualOrder).toBe(originalOrder);
+  });
+
+  it("reorderManually 按传入更新落盘并更新 store 中对应需求的 manualOrder，不影响其他需求", async () => {
+    const { createRequirement, reorderManually } = useRequirementStore.getState();
+    await createRequirement("proj-1", "design", "需求 A");
+    await createRequirement("proj-1", "design", "需求 B");
+    const [a, b] = useRequirementStore.getState().requirements;
+
+    await reorderManually("proj-1", [
+      { requirementId: a.id, manualOrder: 5 },
+      { requirementId: b.id, manualOrder: 6 },
+    ]);
+
+    const updated = useRequirementStore.getState().requirements;
+    expect(updated.find((r) => r.id === a.id)?.manualOrder).toBe(5);
+    expect(updated.find((r) => r.id === b.id)?.manualOrder).toBe(6);
+
+    const filePath = `/app-local-data/projects/proj-1/${a.id}.md`;
+    expect(files.get(filePath)).toContain("manualOrder: 5");
+  });
+});
