@@ -2,6 +2,68 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useUiStore } from "./uiStore";
 import { defaultStageSort } from "../lib/requirementSort";
 
+describe("uiStore 详情面板三态（AC-002/004/005/006）", () => {
+  beforeEach(() => {
+    useUiStore.setState({ selectedRequirementId: null, detailMode: "expanded", activeTab: "body" });
+  });
+
+  it("selectRequirement 选中需求并把激活 Tab 重置为正文（AC-002：点击行切换为该需求详情）", () => {
+    useUiStore.getState().setActiveTab("tasks");
+    useUiStore.getState().selectRequirement("req-1");
+
+    const state = useUiStore.getState();
+    expect(state.selectedRequirementId).toBe("req-1");
+    expect(state.activeTab).toBe("body");
+  });
+
+  it("selectRequirement 在收起状态下选中需求会自动展开详情面板", () => {
+    useUiStore.getState().toggleCollapsed();
+    expect(useUiStore.getState().detailMode).toBe("collapsed");
+
+    useUiStore.getState().selectRequirement("req-2");
+
+    expect(useUiStore.getState().detailMode).toBe("expanded");
+  });
+
+  it("selectRequirement 在全屏状态下选中另一条需求不改变全屏态", () => {
+    useUiStore.getState().toggleFullscreen();
+    expect(useUiStore.getState().detailMode).toBe("fullscreen");
+
+    useUiStore.getState().selectRequirement("req-3");
+
+    expect(useUiStore.getState().detailMode).toBe("fullscreen");
+  });
+
+  it("toggleFullscreen 在 expanded 和 fullscreen 之间切换（AC-005：全屏详情占满主内容区）", () => {
+    expect(useUiStore.getState().detailMode).toBe("expanded");
+
+    useUiStore.getState().toggleFullscreen();
+    expect(useUiStore.getState().detailMode).toBe("fullscreen");
+
+    useUiStore.getState().toggleFullscreen();
+    expect(useUiStore.getState().detailMode).toBe("expanded");
+  });
+
+  it("toggleCollapsed 在 expanded 和 collapsed 之间切换（AC-006：收起后主内容区恢复全宽）", () => {
+    expect(useUiStore.getState().detailMode).toBe("expanded");
+
+    useUiStore.getState().toggleCollapsed();
+    expect(useUiStore.getState().detailMode).toBe("collapsed");
+
+    useUiStore.getState().toggleCollapsed();
+    expect(useUiStore.getState().detailMode).toBe("expanded");
+  });
+
+  it("toggleCollapsed 在全屏态下调用会切到收起（而非回到 expanded），因为它只认 collapsed↔expanded 这一组", () => {
+    useUiStore.getState().toggleFullscreen();
+    expect(useUiStore.getState().detailMode).toBe("fullscreen");
+
+    useUiStore.getState().toggleCollapsed();
+
+    expect(useUiStore.getState().detailMode).toBe("collapsed");
+  });
+});
+
 describe("uiStore 看板排序状态", () => {
   beforeEach(() => {
     useUiStore.setState({ boardSort: {} });
