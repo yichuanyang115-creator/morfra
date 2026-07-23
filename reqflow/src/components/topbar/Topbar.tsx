@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useProjectStore, currentProject } from "../../stores/projectStore";
+import { useRequirementStore } from "../../stores/requirementStore";
 import { useUiStore } from "../../stores/uiStore";
 import { ProjectSwitcher } from "./ProjectSwitcher";
+import { SearchBox } from "./SearchBox";
 
 function ChevDownIcon() {
   return (
@@ -13,15 +15,6 @@ function ChevDownIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
-      <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M17 17l-3.6-3.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
@@ -52,8 +45,10 @@ function PanelToggleIcon({ collapsed }: { collapsed: boolean }) {
 export function Topbar() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const project = useProjectStore(currentProject);
+  const requirements = useRequirementStore((s) => s.requirements);
   const detailMode = useUiStore((s) => s.detailMode);
   const toggleCollapsed = useUiStore((s) => s.toggleCollapsed);
+  const selectRequirement = useUiStore((s) => s.selectRequirement);
   const detailCollapsed = detailMode === "collapsed";
 
   return (
@@ -70,18 +65,7 @@ export function Topbar() {
         </span>
       </button>
 
-      <div className="absolute top-1/2 left-1/2 w-[380px] max-w-[40vw] -translate-x-1/2 -translate-y-1/2">
-        <div className="relative flex w-full items-center gap-1.5 rounded-(--r-md) border border-(--border) bg-(--surface) px-2.5 py-[5px] focus-within:border-(--accent)">
-          <span className="flex-none text-(--muted-2)">
-            <SearchIcon />
-          </span>
-          <input
-            type="text"
-            placeholder="搜索需求名称…"
-            className="min-w-0 flex-1 border-none bg-transparent font-(family-name:--font-body) text-[12.5px] text-(--fg) outline-none placeholder:text-(--muted-2)"
-          />
-        </div>
-      </div>
+      <SearchBox requirements={requirements} onJumpToRequirement={selectRequirement} />
 
       <div className="flex flex-none items-center gap-0.5">
         <button
