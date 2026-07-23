@@ -20,6 +20,7 @@ describe("ActivityTab", () => {
   it("需求从未流转过时显示空状态，不生成任何节点", () => {
     render(
       <ActivityTab
+        currentStage="need"
         transitions={[]}
         comments={[]}
         closureType={null}
@@ -38,7 +39,7 @@ describe("ActivityTab", () => {
       makeTransition({ id: "tr-2", from: "need", to: "design" }),
     ];
     render(
-      <ActivityTab transitions={transitions} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={vi.fn()} />,
+      <ActivityTab currentStage="design" transitions={transitions} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={vi.fn()} />,
     );
 
     expect(screen.getByText("需求")).toBeInTheDocument();
@@ -48,7 +49,7 @@ describe("ActivityTab", () => {
   it("当前阶段是废弃归档时，最后一个节点显示归档（废弃）", () => {
     const transitions = [makeTransition({ id: "tr-1", from: "dev", to: "archive" })];
     render(
-      <ActivityTab transitions={transitions} comments={[]} closureType="abandoned" onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={vi.fn()} />,
+      <ActivityTab currentStage="archive" transitions={transitions} comments={[]} closureType="abandoned" onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={vi.fn()} />,
     );
 
     expect(screen.getByText("归档（废弃）")).toBeInTheDocument();
@@ -57,7 +58,7 @@ describe("ActivityTab", () => {
   it("点击说明按钮展开输入框，失焦提交后 onUpdateNote 收到修剪后的说明", async () => {
     const onUpdateNote = vi.fn();
     render(
-      <ActivityTab transitions={[makeTransition()]} comments={[]} closureType={null} onUpdateNote={onUpdateNote} onAddComment={vi.fn()} onDelete={vi.fn()} />,
+      <ActivityTab currentStage="need" transitions={[makeTransition()]} comments={[]} closureType={null} onUpdateNote={onUpdateNote} onAddComment={vi.fn()} onDelete={vi.fn()} />,
     );
 
     await userEvent.click(screen.getByText("点击添加说明…"));
@@ -78,7 +79,7 @@ describe("ActivityTab", () => {
       { id: "c-2", transitionId: "tr-2", content: "第二条评论", timestamp: "2026-01-03T00:00:00.000Z" },
     ];
     render(
-      <ActivityTab transitions={transitions} comments={comments} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={vi.fn()} />,
+      <ActivityTab currentStage="design" transitions={transitions} comments={comments} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={vi.fn()} />,
     );
 
     expect(screen.getByText("第一条评论")).toBeInTheDocument();
@@ -88,7 +89,7 @@ describe("ActivityTab", () => {
   it("点击 + 评论展开输入框，回车提交后 onAddComment 收到目标节点 id 和内容", async () => {
     const onAddComment = vi.fn();
     render(
-      <ActivityTab transitions={[makeTransition()]} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={onAddComment} onDelete={vi.fn()} />,
+      <ActivityTab currentStage="need" transitions={[makeTransition()]} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={onAddComment} onDelete={vi.fn()} />,
     );
 
     await userEvent.click(screen.getByText("+ 评论"));
@@ -102,7 +103,7 @@ describe("ActivityTab", () => {
   it("点击删除按钮弹出二次确认，取消不触发 onDelete", async () => {
     const onDelete = vi.fn();
     render(
-      <ActivityTab transitions={[makeTransition()]} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={onDelete} />,
+      <ActivityTab currentStage="need" transitions={[makeTransition()]} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={onDelete} />,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "删除该流转记录" }));
@@ -117,12 +118,26 @@ describe("ActivityTab", () => {
   it("点击删除按钮二次确认后，onDelete 收到目标流转记录 id", async () => {
     const onDelete = vi.fn();
     render(
-      <ActivityTab transitions={[makeTransition({ id: "tr-1" })]} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={onDelete} />,
+      <ActivityTab currentStage="need" transitions={[makeTransition({ id: "tr-1" })]} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={onDelete} />,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "删除该流转记录" }));
     await userEvent.click(screen.getByRole("button", { name: "删除" }));
 
     expect(onDelete).toHaveBeenCalledWith("tr-1");
+  });
+
+  it("高亮节点按当前阶段匹配，不是简单取数组最后一条：删除最新流转记录后阶段不回退，高亮应落在仍匹配当前阶段的记录上", () => {
+    const transitions = [
+      makeTransition({ id: "tr-1", from: "collect", to: "need" }),
+      makeTransition({ id: "tr-2", from: "need", to: "design" }),
+    ];
+    const { container } = render(
+      <ActivityTab currentStage="need" transitions={transitions} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={vi.fn()} />,
+    );
+
+    const dots = container.querySelectorAll("span.absolute.top-0\\.5");
+    expect(dots[0]).toHaveClass("bg-(--accent)");
+    expect(dots[1]).not.toHaveClass("bg-(--accent)");
   });
 });

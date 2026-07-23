@@ -205,6 +205,7 @@ export function DetailPanel({
           />
         ) : (
           <ActivityTab
+            currentStage={requirement.stage}
             transitions={requirement.transitions}
             comments={requirement.comments}
             closureType={requirement.closureType}
