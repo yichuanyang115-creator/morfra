@@ -74,3 +74,100 @@ describe("projectStore.init 错误处理", () => {
     vi.mocked(readTextFile).mockImplementation(original);
   });
 });
+
+describe("projectStore CRUD（REQ-018/FLOW-009 多项目管理）", () => {
+  beforeEach(() => {
+    files.clear();
+    useProjectStore.setState({ projects: [], currentProjectId: null, loaded: false, initializing: false, error: false });
+  });
+
+  it("createProject 新建项目后自动切换到该项目，且落盘 _project.md", async () => {
+    const { createProject } = useProjectStore.getState();
+    await createProject("新项目");
+
+    const state = useProjectStore.getState();
+    expect(state.projects).toHaveLength(1);
+    expect(state.projects[0].name).toBe("新项目");
+    expect(state.currentProjectId).toBe(state.projects[0].id);
+
+    const metaPath = `/app-local-data/projects/${state.projects[0].id}/_project.md`;
+    expect(files.get(metaPath)).toContain("新项目");
+  });
+
+  it("switchProject 切换到列表中存在的项目 id", async () => {
+    const { createProject, switchProject } = useProjectStore.getState();
+    await createProject("项目甲");
+    await createProject("项目乙");
+
+    const [first] = useProjectStore.getState().projects;
+    switchProject(first.id);
+
+    expect(useProjectStore.getState().currentProjectId).toBe(first.id);
+  });
+
+  it("switchProject 传入不存在的 id 时不改变当前项目（边界：目标项目已被删除）", async () => {
+    const { createProject, switchProject } = useProjectStore.getState();
+    await createProject("项目甲");
+    const currentId = useProjectStore.getState().currentProjectId;
+
+    switchProject("not-exist-id");
+
+    expect(useProjectStore.getState().currentProjectId).toBe(currentId);
+  });
+
+  it("renameProject 改名后落盘且内存态同步更新，其余字段不变", async () => {
+    const { createProject, renameProject } = useProjectStore.getState();
+    await createProject("旧名字");
+    const id = useProjectStore.getState().projects[0].id;
+
+    await renameProject(id, "新名字");
+
+    const project = useProjectStore.getState().projects.find((p) => p.id === id);
+    expect(project?.name).toBe("新名字");
+    const metaPath = `/app-local-data/projects/${id}/_project.md`;
+    expect(files.get(metaPath)).toContain("新名字");
+  });
+
+  it("deleteProject 删除后切换到列表第一个项目（FLOW-009 边界情况）", async () => {
+    const { createProject, deleteProject } = useProjectStore.getState();
+    await createProject("项目甲");
+    await createProject("项目乙");
+    const [first, second] = useProjectStore.getState().projects;
+    // 当前应指向最后创建的"项目乙"（second），删除它后应切回列表第一个（first）
+    expect(useProjectStore.getState().currentProjectId).toBe(second.id);
+
+    await deleteProject(second.id);
+
+    const state = useProjectStore.getState();
+    expect(state.projects).toHaveLength(1);
+    expect(state.projects[0].id).toBe(first.id);
+    expect(state.currentProjectId).toBe(first.id);
+  });
+
+  it("deleteProject 只有一个项目时拒绝删除（不落盘删除、不改变状态）", async () => {
+    const { createProject, deleteProject } = useProjectStore.getState();
+    await createProject("唯一项目");
+    const only = useProjectStore.getState().projects[0];
+
+    await deleteProject(only.id);
+
+    const state = useProjectStore.getState();
+    expect(state.projects).toHaveLength(1);
+    expect(state.projects[0].id).toBe(only.id);
+  });
+
+  it("addSource 新增自定义来源后加入该项目的 sources 列表，重复添加不产生重复项", async () => {
+    const { createProject, addSource } = useProjectStore.getState();
+    await createProject("项目甲");
+    const id = useProjectStore.getState().projects[0].id;
+    const originalCount = useProjectStore.getState().projects[0].sources.length;
+
+    await addSource(id, "战略合作");
+    await addSource(id, "战略合作");
+
+    const project = useProjectStore.getState().projects.find((p) => p.id === id);
+    expect(project?.sources).toContain("战略合作");
+    expect(project?.sources.filter((s) => s === "战略合作")).toHaveLength(1);
+    expect(project?.sources.length).toBe(originalCount + 1);
+  });
+});
