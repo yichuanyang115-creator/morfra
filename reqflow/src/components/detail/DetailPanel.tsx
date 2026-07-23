@@ -10,6 +10,7 @@ import { DeliverablesTab } from "./tabs/DeliverablesTab";
 import { TasksTab } from "./tabs/TasksTab";
 import { AcceptanceTab } from "./tabs/AcceptanceTab";
 import type { AcceptancePatch } from "./tabs/acceptanceShared";
+import { ActivityTab } from "./tabs/ActivityTab";
 import { TemplateDrawer } from "../editor/TemplateDrawer";
 
 function PlusIcon() {
@@ -51,11 +52,10 @@ interface DetailPanelProps {
   onUpdateAcceptance: (acceptanceId: string, patch: AcceptancePatch) => void;
   onRemoveAcceptance: (acceptanceId: string) => void;
   onTransition: (toStage: Stage, opts?: { abandoned?: boolean }) => void;
+  onUpdateTransitionNote: (transitionId: string, note: string) => void;
+  onAddComment: (transitionId: string, content: string) => void;
+  onDeleteTransition: (transitionId: string) => void;
 }
-
-const TAB_PLACEHOLDER: Record<Exclude<DetailTab, "body" | "produce" | "tasks" | "acceptance">, string> = {
-  activity: "活动将在后续 Phase 实现",
-};
 
 export function DetailPanel({
   requirement,
@@ -79,6 +79,9 @@ export function DetailPanel({
   onUpdateAcceptance,
   onRemoveAcceptance,
   onTransition,
+  onUpdateTransitionNote,
+  onAddComment,
+  onDeleteTransition,
 }: DetailPanelProps) {
   const editorRef = useRef<Editor | null>(null);
   const [produceDraftOpen, setProduceDraftOpen] = useState(false);
@@ -201,7 +204,14 @@ export function DetailPanel({
             onRemove={onRemoveAcceptance}
           />
         ) : (
-          <div className="text-[13px] text-(--muted-2)">{TAB_PLACEHOLDER[activeTab]}</div>
+          <ActivityTab
+            transitions={requirement.transitions}
+            comments={requirement.comments}
+            closureType={requirement.closureType}
+            onUpdateNote={onUpdateTransitionNote}
+            onAddComment={onAddComment}
+            onDelete={onDeleteTransition}
+          />
         )}
       </div>
     </div>

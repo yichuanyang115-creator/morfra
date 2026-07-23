@@ -37,6 +37,9 @@ function App() {
   const updateAcceptance = useRequirementStore((s) => s.updateAcceptance);
   const removeAcceptance = useRequirementStore((s) => s.removeAcceptance);
   const transitionRequirement = useRequirementStore((s) => s.transitionRequirement);
+  const updateTransitionNote = useRequirementStore((s) => s.updateTransitionNote);
+  const addComment = useRequirementStore((s) => s.addComment);
+  const removeTransition = useRequirementStore((s) => s.removeTransition);
 
   const selectedRequirementId = useUiStore((s) => s.selectedRequirementId);
   const detailMode = useUiStore((s) => s.detailMode);
@@ -175,6 +178,21 @@ function App() {
             onTransition={(toStage, opts) => {
               if (currentProjectId && selectedRequirementId) {
                 void transitionRequirement(currentProjectId, selectedRequirementId, toStage, opts);
+              }
+            }}
+            onUpdateTransitionNote={(transitionId, note) => {
+              if (currentProjectId && selectedRequirementId) {
+                void updateTransitionNote(currentProjectId, selectedRequirementId, transitionId, note);
+              }
+            }}
+            onAddComment={(transitionId, content) => {
+              if (currentProjectId && selectedRequirementId) {
+                void addComment(currentProjectId, selectedRequirementId, transitionId, content);
+              }
+            }}
+            onDeleteTransition={(transitionId) => {
+              if (currentProjectId && selectedRequirementId) {
+                void removeTransition(currentProjectId, selectedRequirementId, transitionId);
               }
             }}
           />
