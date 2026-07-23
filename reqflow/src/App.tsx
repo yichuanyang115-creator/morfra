@@ -36,6 +36,7 @@ function App() {
   const addAcceptance = useRequirementStore((s) => s.addAcceptance);
   const updateAcceptance = useRequirementStore((s) => s.updateAcceptance);
   const removeAcceptance = useRequirementStore((s) => s.removeAcceptance);
+  const transitionRequirement = useRequirementStore((s) => s.transitionRequirement);
 
   const selectedRequirementId = useUiStore((s) => s.selectedRequirementId);
   const detailMode = useUiStore((s) => s.detailMode);
@@ -169,6 +170,11 @@ function App() {
             onRemoveAcceptance={(acceptanceId) => {
               if (currentProjectId && selectedRequirementId) {
                 void removeAcceptance(currentProjectId, selectedRequirementId, acceptanceId);
+              }
+            }}
+            onTransition={(toStage, opts) => {
+              if (currentProjectId && selectedRequirementId) {
+                void transitionRequirement(currentProjectId, selectedRequirementId, toStage, opts);
               }
             }}
           />

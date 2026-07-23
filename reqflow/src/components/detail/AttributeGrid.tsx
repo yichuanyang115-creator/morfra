@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Priority, Requirement } from "../../types/models";
-import { STAGES } from "../../types/models";
+import type { Priority, Requirement, Stage } from "../../types/models";
+import { StageTransitionDropdown } from "./StageTransitionDropdown";
 
 interface AttributeGridProps {
   requirement: Requirement;
@@ -11,6 +11,7 @@ interface AttributeGridProps {
   ) => void;
   onProgressChange: (progress: number | null) => void;
   onAddSource: (source: string) => void;
+  onTransition: (toStage: Stage, opts?: { abandoned?: boolean }) => void;
 }
 
 function fmtDate(iso: string): string {
@@ -73,12 +74,18 @@ function stageSlot(requirement: Requirement): { label: string; value: string } {
   }
 }
 
-export function AttributeGrid({ requirement, sources, onFieldChange, onProgressChange, onAddSource }: AttributeGridProps) {
+export function AttributeGrid({
+  requirement,
+  sources,
+  onFieldChange,
+  onProgressChange,
+  onAddSource,
+  onTransition,
+}: AttributeGridProps) {
   const [progressInput, setProgressInput] = useState(requirement.progress == null ? "" : String(requirement.progress));
   const [customizingSource, setCustomizingSource] = useState(false);
   const [customSourceValue, setCustomSourceValue] = useState("");
   const slot = stageSlot(requirement);
-  const stageLabel = STAGES.find((s) => s.key === requirement.stage)?.label ?? requirement.stage;
 
   function commitCustomSource() {
     const trimmed = customSourceValue.trim();
@@ -188,7 +195,13 @@ export function AttributeGrid({ requirement, sources, onFieldChange, onProgressC
       </AttrRow>
 
       <AttrRow label="阶段">
-        <span className={readonlyClass}>{stageLabel}</span>
+        <StageTransitionDropdown
+          currentStage={requirement.stage}
+          closureType={requirement.closureType}
+          onTransition={onTransition}
+          className={selectClass}
+          style={selectStyle}
+        />
       </AttrRow>
 
       <AttrRow label={slot.label}>

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
-import type { Deliverable, Requirement, Task } from "../../types/models";
+import type { Deliverable, Requirement, Stage, Task } from "../../types/models";
 import type { DetailTab } from "../../stores/uiStore";
 import { DetailHeader } from "./DetailHeader";
 import { AttributeGrid } from "./AttributeGrid";
@@ -50,6 +50,7 @@ interface DetailPanelProps {
   onCreateAcceptance: (desc: string) => void;
   onUpdateAcceptance: (acceptanceId: string, patch: AcceptancePatch) => void;
   onRemoveAcceptance: (acceptanceId: string) => void;
+  onTransition: (toStage: Stage, opts?: { abandoned?: boolean }) => void;
 }
 
 const TAB_PLACEHOLDER: Record<Exclude<DetailTab, "body" | "produce" | "tasks" | "acceptance">, string> = {
@@ -77,6 +78,7 @@ export function DetailPanel({
   onCreateAcceptance,
   onUpdateAcceptance,
   onRemoveAcceptance,
+  onTransition,
 }: DetailPanelProps) {
   const editorRef = useRef<Editor | null>(null);
   const [produceDraftOpen, setProduceDraftOpen] = useState(false);
@@ -108,6 +110,7 @@ export function DetailPanel({
         onFieldChange={onFieldChange}
         onProgressChange={onProgressChange}
         onAddSource={onAddSource}
+        onTransition={onTransition}
       />
       <TabBar
         activeTab={activeTab}
