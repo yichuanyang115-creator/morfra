@@ -8,6 +8,8 @@ import { TabBar } from "./TabBar";
 import { BodyTab } from "./tabs/BodyTab";
 import { DeliverablesTab } from "./tabs/DeliverablesTab";
 import { TasksTab } from "./tabs/TasksTab";
+import { AcceptanceTab } from "./tabs/AcceptanceTab";
+import type { AcceptancePatch } from "./tabs/acceptanceShared";
 import { TemplateDrawer } from "../editor/TemplateDrawer";
 
 function PlusIcon() {
@@ -45,10 +47,12 @@ interface DetailPanelProps {
     patch: Partial<Pick<Task, "name" | "assignee" | "deadline" | "progress" | "status" | "blocked" | "blockNote">>,
   ) => void;
   onRemoveTask: (taskId: string) => void;
+  onCreateAcceptance: (desc: string) => void;
+  onUpdateAcceptance: (acceptanceId: string, patch: AcceptancePatch) => void;
+  onRemoveAcceptance: (acceptanceId: string) => void;
 }
 
-const TAB_PLACEHOLDER: Record<Exclude<DetailTab, "body" | "produce" | "tasks">, string> = {
-  acceptance: "验收将在后续 Phase 实现",
+const TAB_PLACEHOLDER: Record<Exclude<DetailTab, "body" | "produce" | "tasks" | "acceptance">, string> = {
   activity: "活动将在后续 Phase 实现",
 };
 
@@ -70,10 +74,14 @@ export function DetailPanel({
   onCreateTask,
   onUpdateTask,
   onRemoveTask,
+  onCreateAcceptance,
+  onUpdateAcceptance,
+  onRemoveAcceptance,
 }: DetailPanelProps) {
   const editorRef = useRef<Editor | null>(null);
   const [produceDraftOpen, setProduceDraftOpen] = useState(false);
   const [taskDraftOpen, setTaskDraftOpen] = useState(false);
+  const [acceptanceDraftOpen, setAcceptanceDraftOpen] = useState(false);
 
   if (!requirement) {
     return (
@@ -131,6 +139,16 @@ export function DetailPanel({
             >
               <PlusIcon />
             </button>
+          ) : activeTab === "acceptance" ? (
+            <button
+              type="button"
+              title="新建验收标准"
+              aria-label="新建验收标准"
+              onClick={() => setAcceptanceDraftOpen(true)}
+              className="grid size-6.5 place-items-center rounded-full border border-(--border-strong) bg-(--surface) text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
+            >
+              <PlusIcon />
+            </button>
           ) : undefined
         }
       />
@@ -166,6 +184,18 @@ export function DetailPanel({
             onCancelDraft={() => setTaskDraftOpen(false)}
             onUpdate={onUpdateTask}
             onRemove={onRemoveTask}
+          />
+        ) : activeTab === "acceptance" ? (
+          <AcceptanceTab
+            acceptance={requirement.acceptance}
+            draftOpen={acceptanceDraftOpen}
+            onCreate={(desc) => {
+              onCreateAcceptance(desc);
+              setAcceptanceDraftOpen(false);
+            }}
+            onCancelDraft={() => setAcceptanceDraftOpen(false)}
+            onUpdate={onUpdateAcceptance}
+            onRemove={onRemoveAcceptance}
           />
         ) : (
           <div className="text-[13px] text-(--muted-2)">{TAB_PLACEHOLDER[activeTab]}</div>

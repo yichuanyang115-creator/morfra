@@ -33,6 +33,9 @@ function App() {
   const addTask = useRequirementStore((s) => s.addTask);
   const updateTask = useRequirementStore((s) => s.updateTask);
   const removeTask = useRequirementStore((s) => s.removeTask);
+  const addAcceptance = useRequirementStore((s) => s.addAcceptance);
+  const updateAcceptance = useRequirementStore((s) => s.updateAcceptance);
+  const removeAcceptance = useRequirementStore((s) => s.removeAcceptance);
 
   const selectedRequirementId = useUiStore((s) => s.selectedRequirementId);
   const detailMode = useUiStore((s) => s.detailMode);
@@ -151,6 +154,21 @@ function App() {
             onRemoveTask={(taskId) => {
               if (currentProjectId && selectedRequirementId) {
                 void removeTask(currentProjectId, selectedRequirementId, taskId);
+              }
+            }}
+            onCreateAcceptance={(desc) => {
+              if (currentProjectId && selectedRequirementId) {
+                void addAcceptance(currentProjectId, selectedRequirementId, desc);
+              }
+            }}
+            onUpdateAcceptance={(acceptanceId, patch) => {
+              if (currentProjectId && selectedRequirementId) {
+                void updateAcceptance(currentProjectId, selectedRequirementId, acceptanceId, patch);
+              }
+            }}
+            onRemoveAcceptance={(acceptanceId) => {
+              if (currentProjectId && selectedRequirementId) {
+                void removeAcceptance(currentProjectId, selectedRequirementId, acceptanceId);
               }
             }}
           />

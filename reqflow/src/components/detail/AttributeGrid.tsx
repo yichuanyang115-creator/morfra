@@ -60,8 +60,10 @@ function stageSlot(requirement: Requirement): { label: string; value: string } {
       const done = requirement.tasks.filter((t) => t.status === "done").length;
       return { label: "任务", value: `${done}/${requirement.tasks.length}` };
     }
-    case "verify":
-      return { label: "验收", value: "0/0" };
+    case "verify": {
+      const passed = requirement.acceptance.filter((a) => a.result === "pass").length;
+      return { label: "验收", value: `${passed}/${requirement.acceptance.length}` };
+    }
     case "release":
       return { label: "方式", value: "未设置" };
     case "archive":
