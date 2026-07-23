@@ -23,6 +23,8 @@ export interface RequirementFrontmatter {
   progress: number | null;
   closureType: "completed" | "abandoned" | null;
   createdAt: string;
+  releaseMethod: string;
+  releaseDate: string;
   deliverables: Deliverable[];
   tasks: Task[];
   acceptance: AcceptanceCriterion[];
@@ -42,6 +44,8 @@ export function toFrontmatter(r: Requirement): RequirementFrontmatter {
     progress: r.progress,
     closureType: r.closureType,
     createdAt: r.createdAt,
+    releaseMethod: r.releaseMethod,
+    releaseDate: r.releaseDate,
     deliverables: r.deliverables,
     tasks: r.tasks,
     acceptance: r.acceptance,
@@ -62,6 +66,8 @@ export function fromFrontmatter(data: RequirementFrontmatter, fallbackId: string
     progress: data.progress ?? null,
     closureType: data.closureType ?? null,
     createdAt: data.createdAt ?? new Date().toISOString(),
+    releaseMethod: data.releaseMethod ?? "",
+    releaseDate: data.releaseDate ?? "",
     body,
     deliverables: data.deliverables ?? [],
     tasks: data.tasks ?? [],

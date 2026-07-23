@@ -30,6 +30,8 @@ function makeRequirement(overrides: Partial<Requirement> = {}): Requirement {
     progress: null,
     closureType: null,
     createdAt: "2026-01-01T00:00:00.000Z",
+    releaseMethod: "",
+    releaseDate: "",
     body: "",
     deliverables: [],
     tasks: [],
@@ -45,6 +47,8 @@ const noop = {
   onSelectRequirement: vi.fn(),
   onProgressChange: vi.fn(),
   onTransition: vi.fn(),
+  onReleaseMethodChange: vi.fn(),
+  onReleaseDateChange: vi.fn(),
 };
 
 describe("Board", () => {

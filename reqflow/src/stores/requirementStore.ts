@@ -3,9 +3,10 @@ import { nanoid } from "nanoid";
 import type { AcceptanceCriterion, Comment, Deliverable, Requirement, Stage, Task, TransitionRecord } from "../types/models";
 import { ensureDir, listFileNames } from "../lib/fs";
 import { projectDir } from "../lib/paths";
+import { todayIso } from "../lib/dates";
 import { loadRequirement, saveRequirement } from "./requirementPersistence";
 
-type EditableField = "name" | "priority" | "source" | "assignee" | "deadline" | "progress";
+type EditableField = "name" | "priority" | "source" | "assignee" | "deadline" | "progress" | "releaseMethod" | "releaseDate";
 
 interface RequirementState {
   requirements: Requirement[];
@@ -115,6 +116,8 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       progress: null,
       closureType: null,
       createdAt: new Date().toISOString(),
+      releaseMethod: "",
+      releaseDate: "",
       body: "",
       deliverables: [],
       tasks: [],
@@ -215,7 +218,12 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
         note: "",
       };
       const closureType: Requirement["closureType"] = abandoned ? "abandoned" : targetStage === "archive" ? "completed" : null;
-      return { ...r, stage: targetStage, closureType, transitions: [...r.transitions, record] };
+      // 恢复：从归档流转回活跃阶段时进度清零（Product-Spec §6.3）
+      const restoringFromArchive = r.stage === "archive" && targetStage !== "archive";
+      const progress = restoringFromArchive ? null : r.progress;
+      // 发布时间默认当前日期（Product-Spec FLOW-006 边界情况），仅在尚未填写时补默认值
+      const releaseDate = targetStage === "release" && !r.releaseDate ? todayIso() : r.releaseDate;
+      return { ...r, stage: targetStage, closureType, progress, releaseDate, transitions: [...r.transitions, record] };
     }),
 
   updateTransitionNote: (projectId, requirementId, transitionId, note) =>

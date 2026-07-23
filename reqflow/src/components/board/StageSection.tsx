@@ -3,6 +3,8 @@ import { useDroppable } from "@dnd-kit/core";
 import type { Requirement, Stage } from "../../types/models";
 import { RequirementRow } from "./RequirementRow";
 import { QuickAddInput } from "./QuickAddInput";
+import { ArchiveSearch } from "./ArchiveSearch";
+import { lastTransitionTimestamp } from "../../lib/requirementMetrics";
 
 function ChevronIcon() {
   return (
@@ -28,6 +30,8 @@ interface StageSectionProps {
   onCreate: (name: string) => void;
   onSelectRequirement: (id: string) => void;
   onProgressChange: (requirementId: string, progress: number | null) => void;
+  onReleaseMethodChange: (requirementId: string, method: string) => void;
+  onReleaseDateChange: (requirementId: string, date: string) => void;
 }
 
 export function StageSection({
@@ -38,12 +42,27 @@ export function StageSection({
   onCreate,
   onSelectRequirement,
   onProgressChange,
+  onReleaseMethodChange,
+  onReleaseDateChange,
 }: StageSectionProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [draftOpen, setDraftOpen] = useState(false);
+  const [archiveSearch, setArchiveSearch] = useState("");
   const { setNodeRef, isOver } = useDroppable({ id: stage });
 
-  const emptyText = `该阶段暂无需求${stage === "collect" ? "，点上方新建记录你的第一个想法" : ""}`;
+  const isArchive = stage === "archive";
+
+  const visibleRequirements = isArchive
+    ? requirements
+        .filter((r) => r.name.toLowerCase().includes(archiveSearch.trim().toLowerCase()))
+        .sort((a, b) => lastTransitionTimestamp(b).localeCompare(lastTransitionTimestamp(a)))
+    : requirements;
+
+  const emptyText = isArchive
+    ? archiveSearch.trim()
+      ? "没有匹配的归档需求"
+      : "还没有归档的需求"
+    : `该阶段暂无需求${stage === "collect" ? "，点上方新建记录你的第一个想法" : ""}`;
 
   return (
     <section ref={setNodeRef} className={`mb-1 rounded-(--r-lg) ${isOver ? "bg-(--accent-soft)" : ""}`}>
@@ -68,7 +87,9 @@ export function StageSection({
           </span>
         </button>
         <span className="flex-1" />
-        {stage !== "archive" && (
+        {isArchive ? (
+          <ArchiveSearch value={archiveSearch} onChange={setArchiveSearch} />
+        ) : (
           <button
             type="button"
             onClick={() => setDraftOpen(true)}
@@ -93,16 +114,18 @@ export function StageSection({
               onCancel={() => setDraftOpen(false)}
             />
           )}
-          {requirements.length === 0 && !draftOpen ? (
+          {visibleRequirements.length === 0 && !draftOpen ? (
             <div className="px-1 py-3.5 text-[12.5px] text-(--muted-2)">{emptyText}</div>
           ) : (
-            requirements.map((r) => (
+            visibleRequirements.map((r) => (
               <RequirementRow
                 key={r.id}
                 requirement={r}
                 selected={r.id === selectedRequirementId}
                 onSelect={() => onSelectRequirement(r.id)}
                 onProgressChange={(progress) => onProgressChange(r.id, progress)}
+                onReleaseMethodChange={(method) => onReleaseMethodChange(r.id, method)}
+                onReleaseDateChange={(date) => onReleaseDateChange(r.id, date)}
               />
             ))
           )}

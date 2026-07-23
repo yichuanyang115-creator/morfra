@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Priority, Requirement, Stage } from "../../types/models";
 import { StageTransitionDropdown } from "./StageTransitionDropdown";
+import { fmtDate } from "../../lib/dates";
 
 interface AttributeGridProps {
   requirement: Requirement;
@@ -12,13 +13,6 @@ interface AttributeGridProps {
   onProgressChange: (progress: number | null) => void;
   onAddSource: (source: string) => void;
   onTransition: (toStage: Stage, opts?: { abandoned?: boolean }) => void;
-}
-
-function fmtDate(iso: string): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return `${d.getMonth() + 1}/${d.getDate()}/${String(d.getFullYear()).slice(2)}`;
 }
 
 function clampProgress(value: string): number | null {
@@ -66,7 +60,7 @@ function stageSlot(requirement: Requirement): { label: string; value: string } {
       return { label: "验收", value: `${passed}/${requirement.acceptance.length}` };
     }
     case "release":
-      return { label: "方式", value: "未设置" };
+      return { label: "方式", value: requirement.releaseMethod || "未设置" };
     case "archive":
       return { label: "结果", value: requirement.closureType === "abandoned" ? "废弃" : "完成" };
     default:

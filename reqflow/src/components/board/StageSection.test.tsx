@@ -17,6 +17,8 @@ function makeRequirement(overrides: Partial<Requirement> = {}): Requirement {
     progress: null,
     closureType: null,
     createdAt: "2026-01-01T00:00:00.000Z",
+    releaseMethod: "",
+    releaseDate: "",
     body: "",
     deliverables: [],
     tasks: [],
@@ -43,6 +45,8 @@ describe("StageSection", () => {
         onCreate={vi.fn()}
         onSelectRequirement={vi.fn()}
         onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
       />,
     );
 
@@ -68,6 +72,8 @@ describe("StageSection", () => {
         onCreate={vi.fn()}
         onSelectRequirement={vi.fn()}
         onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
       />,
     );
 
@@ -88,6 +94,8 @@ describe("StageSection", () => {
         onCreate={vi.fn()}
         onSelectRequirement={vi.fn()}
         onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
       />,
     );
 
@@ -105,6 +113,8 @@ describe("StageSection", () => {
         onCreate={vi.fn()}
         onSelectRequirement={vi.fn()}
         onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
       />,
     );
 
@@ -121,6 +131,8 @@ describe("StageSection", () => {
         onCreate={vi.fn()}
         onSelectRequirement={vi.fn()}
         onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
       />,
     );
 
@@ -138,6 +150,8 @@ describe("StageSection", () => {
         onCreate={onCreate}
         onSelectRequirement={vi.fn()}
         onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
       />,
     );
 
@@ -159,6 +173,8 @@ describe("StageSection", () => {
         onCreate={vi.fn()}
         onSelectRequirement={vi.fn()}
         onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
       />,
     );
 
@@ -178,10 +194,86 @@ describe("StageSection", () => {
         onCreate={vi.fn()}
         onSelectRequirement={onSelectRequirement}
         onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
       />,
     );
 
     await userEvent.click(screen.getByText("选中测试需求"));
     expect(onSelectRequirement).toHaveBeenCalledWith("r-9");
+  });
+
+  it("归档阶段标题行显示搜索框而不是新建按钮", () => {
+    render(
+      <StageSection
+        stage="archive"
+        label="归档"
+        requirements={[]}
+        selectedRequirementId={null}
+        onCreate={vi.fn()}
+        onSelectRequirement={vi.fn()}
+        onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText("搜索归档需求…")).toBeInTheDocument();
+    expect(screen.queryByLabelText("新建需求")).not.toBeInTheDocument();
+  });
+
+  it("归档区域为空且未搜索时提示还没有归档的需求，输入搜索词无匹配时提示没有匹配的归档需求", async () => {
+    render(
+      <StageSection
+        stage="archive"
+        label="归档"
+        requirements={[makeRequirement({ stage: "archive", name: "已完成需求" })]}
+        selectedRequirementId={null}
+        onCreate={vi.fn()}
+        onSelectRequirement={vi.fn()}
+        onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
+      />,
+    );
+
+    await userEvent.type(screen.getByPlaceholderText("搜索归档需求…"), "不存在的关键字");
+    expect(screen.getByText("没有匹配的归档需求")).toBeInTheDocument();
+  });
+
+  it("归档区域按名称搜索过滤需求行，且按最近流转时间倒序排列", async () => {
+    render(
+      <StageSection
+        stage="archive"
+        label="归档"
+        requirements={[
+          makeRequirement({
+            id: "r-old",
+            name: "旧的归档需求",
+            stage: "archive",
+            transitions: [{ id: "t1", from: "release", to: "archive", timestamp: "2026-01-01T00:00:00.000Z", by: "我", note: "" }],
+          }),
+          makeRequirement({
+            id: "r-new",
+            name: "新的归档需求",
+            stage: "archive",
+            transitions: [{ id: "t2", from: "release", to: "archive", timestamp: "2026-02-01T00:00:00.000Z", by: "我", note: "" }],
+          }),
+        ]}
+        selectedRequirementId={null}
+        onCreate={vi.fn()}
+        onSelectRequirement={vi.fn()}
+        onProgressChange={vi.fn()}
+        onReleaseMethodChange={vi.fn()}
+        onReleaseDateChange={vi.fn()}
+      />,
+    );
+
+    const rowNames = screen.getAllByText(/归档需求$/).map((el) => el.textContent);
+    expect(rowNames).toEqual(["新的归档需求", "旧的归档需求"]);
+
+    await userEvent.type(screen.getByPlaceholderText("搜索归档需求…"), "旧的");
+    expect(screen.getByText("旧的归档需求")).toBeInTheDocument();
+    expect(screen.queryByText("新的归档需求")).not.toBeInTheDocument();
   });
 });

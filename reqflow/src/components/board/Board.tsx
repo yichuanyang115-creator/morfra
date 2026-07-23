@@ -28,6 +28,8 @@ interface BoardProps {
   onSelectRequirement: (id: string) => void;
   onProgressChange: (requirementId: string, progress: number | null) => void;
   onTransition: (requirementId: string, toStage: Stage) => void;
+  onReleaseMethodChange: (requirementId: string, method: string) => void;
+  onReleaseDateChange: (requirementId: string, date: string) => void;
 }
 
 export function Board({
@@ -39,6 +41,8 @@ export function Board({
   onSelectRequirement,
   onProgressChange,
   onTransition,
+  onReleaseMethodChange,
+  onReleaseDateChange,
 }: BoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -86,6 +90,8 @@ export function Board({
             onCreate={(name) => onCreate(s.key, name)}
             onSelectRequirement={onSelectRequirement}
             onProgressChange={onProgressChange}
+            onReleaseMethodChange={onReleaseMethodChange}
+            onReleaseDateChange={onReleaseDateChange}
           />
         ))}
       </div>

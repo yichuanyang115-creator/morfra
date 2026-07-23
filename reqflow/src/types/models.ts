@@ -63,6 +63,8 @@ export interface Requirement {
   progress: number | null;
   closureType: "completed" | "abandoned" | null;
   createdAt: string;
+  releaseMethod: string;
+  releaseDate: string;
   body: string;
   deliverables: Deliverable[];
   tasks: Task[];
@@ -104,3 +106,5 @@ export const STAGES: { key: Stage; label: string }[] = [
 ];
 
 export const DEFAULT_SOURCES = ["用户反馈", "竞品分析", "内部想法", "数据分析", "客户定制"];
+
+export const RELEASE_METHODS = ["全量", "灰度", "分批"];

@@ -100,6 +100,12 @@ function App() {
             onTransition={(requirementId, toStage) => {
               if (currentProjectId) void transitionRequirement(currentProjectId, requirementId, toStage);
             }}
+            onReleaseMethodChange={(requirementId, method) => {
+              if (currentProjectId) void updateField(currentProjectId, requirementId, "releaseMethod", method);
+            }}
+            onReleaseDateChange={(requirementId, date) => {
+              if (currentProjectId) void updateField(currentProjectId, requirementId, "releaseDate", date);
+            }}
           />
         }
         detailContent={

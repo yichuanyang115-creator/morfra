@@ -562,6 +562,44 @@ describe("requirementStore 流转（transition）与评论", () => {
     expect(updated?.comments[0].content).toBe("第二条记录的评论");
   });
 
+  it("transitionRequirement 流转到发布阶段且未填写发布时间时，自动填入当前日期", async () => {
+    const { createRequirement, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "verify", "需求 J");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await transitionRequirement("proj-1", created.id, "release");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.releaseDate).toBe(new Date().toISOString().slice(0, 10));
+  });
+
+  it("transitionRequirement 流转到发布阶段但已手动填写发布时间时，不覆盖已有值", async () => {
+    const { createRequirement, transitionRequirement, updateField } = useRequirementStore.getState();
+    await createRequirement("proj-1", "verify", "需求 K");
+    const created = useRequirementStore.getState().requirements[0];
+    await updateField("proj-1", created.id, "releaseDate", "2026-08-01");
+
+    await transitionRequirement("proj-1", created.id, "release");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.releaseDate).toBe("2026-08-01");
+  });
+
+  it("transitionRequirement 从归档恢复到活跃阶段时，progress 清零、closureType 清空", async () => {
+    const { createRequirement, transitionRequirement, updateField } = useRequirementStore.getState();
+    await createRequirement("proj-1", "release", "需求 L");
+    const created = useRequirementStore.getState().requirements[0];
+    await updateField("proj-1", created.id, "progress", 100);
+    await transitionRequirement("proj-1", created.id, "archive");
+
+    await transitionRequirement("proj-1", created.id, "dev");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.stage).toBe("dev");
+    expect(updated?.closureType).toBeNull();
+    expect(updated?.progress).toBeNull();
+  });
+
   it("重开应用后（loadForProject 重新读盘）流转记录、说明和评论原样还原", async () => {
     const { createRequirement, transitionRequirement, updateTransitionNote, addComment, loadForProject } =
       useRequirementStore.getState();
