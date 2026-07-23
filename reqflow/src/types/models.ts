@@ -36,6 +36,22 @@ export interface Task {
   createdAt: string;
 }
 
+export interface TransitionRecord {
+  id: string;
+  from: Stage;
+  to: Stage;
+  timestamp: string;
+  by: string;
+  note: string;
+}
+
+export interface Comment {
+  id: string;
+  transitionId: string;
+  content: string;
+  timestamp: string;
+}
+
 export interface Requirement {
   id: string;
   name: string;
@@ -51,6 +67,8 @@ export interface Requirement {
   deliverables: Deliverable[];
   tasks: Task[];
   acceptance: AcceptanceCriterion[];
+  transitions: TransitionRecord[];
+  comments: Comment[];
 }
 
 export const TASK_STATUSES: { key: TaskStatus; label: string }[] = [

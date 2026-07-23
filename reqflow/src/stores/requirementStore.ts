@@ -1,25 +1,9 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type { AcceptanceCriterion, Deliverable, Priority, Requirement, Stage, Task } from "../types/models";
-import { ensureDir, listFileNames, readFile, writeFile } from "../lib/fs";
-import { parseFrontmatter, stringifyFrontmatter } from "../lib/frontmatter";
-import { projectDir, requirementPath } from "../lib/paths";
-
-interface RequirementFrontmatter {
-  id: string;
-  name: string;
-  stage: Stage;
-  priority: Priority;
-  source: string;
-  assignee: string;
-  deadline: string;
-  progress: number | null;
-  closureType: "completed" | "abandoned" | null;
-  createdAt: string;
-  deliverables: Deliverable[];
-  tasks: Task[];
-  acceptance: AcceptanceCriterion[];
-}
+import type { AcceptanceCriterion, Comment, Deliverable, Requirement, Stage, Task, TransitionRecord } from "../types/models";
+import { ensureDir, listFileNames } from "../lib/fs";
+import { projectDir } from "../lib/paths";
+import { loadRequirement, saveRequirement } from "./requirementPersistence";
 
 type EditableField = "name" | "priority" | "source" | "assignee" | "deadline" | "progress";
 
@@ -65,57 +49,34 @@ interface RequirementState {
     patch: Partial<Pick<AcceptanceCriterion, "desc" | "result" | "failNote">>,
   ) => Promise<void>;
   removeAcceptance: (projectId: string, requirementId: string, acceptanceId: string) => Promise<void>;
+  transitionRequirement: (
+    projectId: string,
+    requirementId: string,
+    toStage: Stage,
+    opts?: { abandoned?: boolean },
+  ) => Promise<void>;
+  updateTransitionNote: (projectId: string, requirementId: string, transitionId: string, note: string) => Promise<void>;
+  addComment: (projectId: string, requirementId: string, transitionId: string, content: string) => Promise<void>;
+  removeTransition: (projectId: string, requirementId: string, transitionId: string) => Promise<void>;
 }
 
-function toFrontmatter(r: Requirement): RequirementFrontmatter {
-  return {
-    id: r.id,
-    name: r.name,
-    stage: r.stage,
-    priority: r.priority,
-    source: r.source,
-    assignee: r.assignee,
-    deadline: r.deadline,
-    progress: r.progress,
-    closureType: r.closureType,
-    createdAt: r.createdAt,
-    deliverables: r.deliverables,
-    tasks: r.tasks,
-    acceptance: r.acceptance,
-  };
-}
+type Get = () => RequirementState;
+type Set = (fn: (state: RequirementState) => Partial<RequirementState>) => void;
 
-function fromFrontmatter(data: RequirementFrontmatter, fallbackId: string, body: string): Requirement {
-  return {
-    id: data.id ?? fallbackId,
-    name: data.name ?? "",
-    stage: data.stage ?? "collect",
-    priority: data.priority ?? "P2",
-    source: data.source ?? "内部想法",
-    assignee: data.assignee ?? "",
-    deadline: data.deadline ?? "",
-    progress: data.progress ?? null,
-    closureType: data.closureType ?? null,
-    createdAt: data.createdAt ?? new Date().toISOString(),
-    body,
-    deliverables: data.deliverables ?? [],
-    tasks: data.tasks ?? [],
-    acceptance: data.acceptance ?? [],
-  };
-}
-
-async function loadRequirement(projectId: string, fileName: string): Promise<Requirement | null> {
-  const id = fileName.replace(/\.md$/, "");
-  const path = await requirementPath(projectId, id);
-  const raw = await readFile(path);
-  if (raw === null) return null;
-  const { data, content } = parseFrontmatter<RequirementFrontmatter>(raw);
-  return fromFrontmatter(data, id, content);
-}
-
-async function saveRequirement(projectId: string, requirement: Requirement): Promise<void> {
-  const path = await requirementPath(projectId, requirement.id);
-  await writeFile(path, stringifyFrontmatter(toFrontmatter(requirement), requirement.body));
+async function mutateRequirement(
+  get: Get,
+  set: Set,
+  projectId: string,
+  requirementId: string,
+  transform: (requirement: Requirement) => Requirement,
+): Promise<void> {
+  const requirement = get().requirements.find((r) => r.id === requirementId);
+  if (!requirement) return;
+  const updated = transform(requirement);
+  await saveRequirement(projectId, updated);
+  set((state) => ({
+    requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+  }));
 }
 
 export const useRequirementStore = create<RequirementState>((set, get) => ({
@@ -158,161 +119,121 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       deliverables: [],
       tasks: [],
       acceptance: [],
+      transitions: [],
+      comments: [],
     };
     await saveRequirement(projectId, requirement);
     set((state) => ({ requirements: [...state.requirements, requirement] }));
   },
 
-  updateField: async (projectId, requirementId, field, value) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const updated: Requirement = { ...requirement, [field]: value };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  updateField: (projectId, requirementId, field, value) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({ ...r, [field]: value })),
 
-  updateBody: async (projectId, requirementId, body) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const updated: Requirement = { ...requirement, body };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  updateBody: (projectId, requirementId, body) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({ ...r, body })),
 
-  addDeliverable: async (projectId, requirementId, name) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const deliverable: Deliverable = {
-      id: nanoid(),
-      name,
-      checked: false,
-      attach: null,
-      createdAt: new Date().toISOString(),
-    };
-    const updated: Requirement = { ...requirement, deliverables: [...requirement.deliverables, deliverable] };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  addDeliverable: (projectId, requirementId, name) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => {
+      const deliverable: Deliverable = { id: nanoid(), name, checked: false, attach: null, createdAt: new Date().toISOString() };
+      return { ...r, deliverables: [...r.deliverables, deliverable] };
+    }),
 
-  updateDeliverable: async (projectId, requirementId, deliverableId, patch) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const updated: Requirement = {
-      ...requirement,
-      deliverables: requirement.deliverables.map((d) => (d.id === deliverableId ? { ...d, ...patch } : d)),
-    };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  updateDeliverable: (projectId, requirementId, deliverableId, patch) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      deliverables: r.deliverables.map((d) => (d.id === deliverableId ? { ...d, ...patch } : d)),
+    })),
 
-  removeDeliverable: async (projectId, requirementId, deliverableId) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const updated: Requirement = {
-      ...requirement,
-      deliverables: requirement.deliverables.filter((d) => d.id !== deliverableId),
-    };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  removeDeliverable: (projectId, requirementId, deliverableId) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      deliverables: r.deliverables.filter((d) => d.id !== deliverableId),
+    })),
 
-  addTask: async (projectId, requirementId, task) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const newTask: Task = {
-      id: nanoid(),
-      name: task.name,
-      assignee: task.assignee,
-      deadline: task.deadline,
-      progress: task.progress,
-      status: "todo",
-      blocked: false,
-      blockNote: "",
-      createdAt: new Date().toISOString(),
-    };
-    const updated: Requirement = { ...requirement, tasks: [...requirement.tasks, newTask] };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  addTask: (projectId, requirementId, task) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => {
+      const newTask: Task = {
+        id: nanoid(),
+        name: task.name,
+        assignee: task.assignee,
+        deadline: task.deadline,
+        progress: task.progress,
+        status: "todo",
+        blocked: false,
+        blockNote: "",
+        createdAt: new Date().toISOString(),
+      };
+      return { ...r, tasks: [...r.tasks, newTask] };
+    }),
 
-  updateTask: async (projectId, requirementId, taskId, patch) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const updated: Requirement = {
-      ...requirement,
-      tasks: requirement.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
-    };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  updateTask: (projectId, requirementId, taskId, patch) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      tasks: r.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
+    })),
 
-  removeTask: async (projectId, requirementId, taskId) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const updated: Requirement = {
-      ...requirement,
-      tasks: requirement.tasks.filter((t) => t.id !== taskId),
-    };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  removeTask: (projectId, requirementId, taskId) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      tasks: r.tasks.filter((t) => t.id !== taskId),
+    })),
 
-  addAcceptance: async (projectId, requirementId, desc) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const criterion: AcceptanceCriterion = {
-      id: nanoid(),
-      desc,
-      result: "unverified",
-      failNote: "",
-      createdAt: new Date().toISOString(),
-    };
-    const updated: Requirement = { ...requirement, acceptance: [...requirement.acceptance, criterion] };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  addAcceptance: (projectId, requirementId, desc) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => {
+      const criterion: AcceptanceCriterion = {
+        id: nanoid(),
+        desc,
+        result: "unverified",
+        failNote: "",
+        createdAt: new Date().toISOString(),
+      };
+      return { ...r, acceptance: [...r.acceptance, criterion] };
+    }),
 
-  updateAcceptance: async (projectId, requirementId, acceptanceId, patch) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const updated: Requirement = {
-      ...requirement,
-      acceptance: requirement.acceptance.map((a) => (a.id === acceptanceId ? { ...a, ...patch } : a)),
-    };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  updateAcceptance: (projectId, requirementId, acceptanceId, patch) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      acceptance: r.acceptance.map((a) => (a.id === acceptanceId ? { ...a, ...patch } : a)),
+    })),
 
-  removeAcceptance: async (projectId, requirementId, acceptanceId) => {
-    const requirement = get().requirements.find((r) => r.id === requirementId);
-    if (!requirement) return;
-    const updated: Requirement = {
-      ...requirement,
-      acceptance: requirement.acceptance.filter((a) => a.id !== acceptanceId),
-    };
-    await saveRequirement(projectId, updated);
-    set((state) => ({
-      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-    }));
-  },
+  removeAcceptance: (projectId, requirementId, acceptanceId) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      acceptance: r.acceptance.filter((a) => a.id !== acceptanceId),
+    })),
+
+  transitionRequirement: (projectId, requirementId, toStage, opts) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => {
+      const abandoned = opts?.abandoned ?? false;
+      const targetStage: Stage = abandoned ? "archive" : toStage;
+      const record: TransitionRecord = {
+        id: nanoid(),
+        from: r.stage,
+        to: targetStage,
+        timestamp: new Date().toISOString(),
+        by: "我",
+        note: "",
+      };
+      const closureType: Requirement["closureType"] = abandoned ? "abandoned" : targetStage === "archive" ? "completed" : null;
+      return { ...r, stage: targetStage, closureType, transitions: [...r.transitions, record] };
+    }),
+
+  updateTransitionNote: (projectId, requirementId, transitionId, note) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      transitions: r.transitions.map((t) => (t.id === transitionId ? { ...t, note } : t)),
+    })),
+
+  addComment: (projectId, requirementId, transitionId, content) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => {
+      const comment: Comment = { id: nanoid(), transitionId, content, timestamp: new Date().toISOString() };
+      return { ...r, comments: [...r.comments, comment] };
+    }),
+
+  removeTransition: (projectId, requirementId, transitionId) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      transitions: r.transitions.filter((t) => t.id !== transitionId),
+      comments: r.comments.filter((c) => c.transitionId !== transitionId),
+    })),
 }));

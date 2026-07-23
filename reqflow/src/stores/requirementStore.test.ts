@@ -433,3 +433,176 @@ describe("requirementStore 验收标准（acceptance）CRUD", () => {
     expect(loaded?.name).toBe("旧需求");
   });
 });
+
+describe("requirementStore 流转（transition）与评论", () => {
+  beforeEach(() => {
+    files.clear();
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+  });
+
+  it("transitionRequirement 正常流转后 stage 更新、新增一条流转记录，closureType 保持为 null", async () => {
+    const { createRequirement, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "design", "需求 A");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await transitionRequirement("proj-1", created.id, "dev");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.stage).toBe("dev");
+    expect(updated?.closureType).toBeNull();
+    expect(updated?.transitions).toHaveLength(1);
+    expect(updated?.transitions[0].from).toBe("design");
+    expect(updated?.transitions[0].to).toBe("dev");
+    expect(updated?.transitions[0].by).toBe("我");
+
+    const filePath = `/app-local-data/projects/proj-1/${created.id}.md`;
+    const raw = files.get(filePath) ?? "";
+    expect(raw).toContain("design");
+  });
+
+  it("transitionRequirement 流转到发布阶段时不自动设置 closureType，只有流转到归档才设置", async () => {
+    const { createRequirement, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "verify", "需求 B");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await transitionRequirement("proj-1", created.id, "release");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.stage).toBe("release");
+    expect(updated?.closureType).toBeNull();
+  });
+
+  it("transitionRequirement 流转到归档（正常完成路径）时 closureType 设为 completed", async () => {
+    const { createRequirement, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "release", "需求 C");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await transitionRequirement("proj-1", created.id, "archive");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.stage).toBe("archive");
+    expect(updated?.closureType).toBe("completed");
+    expect(updated?.transitions[0].to).toBe("archive");
+  });
+
+  it("transitionRequirement 传 abandoned 选项时，不论目标阶段是什么都直接归档且 closureType 为 abandoned", async () => {
+    const { createRequirement, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "dev", "需求 D");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await transitionRequirement("proj-1", created.id, "dev", { abandoned: true });
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.stage).toBe("archive");
+    expect(updated?.closureType).toBe("abandoned");
+    expect(updated?.transitions[0].from).toBe("dev");
+    expect(updated?.transitions[0].to).toBe("archive");
+  });
+
+  it("需求经过 2 次流转后 transitions 数组按顺序累加 2 条记录", async () => {
+    const { createRequirement, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求 E");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await transitionRequirement("proj-1", created.id, "need");
+    await transitionRequirement("proj-1", created.id, "design");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.transitions).toHaveLength(2);
+    expect(updated?.transitions[0]).toMatchObject({ from: "collect", to: "need" });
+    expect(updated?.transitions[1]).toMatchObject({ from: "need", to: "design" });
+  });
+
+  it("updateTransitionNote 只更新目标流转记录的 note，不影响其他记录", async () => {
+    const { createRequirement, transitionRequirement, updateTransitionNote } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求 F");
+    const created = useRequirementStore.getState().requirements[0];
+    await transitionRequirement("proj-1", created.id, "need");
+    await transitionRequirement("proj-1", created.id, "design");
+    const [first, second] = useRequirementStore.getState().requirements[0].transitions;
+
+    await updateTransitionNote("proj-1", created.id, first.id, "优先级评估为 P0");
+
+    const transitions = useRequirementStore.getState().requirements[0].transitions;
+    expect(transitions.find((t) => t.id === first.id)?.note).toBe("优先级评估为 P0");
+    expect(transitions.find((t) => t.id === second.id)?.note).toBe("");
+  });
+
+  it("addComment 新增评论并正确关联到目标流转记录", async () => {
+    const { createRequirement, transitionRequirement, addComment } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求 G");
+    const created = useRequirementStore.getState().requirements[0];
+    await transitionRequirement("proj-1", created.id, "need");
+    const transition = useRequirementStore.getState().requirements[0].transitions[0];
+
+    await addComment("proj-1", created.id, transition.id, "这个改动风险较大");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.comments).toHaveLength(1);
+    expect(updated?.comments[0].transitionId).toBe(transition.id);
+    expect(updated?.comments[0].content).toBe("这个改动风险较大");
+  });
+
+  it("removeTransition 删除流转记录后，该记录及其关联的评论都消失，其他记录和评论不受影响", async () => {
+    const { createRequirement, transitionRequirement, addComment, removeTransition } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求 H");
+    const created = useRequirementStore.getState().requirements[0];
+    await transitionRequirement("proj-1", created.id, "need");
+    await transitionRequirement("proj-1", created.id, "design");
+    const [first, second] = useRequirementStore.getState().requirements[0].transitions;
+    await addComment("proj-1", created.id, first.id, "第一条记录的评论");
+    await addComment("proj-1", created.id, second.id, "第二条记录的评论");
+
+    await removeTransition("proj-1", created.id, first.id);
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.transitions).toHaveLength(1);
+    expect(updated?.transitions[0].id).toBe(second.id);
+    expect(updated?.comments).toHaveLength(1);
+    expect(updated?.comments[0].content).toBe("第二条记录的评论");
+  });
+
+  it("重开应用后（loadForProject 重新读盘）流转记录、说明和评论原样还原", async () => {
+    const { createRequirement, transitionRequirement, updateTransitionNote, addComment, loadForProject } =
+      useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求 I");
+    const created = useRequirementStore.getState().requirements[0];
+    await transitionRequirement("proj-1", created.id, "need");
+    const transition = useRequirementStore.getState().requirements[0].transitions[0];
+    await updateTransitionNote("proj-1", created.id, transition.id, "补充说明");
+    await addComment("proj-1", created.id, transition.id, "留个评论");
+
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+    const { readDir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readDir).mockResolvedValueOnce([
+      { name: `${created.id}.md`, isFile: true, isDirectory: false, isSymlink: false },
+    ] as never);
+    await loadForProject("proj-1");
+
+    const reloaded = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(reloaded?.transitions).toHaveLength(1);
+    expect(reloaded?.transitions[0].note).toBe("补充说明");
+    expect(reloaded?.comments).toHaveLength(1);
+    expect(reloaded?.comments[0].content).toBe("留个评论");
+  });
+
+  it("没有 transitions/comments 字段的旧格式文件加载时不报错，两者都兜底为空数组", async () => {
+    const { loadForProject } = useRequirementStore.getState();
+    const legacyId = "legacy-req-4";
+    files.set(
+      `/app-local-data/projects/proj-1/${legacyId}.md`,
+      "---\nid: legacy-req-4\nname: 旧需求\nstage: dev\npriority: P1\nsource: 内部想法\nassignee: ''\ndeadline: ''\nprogress: null\nclosureType: null\ncreatedAt: '2026-01-01T00:00:00.000Z'\ndeliverables: []\ntasks: []\nacceptance: []\n---\n\n旧正文",
+    );
+    const { readDir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readDir).mockResolvedValueOnce([
+      { name: `${legacyId}.md`, isFile: true, isDirectory: false, isSymlink: false },
+    ] as never);
+
+    await loadForProject("proj-1");
+
+    const loaded = useRequirementStore.getState().requirements.find((r) => r.id === legacyId);
+    expect(loaded?.transitions).toEqual([]);
+    expect(loaded?.comments).toEqual([]);
+    expect(loaded?.name).toBe("旧需求");
+  });
+});
