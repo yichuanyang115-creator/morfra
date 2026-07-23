@@ -50,12 +50,29 @@ export interface Requirement {
   body: string;
   deliverables: Deliverable[];
   tasks: Task[];
+  acceptance: AcceptanceCriterion[];
 }
 
 export const TASK_STATUSES: { key: TaskStatus; label: string }[] = [
   { key: "todo", label: "待开始" },
   { key: "progress", label: "进行中" },
   { key: "done", label: "完成" },
+];
+
+export type AcceptanceResult = "pass" | "fail" | "unverified";
+
+export interface AcceptanceCriterion {
+  id: string;
+  desc: string;
+  result: AcceptanceResult;
+  failNote: string;
+  createdAt: string;
+}
+
+export const ACCEPTANCE_RESULTS: { key: AcceptanceResult; label: string }[] = [
+  { key: "pass", label: "通过" },
+  { key: "fail", label: "不通过" },
+  { key: "unverified", label: "未验证" },
 ];
 
 export const STAGES: { key: Stage; label: string }[] = [

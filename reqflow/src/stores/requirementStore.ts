@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type { Deliverable, Priority, Requirement, Stage, Task } from "../types/models";
+import type { AcceptanceCriterion, Deliverable, Priority, Requirement, Stage, Task } from "../types/models";
 import { ensureDir, listFileNames, readFile, writeFile } from "../lib/fs";
 import { parseFrontmatter, stringifyFrontmatter } from "../lib/frontmatter";
 import { projectDir, requirementPath } from "../lib/paths";
@@ -18,6 +18,7 @@ interface RequirementFrontmatter {
   createdAt: string;
   deliverables: Deliverable[];
   tasks: Task[];
+  acceptance: AcceptanceCriterion[];
 }
 
 type EditableField = "name" | "priority" | "source" | "assignee" | "deadline" | "progress";
@@ -56,6 +57,14 @@ interface RequirementState {
     patch: Partial<Pick<Task, "name" | "assignee" | "deadline" | "progress" | "status" | "blocked" | "blockNote">>,
   ) => Promise<void>;
   removeTask: (projectId: string, requirementId: string, taskId: string) => Promise<void>;
+  addAcceptance: (projectId: string, requirementId: string, desc: string) => Promise<void>;
+  updateAcceptance: (
+    projectId: string,
+    requirementId: string,
+    acceptanceId: string,
+    patch: Partial<Pick<AcceptanceCriterion, "desc" | "result" | "failNote">>,
+  ) => Promise<void>;
+  removeAcceptance: (projectId: string, requirementId: string, acceptanceId: string) => Promise<void>;
 }
 
 function toFrontmatter(r: Requirement): RequirementFrontmatter {
@@ -72,6 +81,7 @@ function toFrontmatter(r: Requirement): RequirementFrontmatter {
     createdAt: r.createdAt,
     deliverables: r.deliverables,
     tasks: r.tasks,
+    acceptance: r.acceptance,
   };
 }
 
@@ -90,6 +100,7 @@ function fromFrontmatter(data: RequirementFrontmatter, fallbackId: string, body:
     body,
     deliverables: data.deliverables ?? [],
     tasks: data.tasks ?? [],
+    acceptance: data.acceptance ?? [],
   };
 }
 
@@ -146,6 +157,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       body: "",
       deliverables: [],
       tasks: [],
+      acceptance: [],
     };
     await saveRequirement(projectId, requirement);
     set((state) => ({ requirements: [...state.requirements, requirement] }));
@@ -254,6 +266,49 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     const updated: Requirement = {
       ...requirement,
       tasks: requirement.tasks.filter((t) => t.id !== taskId),
+    };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  addAcceptance: async (projectId, requirementId, desc) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const criterion: AcceptanceCriterion = {
+      id: nanoid(),
+      desc,
+      result: "unverified",
+      failNote: "",
+      createdAt: new Date().toISOString(),
+    };
+    const updated: Requirement = { ...requirement, acceptance: [...requirement.acceptance, criterion] };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  updateAcceptance: async (projectId, requirementId, acceptanceId, patch) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const updated: Requirement = {
+      ...requirement,
+      acceptance: requirement.acceptance.map((a) => (a.id === acceptanceId ? { ...a, ...patch } : a)),
+    };
+    await saveRequirement(projectId, updated);
+    set((state) => ({
+      requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
+    }));
+  },
+
+  removeAcceptance: async (projectId, requirementId, acceptanceId) => {
+    const requirement = get().requirements.find((r) => r.id === requirementId);
+    if (!requirement) return;
+    const updated: Requirement = {
+      ...requirement,
+      acceptance: requirement.acceptance.filter((a) => a.id !== acceptanceId),
     };
     await saveRequirement(projectId, updated);
     set((state) => ({

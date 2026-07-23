@@ -321,3 +321,115 @@ describe("requirementStore 任务（task）CRUD", () => {
     expect(loaded?.name).toBe("旧需求");
   });
 });
+
+describe("requirementStore 验收标准（acceptance）CRUD", () => {
+  beforeEach(() => {
+    files.clear();
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+  });
+
+  it("addAcceptance 新增一条验收标准，默认结果未验证、不通过原因为空，落盘后可从 frontmatter 读回", async () => {
+    const { createRequirement, addAcceptance } = useRequirementStore.getState();
+    await createRequirement("proj-1", "verify", "需求 A");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await addAcceptance("proj-1", created.id, "登录成功后跳转首页");
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.acceptance).toHaveLength(1);
+    expect(updated?.acceptance[0].desc).toBe("登录成功后跳转首页");
+    expect(updated?.acceptance[0].result).toBe("unverified");
+    expect(updated?.acceptance[0].failNote).toBe("");
+
+    const filePath = `/app-local-data/projects/proj-1/${created.id}.md`;
+    const raw = files.get(filePath) ?? "";
+    expect(raw).toContain("登录成功后跳转首页");
+  });
+
+  it("updateAcceptance 修改结果只影响目标条目的 result，不影响其他条目和其他字段", async () => {
+    const { createRequirement, addAcceptance, updateAcceptance } = useRequirementStore.getState();
+    await createRequirement("proj-1", "verify", "需求 B");
+    const created = useRequirementStore.getState().requirements[0];
+
+    await addAcceptance("proj-1", created.id, "验收一");
+    await addAcceptance("proj-1", created.id, "验收二");
+    const [first, second] = useRequirementStore.getState().requirements[0].acceptance;
+
+    await updateAcceptance("proj-1", created.id, first.id, { result: "pass" });
+
+    const acceptance = useRequirementStore.getState().requirements[0].acceptance;
+    expect(acceptance.find((a) => a.id === first.id)?.result).toBe("pass");
+    expect(acceptance.find((a) => a.id === second.id)?.result).toBe("unverified");
+    expect(acceptance.find((a) => a.id === second.id)?.desc).toBe("验收二");
+  });
+
+  it("updateAcceptance 设置结果为不通过并填写原因，两个字段都正确落盘", async () => {
+    const { createRequirement, addAcceptance, updateAcceptance } = useRequirementStore.getState();
+    await createRequirement("proj-1", "verify", "需求 C");
+    const created = useRequirementStore.getState().requirements[0];
+    await addAcceptance("proj-1", created.id, "验收标准");
+    const criterion = useRequirementStore.getState().requirements[0].acceptance[0];
+
+    await updateAcceptance("proj-1", created.id, criterion.id, { result: "fail", failNote: "接口 500" });
+
+    const updated = useRequirementStore.getState().requirements[0].acceptance[0];
+    expect(updated.result).toBe("fail");
+    expect(updated.failNote).toBe("接口 500");
+  });
+
+  it("removeAcceptance 删除条目后该验收标准不再出现在列表和落盘文件中", async () => {
+    const { createRequirement, addAcceptance, removeAcceptance } = useRequirementStore.getState();
+    await createRequirement("proj-1", "verify", "需求 D");
+    const created = useRequirementStore.getState().requirements[0];
+    await addAcceptance("proj-1", created.id, "要被删除的验收标准");
+    const criterion = useRequirementStore.getState().requirements[0].acceptance[0];
+
+    await removeAcceptance("proj-1", created.id, criterion.id);
+
+    const updated = useRequirementStore.getState().requirements[0];
+    expect(updated.acceptance).toHaveLength(0);
+    const filePath = `/app-local-data/projects/proj-1/${created.id}.md`;
+    expect(files.get(filePath) ?? "").not.toContain("要被删除的验收标准");
+  });
+
+  it("重开应用后（loadForProject 重新读盘）验收标准列表、结果和不通过原因原样还原", async () => {
+    const { createRequirement, addAcceptance, updateAcceptance, loadForProject } = useRequirementStore.getState();
+    await createRequirement("proj-1", "verify", "需求 E");
+    const created = useRequirementStore.getState().requirements[0];
+    await addAcceptance("proj-1", created.id, "验收标准甲");
+    const criterion = useRequirementStore.getState().requirements[0].acceptance[0];
+    await updateAcceptance("proj-1", created.id, criterion.id, { result: "fail", failNote: "超时未响应" });
+
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+    const { readDir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readDir).mockResolvedValueOnce([
+      { name: `${created.id}.md`, isFile: true, isDirectory: false, isSymlink: false },
+    ] as never);
+    await loadForProject("proj-1");
+
+    const reloaded = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(reloaded?.acceptance).toHaveLength(1);
+    expect(reloaded?.acceptance[0].desc).toBe("验收标准甲");
+    expect(reloaded?.acceptance[0].result).toBe("fail");
+    expect(reloaded?.acceptance[0].failNote).toBe("超时未响应");
+  });
+
+  it("没有 acceptance 字段的旧格式文件加载时不报错，acceptance 兜底为空数组", async () => {
+    const { loadForProject } = useRequirementStore.getState();
+    const legacyId = "legacy-req-3";
+    files.set(
+      `/app-local-data/projects/proj-1/${legacyId}.md`,
+      "---\nid: legacy-req-3\nname: 旧需求\nstage: verify\npriority: P1\nsource: 内部想法\nassignee: ''\ndeadline: ''\nprogress: null\nclosureType: null\ncreatedAt: '2026-01-01T00:00:00.000Z'\ndeliverables: []\ntasks: []\n---\n\n旧正文",
+    );
+    const { readDir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readDir).mockResolvedValueOnce([
+      { name: `${legacyId}.md`, isFile: true, isDirectory: false, isSymlink: false },
+    ] as never);
+
+    await loadForProject("proj-1");
+
+    const loaded = useRequirementStore.getState().requirements.find((r) => r.id === legacyId);
+    expect(loaded?.acceptance).toEqual([]);
+    expect(loaded?.name).toBe("旧需求");
+  });
+});
