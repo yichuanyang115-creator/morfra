@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDroppable } from "@dnd-kit/core";
 import type { Requirement, Stage } from "../../types/models";
 import { RequirementRow } from "./RequirementRow";
 import { QuickAddInput } from "./QuickAddInput";
@@ -40,12 +41,17 @@ export function StageSection({
 }: StageSectionProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [draftOpen, setDraftOpen] = useState(false);
+  const { setNodeRef, isOver } = useDroppable({ id: stage });
 
   const emptyText = `该阶段暂无需求${stage === "collect" ? "，点上方新建记录你的第一个想法" : ""}`;
 
   return (
-    <section className="mb-1">
-      <div className="my-1.5 flex max-w-(--board-row-max-w) items-center gap-2 rounded-(--r-lg) border border-(--border) bg-(--surface) px-2.5 py-1.75 shadow-[0_1px_2px_rgba(30,40,70,0.05)]">
+    <section ref={setNodeRef} className={`mb-1 rounded-(--r-lg) ${isOver ? "bg-(--accent-soft)" : ""}`}>
+      <div
+        className={`my-1.5 flex max-w-(--board-row-max-w) items-center gap-2 rounded-(--r-lg) border px-2.5 py-1.75 shadow-[0_1px_2px_rgba(30,40,70,0.05)] ${
+          isOver ? "border-(--accent) bg-(--accent-soft)" : "border-(--border) bg-(--surface)"
+        }`}
+      >
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}

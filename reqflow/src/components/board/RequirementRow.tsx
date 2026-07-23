@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useDraggable } from "@dnd-kit/core";
 import type { Priority, Requirement } from "../../types/models";
 
 const PRIORITY_STYLE: Record<Priority, string> = {
@@ -38,16 +39,22 @@ interface RequirementRowProps {
 
 export function RequirementRow({ requirement, selected, onSelect, onProgressChange }: RequirementRowProps) {
   const [progressInput, setProgressInput] = useState(requirement.progress == null ? "" : String(requirement.progress));
-  // 停留天数口径是"进入当前阶段的时间到今天"（Product-Spec §6.3），Phase 3 还没有流转记录
-  // （TransitionRecord 是 Phase 9 范围），暂用 createdAt 代替——新建需求从未流转，两者数值相等。
-  // Phase 9 接入流转后要改成"最后一次流转记录的时间，无流转记录则用 createdAt"。
-  const stayDays = diffDaysFromToday(requirement.createdAt);
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: requirement.id });
+  // 停留天数口径是"进入当前阶段的时间到今天"（Product-Spec §6.3）；用最后一次流转记录的
+  // 时间，没有流转记录（从未流转过）则用 createdAt 代替。
+  const lastTransition = requirement.transitions[requirement.transitions.length - 1];
+  const stayDays = diffDaysFromToday(lastTransition ? lastTransition.timestamp : requirement.createdAt);
   const totalDays = diffDaysFromToday(requirement.createdAt);
 
   return (
     <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       onClick={onSelect}
       className={`grid max-w-(--board-row-max-w) cursor-pointer items-center gap-3 border-b border-(--border) px-2 py-2 ${
+        isDragging ? "opacity-40" : ""
+      } ${
         selected
           ? "border-(--accent-soft-strong) bg-(--accent-soft) shadow-[inset_2px_0_0_0_var(--accent-solid)]"
           : "hover:bg-(--surface)"

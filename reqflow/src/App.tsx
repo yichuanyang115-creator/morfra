@@ -97,6 +97,9 @@ function App() {
             onProgressChange={(requirementId, progress) => {
               if (currentProjectId) void updateField(currentProjectId, requirementId, "progress", progress);
             }}
+            onTransition={(requirementId, toStage) => {
+              if (currentProjectId) void transitionRequirement(currentProjectId, requirementId, toStage);
+            }}
           />
         }
         detailContent={
