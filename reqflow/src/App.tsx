@@ -15,6 +15,7 @@ function mostRecentRequirementId<T extends { id: string; createdAt: string }>(re
 function App() {
   const initProjects = useProjectStore((s) => s.init);
   const projectsLoaded = useProjectStore((s) => s.loaded);
+  const projectsError = useProjectStore((s) => s.error);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const project = useProjectStore(currentProject);
   const addSource = useProjectStore((s) => s.addSource);
@@ -69,6 +70,14 @@ function App() {
       if (mostRecentId) selectRequirement(mostRecentId);
     }
   }, [loadedProjectId, currentProjectId, requirements, selectedRequirementId, selectRequirement]);
+
+  if (projectsError) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center text-(--muted) text-[13px]">
+        数据读取失败，请检查项目文件夹
+      </div>
+    );
+  }
 
   if (!projectsLoaded) {
     return (

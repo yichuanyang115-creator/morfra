@@ -96,7 +96,12 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       await ensureDir(dir);
       const fileNames = (await listFileNames(dir)).filter((name) => name.endsWith(".md") && name !== "_project.md");
 
-      const loaded = await Promise.all(fileNames.map((name) => loadRequirement(projectId, name)));
+      // 单个需求文件解析失败（如手动损坏了某个 .md）不该拖垮整批需求的显示，逐个隔离捕获、跳过坏文件
+      const loaded = await Promise.all(
+        fileNames.map((name) =>
+          loadRequirement(projectId, name).catch(() => null),
+        ),
+      );
       const requirements = loaded.filter((r): r is Requirement => r !== null);
 
       set({ requirements, loadedProjectId: projectId, loading: false });

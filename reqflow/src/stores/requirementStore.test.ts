@@ -184,6 +184,40 @@ describe("requirementStore 产出（deliverable）CRUD", () => {
     expect(reloaded?.deliverables[0].attach?.url).toBe("https://example.com/spec");
   });
 
+  it("一个需求文件损坏（frontmatter 解析报错）不影响其余需求正常加载，坏文件被跳过", async () => {
+    const { createRequirement, loadForProject } = useRequirementStore.getState();
+    await createRequirement("proj-1", "design", "正常需求");
+    const good = useRequirementStore.getState().requirements[0];
+
+    const brokenId = "broken-req";
+    files.set(
+      `/app-local-data/projects/proj-1/${brokenId}.md`,
+      "---\nname: [ 没有闭合的 YAML\n---\n\n坏文件",
+    );
+
+    const { readDir, readTextFile } = await import("@tauri-apps/plugin-fs");
+    const brokenPath = `/app-local-data/projects/proj-1/${brokenId}.md`;
+    vi.mocked(readDir).mockResolvedValueOnce([
+      { name: `${good.id}.md`, isFile: true, isDirectory: false, isSymlink: false },
+      { name: `${brokenId}.md`, isFile: true, isDirectory: false, isSymlink: false },
+    ] as never);
+    const originalReadTextFile = vi.mocked(readTextFile).getMockImplementation()!;
+    vi.mocked(readTextFile).mockImplementation(async (path) => {
+      if (path === brokenPath) throw new Error("YAML parse error");
+      return originalReadTextFile(path);
+    });
+
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+    await loadForProject("proj-1");
+
+    const state = useRequirementStore.getState();
+    expect(state.error).toBe(false);
+    expect(state.requirements).toHaveLength(1);
+    expect(state.requirements[0].id).toBe(good.id);
+
+    vi.mocked(readTextFile).mockImplementation(originalReadTextFile);
+  });
+
   it("没有 deliverables 字段的旧格式文件（Phase 5 之前创建）加载时不报错，deliverables 兜底为空数组", async () => {
     const { loadForProject } = useRequirementStore.getState();
     const legacyId = "legacy-req";

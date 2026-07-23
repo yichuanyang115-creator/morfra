@@ -18,6 +18,7 @@ interface ProjectState {
   currentProjectId: string | null;
   loaded: boolean;
   initializing: boolean;
+  error: boolean;
   init: () => Promise<void>;
   switchProject: (id: string) => void;
   createProject: (name: string) => Promise<void>;
@@ -53,24 +54,30 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   currentProjectId: null,
   loaded: false,
   initializing: false,
+  error: false,
 
   init: async () => {
     if (get().loaded || get().initializing) return;
-    set({ initializing: true });
+    set({ initializing: true, error: false });
 
-    const root = await projectsRootDir();
-    await ensureDir(root);
-    const ids = await listDirNames(root);
+    try {
+      const root = await projectsRootDir();
+      await ensureDir(root);
+      const ids = await listDirNames(root);
 
-    const loaded = await Promise.all(ids.map(loadProject));
-    let projects = loaded.filter((p): p is Project => p !== null);
+      // 单个项目元数据解析失败不该拖垮整个项目列表，逐个隔离捕获、跳过坏项目
+      const loaded = await Promise.all(ids.map((id) => loadProject(id).catch(() => null)));
+      let projects = loaded.filter((p): p is Project => p !== null);
 
-    if (projects.length === 0) {
-      const defaultProject = await createDefaultProject();
-      projects = [defaultProject];
+      if (projects.length === 0) {
+        const defaultProject = await createDefaultProject();
+        projects = [defaultProject];
+      }
+
+      set({ projects, currentProjectId: projects[0].id, loaded: true, initializing: false });
+    } catch {
+      set({ initializing: false, error: true });
     }
-
-    set({ projects, currentProjectId: projects[0].id, loaded: true, initializing: false });
   },
 
   switchProject: (id) => {
