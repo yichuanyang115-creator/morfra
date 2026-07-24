@@ -4,6 +4,7 @@ import { useRequirementStore } from "../../stores/requirementStore";
 import { useUiStore } from "../../stores/uiStore";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 import { SearchBox } from "./SearchBox";
+import { SettingsPanel } from "./SettingsPanel";
 
 function ChevDownIcon() {
   return (
@@ -44,6 +45,7 @@ function PanelToggleIcon({ collapsed }: { collapsed: boolean }) {
 
 export function Topbar() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const project = useProjectStore(currentProject);
   const requirements = useRequirementStore((s) => s.requirements);
   const detailMode = useUiStore((s) => s.detailMode);
@@ -71,6 +73,8 @@ export function Topbar() {
         <button
           type="button"
           aria-label="设置"
+          aria-haspopup="true"
+          onClick={() => setSettingsOpen((v) => !v)}
           className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
         >
           <SettingsIcon />
@@ -89,6 +93,13 @@ export function Topbar() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setSwitcherOpen(false)} />
           <ProjectSwitcher onClose={() => setSwitcherOpen(false)} />
+        </>
+      )}
+
+      {settingsOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setSettingsOpen(false)} />
+          <SettingsPanel onClose={() => setSettingsOpen(false)} />
         </>
       )}
     </header>

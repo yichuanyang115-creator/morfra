@@ -25,6 +25,10 @@ export async function removeDir(path: string): Promise<void> {
   await remove(path, { recursive: true });
 }
 
+export async function removeFile(path: string): Promise<void> {
+  await remove(path);
+}
+
 export async function listDirNames(path: string): Promise<string[]> {
   if (!(await exists(path))) {
     return [];
