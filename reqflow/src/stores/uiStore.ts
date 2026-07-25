@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Stage } from "../types/models";
 import { defaultStageSort, type StageSort, type SortField } from "../lib/requirementSort";
+import { BOARD_DEFAULT_WIDTH, clampBoardWidth } from "../lib/boardWidth";
 
 export type DetailMode = "expanded" | "collapsed" | "fullscreen";
 
@@ -11,6 +12,7 @@ interface UiState {
   detailMode: DetailMode;
   activeTab: DetailTab;
   boardSort: Partial<Record<Stage, StageSort>>;
+  boardWidth: number;
   selectRequirement: (id: string) => void;
   toggleCollapsed: () => void;
   toggleFullscreen: () => void;
@@ -21,6 +23,7 @@ interface UiState {
   toggleStageSortDir: (stage: Stage, slot: "primary" | "secondary") => void;
   restoreStageSort: (stage: Stage) => void;
   setStageSortManual: (stage: Stage) => void;
+  setBoardWidth: (width: number, viewportWidth: number) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -28,6 +31,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   detailMode: "expanded",
   activeTab: "body",
   boardSort: {},
+  boardWidth: BOARD_DEFAULT_WIDTH,
 
   selectRequirement: (id) => {
     const current = get().detailMode;
@@ -89,5 +93,9 @@ export const useUiStore = create<UiState>((set, get) => ({
       const sort = state.getStageSort(stage);
       return { boardSort: { ...state.boardSort, [stage]: { ...sort, mode: "manual" } } };
     });
+  },
+
+  setBoardWidth: (width, viewportWidth) => {
+    set({ boardWidth: clampBoardWidth(width, viewportWidth) });
   },
 }));

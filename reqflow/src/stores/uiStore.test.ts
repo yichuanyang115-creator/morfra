@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useUiStore } from "./uiStore";
 import { defaultStageSort } from "../lib/requirementSort";
+import { BOARD_DEFAULT_WIDTH, BOARD_MIN_WIDTH } from "../lib/boardWidth";
 
 describe("uiStore 详情面板三态（AC-002/004/005/006）", () => {
   beforeEach(() => {
@@ -125,5 +126,30 @@ describe("uiStore 看板排序状态", () => {
 
     expect(useUiStore.getState().getStageSort("design").primary).toBe("priority");
     expect(useUiStore.getState().getStageSort("dev").primary).toBe("createdAt");
+  });
+});
+
+describe("uiStore 看板宽度（REQ-003 分隔条拖拽）", () => {
+  beforeEach(() => {
+    useUiStore.setState({ boardWidth: BOARD_DEFAULT_WIDTH });
+  });
+
+  it("默认宽度是 BOARD_DEFAULT_WIDTH", () => {
+    expect(useUiStore.getState().boardWidth).toBe(BOARD_DEFAULT_WIDTH);
+  });
+
+  it("setBoardWidth 在允许范围内按传入值更新宽度", () => {
+    useUiStore.getState().setBoardWidth(700, 1600);
+    expect(useUiStore.getState().boardWidth).toBe(700);
+  });
+
+  it("setBoardWidth 传入值超出内容能用到的最大宽度时夹到 BOARD_DEFAULT_WIDTH", () => {
+    useUiStore.getState().setBoardWidth(900, 1600);
+    expect(useUiStore.getState().boardWidth).toBe(BOARD_DEFAULT_WIDTH);
+  });
+
+  it("setBoardWidth 传入值超出下限时夹到 BOARD_MIN_WIDTH", () => {
+    useUiStore.getState().setBoardWidth(100, 1600);
+    expect(useUiStore.getState().boardWidth).toBe(BOARD_MIN_WIDTH);
   });
 });

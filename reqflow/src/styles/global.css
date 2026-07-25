@@ -53,6 +53,15 @@ button {
   border-radius: 4px;
 }
 
+/* 拖拽分隔条调整看板宽度时锁住全局光标和选中行为，避免拖着拖着突然选中一片文字。 */
+body.resizing-panel {
+  cursor: col-resize;
+  user-select: none;
+}
+body.resizing-panel * {
+  user-select: none;
+}
+
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,

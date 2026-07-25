@@ -23,6 +23,20 @@ if (typeof document !== "undefined") {
   Range.prototype.getBoundingClientRect = emptyRect;
   Element.prototype.getClientRects = () => [] as unknown as DOMRectList;
   Element.prototype.getBoundingClientRect = emptyRect;
+
+  // jsdom 没实现 pointer capture——分隔条拖拽用 setPointerCapture 让拖动过程中
+  // 鼠标移出元素边界也能继续收到 pointermove，测试环境补空实现即可
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = () => undefined;
+  }
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = () => undefined;
+  }
+
+  // jsdom 没实现 scrollTo——对话框收到新消息后滚动到底部会调用它，测试环境补空实现即可
+  if (!Element.prototype.scrollTo) {
+    Element.prototype.scrollTo = () => undefined;
+  }
 }
 
 afterEach(() => {
