@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { DetailMode } from "../../stores/uiStore";
 import { useUiStore } from "../../stores/uiStore";
-import { RESIZER_WIDTH, chatPanelWidth, clampBoardWidth } from "../../lib/boardWidth";
+import { useChatStore } from "../../stores/chatStore";
+import { chatPanelWidth, clampBoardWidth, detailPanelWidthFor } from "../../lib/boardWidth";
 import { ChatPanel } from "../chat/ChatPanel";
 
 interface MainLayoutProps {
@@ -25,6 +26,7 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
   const showResizer = detailMode === "expanded";
   const boardWidth = useUiStore((s) => s.boardWidth);
   const setBoardWidth = useUiStore((s) => s.setBoardWidth);
+  const chatOpen = useChatStore((s) => s.open);
   const dragStateRef = useRef<{ startX: number; startWidth: number } | null>(null);
   // 拖拽期间关掉列宽过渡动画，否则每次 pointermove 更新目标宽度都会重新起一段
   // 180ms 缓动追赶，鼠标移动越快、宽度越跟不上手（对应原型 .app-body.resizing 处理）。
@@ -68,11 +70,11 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
   }
 
   const clampedBoardWidth = clampBoardWidth(boardWidth, window.innerWidth);
-  // 详情面板的实际像素宽度：expanded 态 = 视口 - 看板 - 分隔条；fullscreen 态占满视口；
-  // collapsed 态为 0（对话框此时也不显示，见下方 detailPanelWidth === 0 判断）。
-  const detailPanelWidth =
-    detailMode === "collapsed" ? 0 : detailMode === "fullscreen" ? window.innerWidth : window.innerWidth - clampedBoardWidth - RESIZER_WIDTH;
-  const chatWidth = detailPanelWidth === 0 ? null : chatPanelWidth(detailPanelWidth);
+  const detailPanelWidth = detailPanelWidthFor(detailMode, boardWidth, window.innerWidth);
+  // REQ-024 v2.7：显隐改由顶栏开关手动控制，不再自动按空间判断。收起态强制隐藏、
+  // 不读开关状态（面板 0 宽度没有可显示的位置）；展开/全屏态遵循用户设的开关状态，
+  // 开关开且空间够才显示。
+  const chatWidth = detailMode === "collapsed" || !chatOpen ? null : chatPanelWidth(detailPanelWidth);
 
   return (
     <div

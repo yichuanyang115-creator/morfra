@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   BOARD_DEFAULT_WIDTH,
   BOARD_MIN_WIDTH,
-  CHAT_MIN_VISIBLE_WIDTH,
   CHAT_MIN_WIDTH,
   DETAIL_CONTENT_MAX_WIDTH,
   DETAIL_MIN_WIDTH,
   RESIZER_WIDTH,
   chatPanelWidth,
   clampBoardWidth,
+  detailPanelWidthFor,
 } from "./boardWidth";
 
 describe("clampBoardWidth", () => {
@@ -39,18 +39,34 @@ describe("clampBoardWidth", () => {
   });
 });
 
-describe("chatPanelWidth（REQ-024 详情面板对话框宽度）", () => {
-  it("剩余空间刚好等于 CHAT_MIN_VISIBLE_WIDTH 时显示，宽度等于剩余空间", () => {
-    const detailPanelWidth = DETAIL_CONTENT_MAX_WIDTH + CHAT_MIN_VISIBLE_WIDTH;
-    expect(chatPanelWidth(detailPanelWidth)).toBe(CHAT_MIN_VISIBLE_WIDTH);
+describe("detailPanelWidthFor", () => {
+  it("collapsed 态返回 0，不管看板宽度或视口多大", () => {
+    expect(detailPanelWidthFor("collapsed", BOARD_DEFAULT_WIDTH, 2000)).toBe(0);
   });
 
-  it("剩余空间比 CHAT_MIN_VISIBLE_WIDTH 少 1px 时不显示，返回 null", () => {
-    const detailPanelWidth = DETAIL_CONTENT_MAX_WIDTH + CHAT_MIN_VISIBLE_WIDTH - 1;
+  it("fullscreen 态返回整个视口宽度", () => {
+    expect(detailPanelWidthFor("fullscreen", BOARD_DEFAULT_WIDTH, 1200)).toBe(1200);
+  });
+
+  it("expanded 态返回 视口 - 夹紧后的看板宽度 - 分隔条", () => {
+    const viewport = 1600;
+    const clamped = clampBoardWidth(BOARD_DEFAULT_WIDTH, viewport);
+    expect(detailPanelWidthFor("expanded", BOARD_DEFAULT_WIDTH, viewport)).toBe(viewport - clamped - RESIZER_WIDTH);
+  });
+});
+
+describe("chatPanelWidth（REQ-024 v2.7：手动开关取代自动显隐，仅剩一个可用性阈值）", () => {
+  it("剩余空间刚好等于 CHAT_MIN_WIDTH 时可用，宽度等于剩余空间", () => {
+    const detailPanelWidth = DETAIL_CONTENT_MAX_WIDTH + CHAT_MIN_WIDTH;
+    expect(chatPanelWidth(detailPanelWidth)).toBe(CHAT_MIN_WIDTH);
+  });
+
+  it("剩余空间比 CHAT_MIN_WIDTH 少 1px 时不可用，返回 null", () => {
+    const detailPanelWidth = DETAIL_CONTENT_MAX_WIDTH + CHAT_MIN_WIDTH - 1;
     expect(chatPanelWidth(detailPanelWidth)).toBeNull();
   });
 
-  it("面板宽度小于内容限宽（剩余空间为负）时不显示，返回 null", () => {
+  it("面板宽度小于内容限宽（剩余空间为负）时不可用，返回 null", () => {
     expect(chatPanelWidth(DETAIL_CONTENT_MAX_WIDTH - 100)).toBeNull();
   });
 
@@ -62,9 +78,5 @@ describe("chatPanelWidth（REQ-024 详情面板对话框宽度）", () => {
   it("剩余空间远超时也不封顶——对话框和看板不同，没有内容自身的最大宽度限制", () => {
     const detailPanelWidth = DETAIL_CONTENT_MAX_WIDTH + 2000;
     expect(chatPanelWidth(detailPanelWidth)).toBe(2000);
-  });
-
-  it("剩余空间在 [CHAT_MIN_VISIBLE_WIDTH, CHAT_MIN_WIDTH) 之间时不会出现（CHAT_MIN_VISIBLE_WIDTH 本身应 ≥ CHAT_MIN_WIDTH，防御性下夹验证）", () => {
-    expect(CHAT_MIN_VISIBLE_WIDTH).toBeGreaterThanOrEqual(CHAT_MIN_WIDTH);
   });
 });

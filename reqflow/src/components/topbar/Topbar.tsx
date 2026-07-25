@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useProjectStore, currentProject } from "../../stores/projectStore";
 import { useRequirementStore } from "../../stores/requirementStore";
 import { useUiStore } from "../../stores/uiStore";
+import { chatPanelWidth, detailPanelWidthFor } from "../../lib/boardWidth";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 import { SearchBox } from "./SearchBox";
 import { SettingsPanel } from "./SettingsPanel";
+import { ChatToggle } from "./ChatToggle";
 
 function ChevDownIcon() {
   return (
@@ -49,9 +51,15 @@ export function Topbar() {
   const project = useProjectStore(currentProject);
   const requirements = useRequirementStore((s) => s.requirements);
   const detailMode = useUiStore((s) => s.detailMode);
+  const boardWidth = useUiStore((s) => s.boardWidth);
   const toggleCollapsed = useUiStore((s) => s.toggleCollapsed);
   const selectRequirement = useUiStore((s) => s.selectRequirement);
   const detailCollapsed = detailMode === "collapsed";
+
+  // 面板收起时按钮仍要可点击（只记录意图，等展开后再生效，REQ-024 MUST），不能套用
+  // "剩余空间不足就置灰"这条规则——收起态的剩余空间恒为负，套用会误伤成永远不可点。
+  const chatSpaceAvailable =
+    detailCollapsed || chatPanelWidth(detailPanelWidthFor(detailMode, boardWidth, window.innerWidth)) !== null;
 
   return (
     <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--surface-2) px-2.5 border-b border-(--border)">
@@ -79,6 +87,7 @@ export function Topbar() {
         >
           <SettingsIcon />
         </button>
+        <ChatToggle spaceAvailable={chatSpaceAvailable} />
         <button
           type="button"
           aria-label={detailCollapsed ? "展开详情" : "收起详情"}

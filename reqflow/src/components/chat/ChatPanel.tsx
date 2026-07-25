@@ -56,7 +56,7 @@ export function ChatPanel({ width }: ChatPanelProps) {
         <button
           type="button"
           aria-label="清空对话"
-          onClick={clearChat}
+          onClick={() => void clearChat()}
           className="grid size-6.5 place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--st-blocked)"
         >
           <TrashIcon />

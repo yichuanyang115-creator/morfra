@@ -2,12 +2,24 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { ChatPanel } from "./ChatPanel";
-import { useChatStore } from "../../stores/chatStore";
+
+vi.mock("@tauri-apps/plugin-fs", () => ({
+  exists: vi.fn(async () => false),
+  readTextFile: vi.fn(async () => ""),
+  writeTextFile: vi.fn(async () => undefined),
+}));
+
+vi.mock("@tauri-apps/api/path", () => ({
+  appLocalDataDir: vi.fn(async () => "/app-local-data"),
+  join: vi.fn(async (...parts: string[]) => parts.join("/")),
+}));
+
+const { useChatStore } = await import("../../stores/chatStore");
 
 describe("ChatPanel（REQ-024 详情面板对话框，假数据）", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    useChatStore.setState({ messages: [], thinking: false });
+    useChatStore.setState({ open: true, messages: [], thinking: false, loadedProjectId: "proj-1" });
   });
 
   afterEach(() => {
@@ -36,7 +48,7 @@ describe("ChatPanel（REQ-024 详情面板对话框，假数据）", () => {
     expect(useChatStore.getState().messages).toHaveLength(0);
   });
 
-  it("回车发送非空消息：立即显示用户消息和思考中提示，延迟后显示固定回复", () => {
+  it("回车发送非空消息：立即显示用户消息和思考中提示，延迟后显示固定回复", async () => {
     render(<ChatPanel width={300} />);
     const textarea = screen.getByPlaceholderText("输入消息，回车发送…");
 
@@ -46,8 +58,8 @@ describe("ChatPanel（REQ-024 详情面板对话框，假数据）", () => {
     expect(screen.getByText("你好")).toBeInTheDocument();
     expect(screen.getByText("思考中…")).toBeInTheDocument();
 
-    act(() => {
-      vi.runAllTimers();
+    await act(async () => {
+      await vi.runAllTimersAsync();
     });
 
     expect(screen.queryByText("思考中…")).not.toBeInTheDocument();
@@ -85,7 +97,7 @@ describe("ChatPanel（REQ-024 详情面板对话框，假数据）", () => {
     expect(useChatStore.getState().messages).toHaveLength(0);
   });
 
-  it("点击清空对话按钮清空全部消息", () => {
+  it("点击清空对话按钮清空全部消息", async () => {
     useChatStore.setState({
       messages: [
         { id: "1", role: "user", content: "旧消息" },
@@ -95,7 +107,10 @@ describe("ChatPanel（REQ-024 详情面板对话框，假数据）", () => {
     render(<ChatPanel width={300} />);
     expect(screen.getByText("旧消息")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "清空对话" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "清空对话" }));
+      await vi.runAllTimersAsync();
+    });
 
     expect(screen.queryByText("旧消息")).not.toBeInTheDocument();
     expect(useChatStore.getState().messages).toHaveLength(0);

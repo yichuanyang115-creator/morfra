@@ -145,17 +145,17 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
   });
 });
 
-describe("MainLayout 详情面板对话框接入（REQ-024）", () => {
+describe("MainLayout 详情面板对话框接入（REQ-024 v2.7：顶栏手动开关取代自动显隐）", () => {
   beforeEach(() => {
-    useChatStore.setState({ messages: [], thinking: false });
+    useChatStore.setState({ open: false, messages: [], thinking: false, loadedProjectId: "proj-1" });
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("视口宽度不足时（默认看板宽度下详情面板剩余空间 <280px），对话框不渲染", () => {
-    vi.stubGlobal("innerWidth", 1280);
+  it("开关关闭时，即使空间足够也不渲染对话框", () => {
+    vi.stubGlobal("innerWidth", 2000);
     useUiStore.setState({ boardWidth: BOARD_DEFAULT_WIDTH });
 
     render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />);
@@ -163,27 +163,40 @@ describe("MainLayout 详情面板对话框接入（REQ-024）", () => {
     expect(screen.queryByPlaceholderText(CHAT_INPUT_PLACEHOLDER)).not.toBeInTheDocument();
   });
 
-  it("视口足够宽、详情面板剩余空间 ≥280px 时，对话框渲染出来", () => {
-    // 视口 2000、看板 821、分隔条 6 → 详情面板 1173，减去内容限宽 660 = 513 ≥ 280
+  it("开关打开但视口宽度不足（详情面板剩余空间 <240px）时，对话框不渲染", () => {
+    vi.stubGlobal("innerWidth", 1280);
+    useUiStore.setState({ boardWidth: BOARD_DEFAULT_WIDTH });
+    useChatStore.setState({ open: true });
+
+    render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />);
+
+    expect(screen.queryByPlaceholderText(CHAT_INPUT_PLACEHOLDER)).not.toBeInTheDocument();
+  });
+
+  it("开关打开且视口足够宽（详情面板剩余空间 ≥240px）时，对话框渲染出来", () => {
+    // 视口 2000、看板 821、分隔条 6 → 详情面板 1173，减去内容限宽 660 = 513 ≥ 240
     vi.stubGlobal("innerWidth", 2000);
     useUiStore.setState({ boardWidth: BOARD_DEFAULT_WIDTH });
+    useChatStore.setState({ open: true });
 
     render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />);
 
     expect(screen.getByPlaceholderText(CHAT_INPUT_PLACEHOLDER)).toBeInTheDocument();
   });
 
-  it("详情面板收起（0 宽度）时对话框一并隐藏，即使视口很宽", () => {
+  it("详情面板收起（0 宽度）时对话框强制隐藏，不管开关是否打开", () => {
     vi.stubGlobal("innerWidth", 2000);
+    useChatStore.setState({ open: true });
 
     render(<MainLayout detailMode="collapsed" boardContent={<div />} detailContent={<div />} />);
 
     expect(screen.queryByPlaceholderText(CHAT_INPUT_PLACEHOLDER)).not.toBeInTheDocument();
   });
 
-  it("全屏态下面板占满视口，剩余空间够时对话框按同一规则显示", () => {
-    // 全屏详情面板宽度 = 视口 1200，减去内容限宽 660 = 540 ≥ 280
+  it("全屏态下面板占满视口，开关打开且剩余空间够时对话框按同一规则显示", () => {
+    // 全屏详情面板宽度 = 视口 1200，减去内容限宽 660 = 540 ≥ 240
     vi.stubGlobal("innerWidth", 1200);
+    useChatStore.setState({ open: true });
 
     render(<MainLayout detailMode="fullscreen" boardContent={<div />} detailContent={<div />} />);
 
@@ -191,8 +204,9 @@ describe("MainLayout 详情面板对话框接入（REQ-024）", () => {
   });
 
   it("全屏态下视口不够宽时，对话框同样隐藏（跟展开态判断规则一致）", () => {
-    // 全屏详情面板宽度 = 视口 900，减去内容限宽 660 = 240 < 280
-    vi.stubGlobal("innerWidth", 900);
+    // 全屏详情面板宽度 = 视口 800，减去内容限宽 660 = 140 < 240
+    vi.stubGlobal("innerWidth", 800);
+    useChatStore.setState({ open: true });
 
     render(<MainLayout detailMode="fullscreen" boardContent={<div />} detailContent={<div />} />);
 
@@ -202,7 +216,7 @@ describe("MainLayout 详情面板对话框接入（REQ-024）", () => {
   it("切换需求（detailContent 变化）不重新挂载对话框，已有对话内容保留——挂载点在 MainLayout 层而非 detailContent 内部", () => {
     vi.stubGlobal("innerWidth", 2000);
     useUiStore.setState({ boardWidth: BOARD_DEFAULT_WIDTH });
-    useChatStore.setState({ messages: [{ id: "m1", role: "user", content: "已有对话" }] });
+    useChatStore.setState({ open: true, messages: [{ id: "m1", role: "user", content: "已有对话" }] });
 
     const { rerender } = render(
       <MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div>需求 A 详情</div>} />,

@@ -5,6 +5,7 @@ import { Board } from "./components/board/Board";
 import { DetailPanel } from "./components/detail/DetailPanel";
 import { useProjectStore, currentProject } from "./stores/projectStore";
 import { useRequirementStore } from "./stores/requirementStore";
+import { useChatStore } from "./stores/chatStore";
 import { useUiStore } from "./stores/uiStore";
 
 function mostRecentRequirementId<T extends { id: string; createdAt: string }>(requirements: T[]): string | null {
@@ -50,6 +51,9 @@ function App() {
   const toggleFullscreen = useUiStore((s) => s.toggleFullscreen);
   const setActiveTab = useUiStore((s) => s.setActiveTab);
 
+  const chatLoadedProjectId = useChatStore((s) => s.loadedProjectId);
+  const loadChatForProject = useChatStore((s) => s.loadForProject);
+
   useEffect(() => {
     void initProjects();
   }, [initProjects]);
@@ -59,6 +63,13 @@ function App() {
       void loadForProject(currentProjectId);
     }
   }, [currentProjectId, loadedProjectId, loadForProject]);
+
+  // REQ-024 v2.7：对话框状态和记录按项目落盘，切换项目时跟需求列表一样重新加载。
+  useEffect(() => {
+    if (currentProjectId && currentProjectId !== chatLoadedProjectId) {
+      void loadChatForProject(currentProjectId);
+    }
+  }, [currentProjectId, chatLoadedProjectId, loadChatForProject]);
 
   // REQ-004 MUST：右栏默认显示最近操作的需求。项目切换后 selectedRequirementId
   // 会指向已不存在于当前需求列表里的旧需求，此时也要重新选中当前项目最近操作的需求。
