@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Deliverable, Requirement, Stage, Task } from "../../types/models";
 import type { DetailTab } from "../../stores/uiStore";
+import { DETAIL_MIN_WIDTH } from "../../lib/boardWidth";
 import { DetailHeader } from "./DetailHeader";
 import { AttributeGrid } from "./AttributeGrid";
 import { TabBar } from "./TabBar";
@@ -84,9 +85,26 @@ export function DetailPanel({
   onDeleteTransition,
 }: DetailPanelProps) {
   const editorRef = useRef<Editor | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [produceDraftOpen, setProduceDraftOpen] = useState(false);
   const [taskDraftOpen, setTaskDraftOpen] = useState(false);
   const [acceptanceDraftOpen, setAcceptanceDraftOpen] = useState(false);
+  // 属性区两列→单列的切换阈值直接量测面板自身渲染宽度（而非从上层传宽度值），
+  // 避免 App.tsx/MainLayout/DetailPanel 三处各算一遍详情面板宽度、以后跑偏。960px
+  // 可读性上限（REQ-003）由 MainLayout 的外层容器负责，不影响这里的 480px 阈值判断，
+  // 因为 480 远小于 960，永远不会被那层限宽误伤。
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? el.clientWidth;
+      setCompact(width <= DETAIL_MIN_WIDTH);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   if (!requirement) {
     return (
@@ -100,7 +118,7 @@ export function DetailPanel({
   }
 
   return (
-    <div key={requirement.id} className="flex h-full flex-col">
+    <div key={requirement.id} ref={rootRef} className="flex h-full flex-col">
       <DetailHeader
         requirement={requirement}
         fullscreen={fullscreen}
@@ -110,6 +128,7 @@ export function DetailPanel({
       <AttributeGrid
         requirement={requirement}
         sources={sources}
+        compact={compact}
         onFieldChange={onFieldChange}
         onProgressChange={onProgressChange}
         onAddSource={onAddSource}

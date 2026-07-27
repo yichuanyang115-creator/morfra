@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CHAT_DEFAULT_WIDTH } from "../lib/boardWidth";
 
 const files = new Map<string, string>();
 
@@ -24,24 +25,54 @@ function chatPath(projectId: string) {
   return `/app-local-data/projects/${projectId}/_chat.md`;
 }
 
-describe("chatStore（REQ-024 v2.7：顶栏手动开关 + 按项目落盘）", () => {
+describe("chatStore（REQ-024 v2.8：独立对话框栏位，开关状态 + 拖拽宽度按项目落盘）", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     files.clear();
-    useChatStore.setState({ open: false, messages: [], thinking: false, loadedProjectId: null });
+    useChatStore.setState({
+      open: false,
+      width: CHAT_DEFAULT_WIDTH,
+      messages: [],
+      thinking: false,
+      loadedProjectId: null,
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("loadForProject 首次进入某项目（还没有 _chat.md 文件）时，恢复默认关闭态和空消息", async () => {
+  it("loadForProject 首次进入某项目（还没有 _chat.md 文件）时，恢复默认关闭态、默认宽度和空消息", async () => {
     await useChatStore.getState().loadForProject(PROJECT_A);
 
     const state = useChatStore.getState();
     expect(state.open).toBe(false);
+    expect(state.width).toBe(CHAT_DEFAULT_WIDTH);
     expect(state.messages).toHaveLength(0);
     expect(state.loadedProjectId).toBe(PROJECT_A);
+  });
+
+  it("loadForProject 读到旧数据（无 width 字段，v2.7 版本落盘的文件）时，补默认宽度", async () => {
+    const path = chatPath(PROJECT_A);
+    files.set(path, "---\nopen: true\nmessages: []\n---\n");
+
+    await useChatStore.getState().loadForProject(PROJECT_A);
+
+    expect(useChatStore.getState().width).toBe(CHAT_DEFAULT_WIDTH);
+    expect(useChatStore.getState().open).toBe(true);
+  });
+
+  it("setWidth 更新宽度并落盘，重新 loadForProject 同一项目能读回该宽度", async () => {
+    await useChatStore.getState().loadForProject(PROJECT_A);
+    await useChatStore.getState().setWidth(400);
+
+    expect(useChatStore.getState().width).toBe(400);
+    expect(files.get(chatPath(PROJECT_A))).toContain("width: 400");
+
+    useChatStore.setState({ open: false, width: CHAT_DEFAULT_WIDTH, messages: [], loadedProjectId: null });
+    await useChatStore.getState().loadForProject(PROJECT_A);
+
+    expect(useChatStore.getState().width).toBe(400);
   });
 
   it("toggleOpen 翻转开关状态并落盘，重新 loadForProject 同一项目能读回该状态", async () => {

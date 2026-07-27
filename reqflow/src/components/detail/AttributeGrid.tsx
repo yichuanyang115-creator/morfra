@@ -6,6 +6,8 @@ import { fmtDate } from "../../lib/dates";
 interface AttributeGridProps {
   requirement: Requirement;
   sources: string[];
+  /** 详情面板逼近 480px 底线（REQ-003 v2.8）时为真，两列网格收缩为单列，无中间过渡态。 */
+  compact: boolean;
   onFieldChange: <K extends "priority" | "assignee" | "source" | "deadline">(
     field: K,
     value: Requirement[K],
@@ -71,6 +73,7 @@ function stageSlot(requirement: Requirement): { label: string; value: string } {
 export function AttributeGrid({
   requirement,
   sources,
+  compact,
   onFieldChange,
   onProgressChange,
   onAddSource,
@@ -94,7 +97,7 @@ export function AttributeGrid({
   return (
     <div
       className="mx-4 my-3 grid items-center gap-y-2 gap-x-2.5 rounded-(--r-lg) bg-(--surface-2) p-3"
-      style={{ gridTemplateColumns: "58px minmax(0, 1fr) 58px minmax(0, 1fr)" }}
+      style={{ gridTemplateColumns: compact ? "58px minmax(0, 1fr)" : "58px minmax(0, 1fr) 58px minmax(0, 1fr)" }}
     >
       <AttrRow label="优先级">
         <select

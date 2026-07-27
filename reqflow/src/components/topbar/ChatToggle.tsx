@@ -13,24 +13,17 @@ function ChatIcon() {
   );
 }
 
-interface ChatToggleProps {
-  spaceAvailable: boolean;
-}
-
-export function ChatToggle({ spaceAvailable }: ChatToggleProps) {
+export function ChatToggle() {
   const open = useChatStore((s) => s.open);
   const toggleOpen = useChatStore((s) => s.toggleOpen);
-  const disabled = !spaceAvailable;
 
   return (
     <button
       type="button"
       aria-label={open ? "关闭对话框" : "打开对话框"}
       aria-pressed={open}
-      disabled={disabled}
-      title={disabled ? "拖宽详情面板后可使用" : undefined}
       onClick={() => void toggleOpen()}
-      className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none text-(--muted) disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none text-(--muted) ${
         open ? "bg-(--accent-soft) text-(--accent-text)" : "bg-transparent hover:bg-(--surface) hover:text-(--fg)"
       }`}
     >
