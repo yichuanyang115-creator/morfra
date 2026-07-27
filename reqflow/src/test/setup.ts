@@ -37,17 +37,6 @@ if (typeof document !== "undefined") {
   if (!Element.prototype.scrollTo) {
     Element.prototype.scrollTo = () => undefined;
   }
-
-  // jsdom 没实现 ResizeObserver——DetailPanel 用它量测自身宽度决定属性区是否收缩为
-  // 单列（REQ-003 v2.8），测试环境补空实现即可，组件初始渲染宽度用 clientWidth 兜底。
-  if (typeof globalThis.ResizeObserver === "undefined") {
-    class NoopResizeObserver {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    }
-    globalThis.ResizeObserver = NoopResizeObserver as unknown as typeof ResizeObserver;
-  }
 }
 
 afterEach(() => {

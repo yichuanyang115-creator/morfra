@@ -55,7 +55,7 @@ export function Topbar() {
   const detailCollapsed = detailMode === "collapsed";
 
   return (
-    <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--surface-2) px-2.5 border-b border-(--border)">
+    <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--topbar) px-2.5 border-b border-(--border)">
       <button
         type="button"
         onClick={() => setSwitcherOpen((v) => !v)}

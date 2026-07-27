@@ -212,7 +212,7 @@ describe("RequirementRow", () => {
       />,
     );
 
-    expect(container.firstChild).toHaveClass("bg-(--accent-soft)");
+    expect(container.firstChild).toHaveClass("bg-(--accent-selected)");
   });
 
   it("没有流转记录时，停留天数用创建时间计算，不因缺少流转记录而报错或显示为空", () => {

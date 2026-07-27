@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Deliverable, Requirement, Stage, Task } from "../../types/models";
 import type { DetailTab } from "../../stores/uiStore";
@@ -25,6 +25,10 @@ function PlusIcon() {
 interface DetailPanelProps {
   requirement: Requirement | null;
   sources: string[];
+  /** 详情面板当前实际渲染宽度，由 MainLayout 用 detailPanelWidthFor 算出后传入——
+   * 单一来源，不在这里用 ResizeObserver 反推（DOM 测量链路太长，任何一层布局细节
+   * 偏差都会导致算出的宽度和真实值不一致，且难以定位）。 */
+  width: number;
   fullscreen: boolean;
   activeTab: DetailTab;
   onToggleFullscreen: () => void;
@@ -61,6 +65,7 @@ interface DetailPanelProps {
 export function DetailPanel({
   requirement,
   sources,
+  width,
   fullscreen,
   activeTab,
   onToggleFullscreen,
@@ -85,26 +90,13 @@ export function DetailPanel({
   onDeleteTransition,
 }: DetailPanelProps) {
   const editorRef = useRef<Editor | null>(null);
-  const rootRef = useRef<HTMLDivElement | null>(null);
   const [produceDraftOpen, setProduceDraftOpen] = useState(false);
   const [taskDraftOpen, setTaskDraftOpen] = useState(false);
   const [acceptanceDraftOpen, setAcceptanceDraftOpen] = useState(false);
-  // 属性区两列→单列的切换阈值直接量测面板自身渲染宽度（而非从上层传宽度值），
-  // 避免 App.tsx/MainLayout/DetailPanel 三处各算一遍详情面板宽度、以后跑偏。960px
-  // 可读性上限（REQ-003）由 MainLayout 的外层容器负责，不影响这里的 480px 阈值判断，
-  // 因为 480 远小于 960，永远不会被那层限宽误伤。
-  const [compact, setCompact] = useState(false);
-
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? el.clientWidth;
-      setCompact(width <= DETAIL_MIN_WIDTH);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  // 属性区两列→单列的切换阈值（REQ-003 v2.8）：width 是 MainLayout 算出的详情面板
+  // 确切宽度，跟 960px 可读性上限（由 MainLayout 外层容器的 max-width 负责）互不
+  // 影响——480 远小于 960，两条阈值不会互相干扰。
+  const compact = width <= DETAIL_MIN_WIDTH;
 
   if (!requirement) {
     return (
@@ -118,7 +110,7 @@ export function DetailPanel({
   }
 
   return (
-    <div key={requirement.id} ref={rootRef} className="flex h-full flex-col">
+    <div key={requirement.id} className="flex h-full min-w-0 flex-col">
       <DetailHeader
         requirement={requirement}
         fullscreen={fullscreen}

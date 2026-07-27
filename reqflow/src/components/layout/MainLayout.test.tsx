@@ -3,7 +3,14 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MainLayout } from "./MainLayout";
 import { useUiStore } from "../../stores/uiStore";
 import { useChatStore } from "../../stores/chatStore";
-import { BOARD_DEFAULT_WIDTH, BOARD_MIN_WIDTH, CHAT_DEFAULT_WIDTH, CHAT_MIN_WIDTH } from "../../lib/boardWidth";
+import {
+  BOARD_DEFAULT_WIDTH,
+  BOARD_MIN_WIDTH,
+  CHAT_DEFAULT_WIDTH,
+  CHAT_MIN_WIDTH,
+  RESIZER_WIDTH,
+  clampBoardWidth,
+} from "../../lib/boardWidth";
 
 // 拖拽对话框分隔条会触发 chatStore.setWidth 落盘（fire-and-forget），需要 mock 掉底层
 // 文件系统调用，否则测试环境里真实的 @tauri-apps invoke 会抛出未处理的 rejection。
@@ -44,7 +51,7 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
       <MainLayout
         detailMode="expanded"
         boardContent={<div>看板内容</div>}
-        detailContent={<div>详情内容</div>}
+        detailContent={() => <div>详情内容</div>}
       />,
     );
 
@@ -58,7 +65,7 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
       <MainLayout
         detailMode="collapsed"
         boardContent={<div>看板内容</div>}
-        detailContent={<div>详情内容</div>}
+        detailContent={() => <div>详情内容</div>}
       />,
     );
 
@@ -71,7 +78,7 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
       <MainLayout
         detailMode="fullscreen"
         boardContent={<div>看板内容</div>}
-        detailContent={<div>详情内容</div>}
+        detailContent={() => <div>详情内容</div>}
       />,
     );
 
@@ -84,10 +91,10 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
 
   it("三态的 gridTemplateColumns 各不相同，联动关系可回归（对话框关闭时最后两列恒为 0）", () => {
     const { container: expandedContainer } = render(
-      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />,
+      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />,
     );
     const { container: collapsedContainer } = render(
-      <MainLayout detailMode="collapsed" boardContent={<div />} detailContent={<div />} />,
+      <MainLayout detailMode="collapsed" boardContent={<div />} detailContent={() => <div />} />,
     );
 
     const expandedGrid = expandedContainer.firstElementChild as HTMLElement;
@@ -100,7 +107,7 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
   it("拖动分隔条：向右拖动增加看板宽度，向左拖动减少看板宽度（REQ-003 MUST 分隔条支持拖拽调整详情面板宽度）", () => {
     useUiStore.setState({ boardWidth: BOARD_DEFAULT_WIDTH - 100 });
     const { container } = render(
-      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />,
+      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />,
     );
     const resizer = screen.getByRole("separator", { name: BOARD_RESIZER_LABEL });
     const grid = container.firstElementChild as HTMLElement;
@@ -115,7 +122,7 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
 
   it("拖动超过下限时宽度夹到 BOARD_MIN_WIDTH，不会继续变窄", () => {
     const { container } = render(
-      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />,
+      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />,
     );
     const resizer = screen.getByRole("separator", { name: BOARD_RESIZER_LABEL });
     const grid = container.firstElementChild as HTMLElement;
@@ -129,7 +136,7 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
   it("松手（pointerup）后再移动鼠标不再改变宽度，拖拽状态已结束", () => {
     useUiStore.setState({ boardWidth: BOARD_DEFAULT_WIDTH - 100 });
     const { container } = render(
-      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />,
+      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />,
     );
     const resizer = screen.getByRole("separator", { name: BOARD_RESIZER_LABEL });
     const grid = container.firstElementChild as HTMLElement;
@@ -143,13 +150,13 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
   });
 
   it("collapsed/fullscreen 态下看板分隔条不渲染，无法拖拽调宽", () => {
-    render(<MainLayout detailMode="fullscreen" boardContent={<div />} detailContent={<div />} />);
+    render(<MainLayout detailMode="fullscreen" boardContent={<div />} detailContent={() => <div />} />);
     expect(screen.queryByRole("separator", { name: BOARD_RESIZER_LABEL })).not.toBeInTheDocument();
   });
 
   it("从默认宽度继续向右拖动不会超过 BOARD_DEFAULT_WIDTH，避免看板内容已到上限后中间露出无意义空白", () => {
     const { container } = render(
-      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />,
+      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />,
     );
     const resizer = screen.getByRole("separator", { name: BOARD_RESIZER_LABEL });
     const grid = container.firstElementChild as HTMLElement;
@@ -158,6 +165,50 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
     fireEvent.pointerMove(resizer, { clientX: 700, pointerId: 1 });
 
     expect(grid.style.gridTemplateColumns).toBe(`${BOARD_DEFAULT_WIDTH}px 6px 1fr 0px 0px`);
+  });
+
+  it("detailContent 收到的 width 参数与 MainLayout 自己算出的详情面板宽度一致（回归：REQ-003 v2.8 详情面板收缩 bug——此前 DetailPanel 用 ResizeObserver 自己反推宽度，量测链路不可靠，改为 MainLayout 直接传确切值）", () => {
+    const viewport = WIDE_TEST_VIEWPORT;
+    const board = BOARD_DEFAULT_WIDTH;
+    const expectedWidth = viewport - clampBoardWidth(board, viewport) - RESIZER_WIDTH;
+
+    let receivedWidth: number | null = null;
+    render(
+      <MainLayout
+        detailMode="expanded"
+        boardContent={<div />}
+        detailContent={(width) => {
+          receivedWidth = width;
+          return <div>详情</div>;
+        }}
+      />,
+    );
+
+    expect(receivedWidth).toBe(expectedWidth);
+  });
+
+  it("看板拖窄后，detailContent 收到的 width 参数跟着联动变化，不是渲染时定死的一次性值", () => {
+    useUiStore.setState({ boardWidth: BOARD_DEFAULT_WIDTH - 100 });
+    let receivedWidth: number | null = null;
+
+    render(
+      <MainLayout
+        detailMode="expanded"
+        boardContent={<div />}
+        detailContent={(width) => {
+          receivedWidth = width;
+          return <div>详情</div>;
+        }}
+      />,
+    );
+
+    const widthBeforeDrag = receivedWidth;
+    const resizer = screen.getByRole("separator", { name: BOARD_RESIZER_LABEL });
+    fireEvent.pointerDown(resizer, { clientX: 500, pointerId: 1 });
+    fireEvent.pointerMove(resizer, { clientX: 560, pointerId: 1 });
+
+    expect(receivedWidth).not.toBe(widthBeforeDrag);
+    expect(receivedWidth).toBe((widthBeforeDrag ?? 0) - 60);
   });
 });
 
@@ -173,7 +224,7 @@ describe("MainLayout 对话框独立第三栏（REQ-003 / REQ-024 v2.8：显隐�
 
   it("开关关闭时不渲染对话框，即使空间充足", () => {
     vi.stubGlobal("innerWidth", 2000);
-    render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />);
+    render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />);
 
     expect(screen.queryByPlaceholderText(CHAT_INPUT_PLACEHOLDER)).not.toBeInTheDocument();
     expect(screen.queryByRole("separator", { name: CHAT_RESIZER_LABEL })).not.toBeInTheDocument();
@@ -183,7 +234,7 @@ describe("MainLayout 对话框独立第三栏（REQ-003 / REQ-024 v2.8：显隐�
     vi.stubGlobal("innerWidth", 2000);
     useChatStore.setState({ open: true });
 
-    render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />);
+    render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />);
 
     expect(screen.getByPlaceholderText(CHAT_INPUT_PLACEHOLDER)).toBeInTheDocument();
     expect(screen.getByRole("separator", { name: CHAT_RESIZER_LABEL })).toBeInTheDocument();
@@ -193,7 +244,7 @@ describe("MainLayout 对话框独立第三栏（REQ-003 / REQ-024 v2.8：显隐�
     vi.stubGlobal("innerWidth", 2000);
     useChatStore.setState({ open: true });
 
-    render(<MainLayout detailMode="collapsed" boardContent={<div />} detailContent={<div />} />);
+    render(<MainLayout detailMode="collapsed" boardContent={<div />} detailContent={() => <div />} />);
 
     expect(screen.getByPlaceholderText(CHAT_INPUT_PLACEHOLDER)).toBeInTheDocument();
   });
@@ -202,7 +253,7 @@ describe("MainLayout 对话框独立第三栏（REQ-003 / REQ-024 v2.8：显隐�
     vi.stubGlobal("innerWidth", 2000);
     useChatStore.setState({ open: true });
 
-    render(<MainLayout detailMode="fullscreen" boardContent={<div />} detailContent={<div />} />);
+    render(<MainLayout detailMode="fullscreen" boardContent={<div />} detailContent={() => <div />} />);
 
     expect(screen.getByPlaceholderText(CHAT_INPUT_PLACEHOLDER)).toBeInTheDocument();
   });
@@ -211,7 +262,7 @@ describe("MainLayout 对话框独立第三栏（REQ-003 / REQ-024 v2.8：显隐�
     vi.stubGlobal("innerWidth", 2000);
     useChatStore.setState({ open: true, width: CHAT_DEFAULT_WIDTH });
 
-    const { container } = render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />);
+    const { container } = render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />);
     const resizer = screen.getByRole("separator", { name: CHAT_RESIZER_LABEL });
     const grid = container.firstElementChild as HTMLElement;
 
@@ -226,7 +277,7 @@ describe("MainLayout 对话框独立第三栏（REQ-003 / REQ-024 v2.8：显隐�
     vi.stubGlobal("innerWidth", 2000);
     useChatStore.setState({ open: true, width: CHAT_DEFAULT_WIDTH });
 
-    const { container } = render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />);
+    const { container } = render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />);
     const resizer = screen.getByRole("separator", { name: CHAT_RESIZER_LABEL });
     const grid = container.firstElementChild as HTMLElement;
 
@@ -240,7 +291,7 @@ describe("MainLayout 对话框独立第三栏（REQ-003 / REQ-024 v2.8：显隐�
     vi.stubGlobal("innerWidth", 1600);
     useChatStore.setState({ open: true, width: CHAT_DEFAULT_WIDTH });
 
-    const { container } = render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div />} />);
+    const { container } = render(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />);
     const resizer = screen.getByRole("separator", { name: CHAT_RESIZER_LABEL });
     const grid = container.firstElementChild as HTMLElement;
 
@@ -257,11 +308,11 @@ describe("MainLayout 对话框独立第三栏（REQ-003 / REQ-024 v2.8：显隐�
     useChatStore.setState({ open: true, messages: [{ id: "m1", role: "user", content: "已有对话" }] });
 
     const { rerender } = render(
-      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div>需求 A 详情</div>} />,
+      <MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div>需求 A 详情</div>} />,
     );
     expect(screen.getByText("已有对话")).toBeInTheDocument();
 
-    rerender(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={<div>需求 B 详情</div>} />);
+    rerender(<MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div>需求 B 详情</div>} />);
 
     expect(screen.getByText("需求 B 详情")).toBeInTheDocument();
     expect(screen.getByText("已有对话")).toBeInTheDocument();

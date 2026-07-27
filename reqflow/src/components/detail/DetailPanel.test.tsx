@@ -57,6 +57,7 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
       <DetailPanel
         requirement={null}
         sources={[]}
+        width={800}
         fullscreen={false}
         activeTab="body"
         onToggleFullscreen={vi.fn()}
@@ -72,6 +73,7 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
       <DetailPanel
         requirement={makeRequirement({ name: "登录页优化" })}
         sources={["内部想法"]}
+        width={800}
         fullscreen={false}
         activeTab="body"
         onToggleFullscreen={vi.fn()}
@@ -89,6 +91,7 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
       <DetailPanel
         requirement={makeRequirement()}
         sources={[]}
+        width={800}
         fullscreen={false}
         activeTab="body"
         onToggleFullscreen={onToggleFullscreen}
@@ -106,6 +109,7 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
       <DetailPanel
         requirement={makeRequirement()}
         sources={[]}
+        width={800}
         fullscreen={false}
         activeTab="produce"
         onToggleFullscreen={vi.fn()}
@@ -117,11 +121,44 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     expect(screen.getByText("还没有产出，点右上角 + 新建")).toBeInTheDocument();
   });
 
+  it("width 参数直接决定属性区两列/单列（REQ-003 v2.8）——不再靠 ResizeObserver 量测 DOM 反推，" +
+    "由 MainLayout 算出的确切宽度值直接驱动，链路短、无中间不确定性（回归：详情面板收缩 bug，" +
+    "此前用 ResizeObserver 时该逻辑从未真正生效）", () => {
+    const { container: wideContainer } = render(
+      <DetailPanel
+        requirement={makeRequirement()}
+        sources={[]}
+        width={800}
+        fullscreen={false}
+        activeTab="body"
+        onToggleFullscreen={vi.fn()}
+        {...noopHandlers}
+      />,
+    );
+    const wideGrid = wideContainer.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    expect(wideGrid.style.gridTemplateColumns).toBe("58px minmax(0, 1fr) 58px minmax(0, 1fr)");
+
+    const { container: narrowContainer } = render(
+      <DetailPanel
+        requirement={makeRequirement()}
+        sources={[]}
+        width={480}
+        fullscreen={false}
+        activeTab="body"
+        onToggleFullscreen={vi.fn()}
+        {...noopHandlers}
+      />,
+    );
+    const narrowGrid = narrowContainer.querySelector('[style*="grid-template-columns"]') as HTMLElement;
+    expect(narrowGrid.style.gridTemplateColumns).toBe("58px minmax(0, 1fr)");
+  });
+
   it("切换需求（requirement.id 改变）后组件用 key 强制重挂载，不残留上一条需求的本地状态", () => {
     const { rerender } = render(
       <DetailPanel
         requirement={makeRequirement({ id: "r-1", name: "需求一" })}
         sources={[]}
+        width={800}
         fullscreen={false}
         activeTab="body"
         onToggleFullscreen={vi.fn()}
@@ -134,6 +171,7 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
       <DetailPanel
         requirement={makeRequirement({ id: "r-2", name: "需求二" })}
         sources={[]}
+        width={800}
         fullscreen={false}
         activeTab="body"
         onToggleFullscreen={vi.fn()}

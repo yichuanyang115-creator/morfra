@@ -14,7 +14,12 @@ import { ChatPanel } from "../chat/ChatPanel";
 interface MainLayoutProps {
   detailMode: DetailMode;
   boardContent: ReactNode;
-  detailContent: ReactNode;
+  /**
+   * 详情面板内容用 render-prop 而非直接传 ReactNode：MainLayout 是详情面板宽度
+   * （detailPanelWidthFor）唯一的计算源头，父组件（App.tsx）不该在别处重新算一遍
+   * 同样的宽度——那样两处逻辑各算一份，以后改一处忘了改另一处就会跑偏。
+   */
+  detailContent: (width: number) => ReactNode;
 }
 
 /**
@@ -123,7 +128,7 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
       className={`grid min-h-0 flex-1 ${isDragging ? "" : "transition-[grid-template-columns] duration-180 ease-in-out"}`}
       style={{ gridTemplateColumns: gridTemplate(detailMode, clampedBoardWidth, clampedChatWidth) }}
     >
-      <main className="flex min-h-0 min-w-0 flex-col border-r border-(--border)">
+      <main className="flex min-h-0 min-w-0 flex-col border-r border-(--border) bg-(--surface)">
         <div className="min-h-0 flex-1 overflow-y-auto">{boardContent}</div>
       </main>
 
@@ -143,14 +148,14 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
 
       <aside
         className={`flex min-h-0 min-w-0 flex-col overflow-hidden bg-(--surface) ${
-          detailMode === "expanded" ? "border-l border-(--border)" : ""
+          detailMode === "expanded" ? "shadow-[-4px_0_16px_-4px_rgba(60,50,30,0.12)]" : ""
         }`}
       >
         <div
           className="mx-auto flex h-full min-h-0 w-full min-w-0 flex-col"
           style={{ maxWidth: detailPanelWidth > 0 ? "var(--detail-max-w)" : undefined }}
         >
-          {detailContent}
+          {detailContent(detailPanelWidth)}
         </div>
       </aside>
 

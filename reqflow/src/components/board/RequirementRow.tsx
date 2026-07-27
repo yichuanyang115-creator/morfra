@@ -60,7 +60,7 @@ export function RequirementRow({
         isDragging ? "opacity-40" : ""
       } ${
         selected
-          ? "border-(--accent-soft-strong) bg-(--accent-soft) shadow-[inset_2px_0_0_0_var(--accent-solid)]"
+          ? "bg-(--accent-selected)"
           : "hover:bg-(--surface)"
       }`}
     >

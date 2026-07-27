@@ -123,7 +123,7 @@ export function Board({
           <EmptyState text="还没有需求，点收集阶段的新建按钮记录你的第一个想法" />
         )}
         <div
-          className="sticky top-0 z-4 grid h-(--board-header-h) max-w-(--board-row-max-w) items-center gap-3 bg-(--bg) px-2 text-[11.5px] tracking-[0.02em] text-(--muted)"
+          className="sticky top-0 z-4 grid h-(--board-header-h) max-w-(--board-row-max-w) items-center gap-3 bg-(--surface) px-2 text-[11.5px] tracking-[0.02em] text-(--muted)"
           style={{ gridTemplateColumns: "minmax(140px, 320px) 40px 56px 56px 52px 56px 56px 40px" }}
         >
           {BOARD_COLUMNS.map((c, i) => (

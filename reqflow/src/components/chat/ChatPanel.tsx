@@ -49,7 +49,7 @@ export function ChatPanel({ width }: ChatPanelProps) {
 
   return (
     <div
-      className="flex h-full min-w-0 flex-none flex-col border-l border-(--border) bg-(--surface-2)"
+      className="flex h-full min-w-0 flex-none flex-col border-l border-(--border) bg-(--surface)"
       style={{ width: `${width}px` }}
     >
       <div className="flex flex-none items-center justify-end border-b border-(--border) px-2.5 py-1.5">
@@ -73,15 +73,15 @@ export function ChatPanel({ width }: ChatPanelProps) {
                 key={m.id}
                 className={`max-w-full break-words rounded-(--r-md) px-2.5 py-1.5 text-[12.5px] ${
                   m.role === "user"
-                    ? "self-end bg-(--accent-soft) text-(--accent-text)"
-                    : "self-start bg-(--surface) text-(--fg)"
+                    ? "self-end bg-(--accent-soft-strong) text-(--accent-text)"
+                    : "self-start bg-(--surface-2) text-(--fg)"
                 }`}
               >
                 {m.content}
               </div>
             ))}
             {thinking && (
-              <div className="self-start rounded-(--r-md) bg-(--surface) px-2.5 py-1.5 text-[12.5px] text-(--muted-2)">
+              <div className="self-start rounded-(--r-md) bg-(--surface-2) px-2.5 py-1.5 text-[12.5px] text-(--muted-2)">
                 <span className="inline-block animate-pulse">思考中…</span>
               </div>
             )}

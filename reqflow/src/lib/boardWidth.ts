@@ -5,7 +5,12 @@
  */
 export const BOARD_MIN_WIDTH = 641;
 export const BOARD_DEFAULT_WIDTH = 821;
-/** 详情面板自适应收缩底线（REQ-003 v2.8），低于此改为限制对话框继续拖宽，看板拖拽不受此约束。 */
+/**
+ * 详情面板自适应收缩底线（REQ-003 v2.8），低于此改为限制对话框继续拖宽，看板拖拽
+ * 不受此约束。改这个值时要同步检查 tauri.conf.json 的 app.windows[0].minWidth——
+ * 应用允许缩到的最小窗口宽度必须 ≥ BOARD_MIN_WIDTH + RESIZER_WIDTH + DETAIL_MIN_WIDTH，
+ * 否则窗口能被缩到详情面板挤破底线都保不住的宽度（480 对应 minWidth 至少要 1127）。
+ */
 export const DETAIL_MIN_WIDTH = 480;
 export const RESIZER_WIDTH = 6;
 

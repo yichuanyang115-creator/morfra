@@ -1,37 +1,43 @@
 /*
- * Design tokens — 数值搬自设计稿《需求管理系统原型.html》的 :root 变量块。
- * 设计稿优先级高于 Design-Brief，命名沿用设计稿原名，方便后续 Phase 逐处对照像素值。
+ * Design tokens。色彩系统改版：青苹果绿主题（参考用户提供的 April 终端主题）。
+ * 基底大面积区域（bg/surface/surface-2/topbar/对话框背景）统一用暖白，几乎不带黄调，
+ * 不铺绿；--accent 是唯一的高饱和度青苹果绿（#5DA802），集中体现在看板阶段条底色、
+ * 按钮、选中态左边条这几个"点"上，不渲染整屏。--st-done 用独立的翠绿色相与 --accent
+ * 区分，避免"已完成"状态和"当前重点强调"混淆。命名沿用设计稿原名，数值已不等于原型 HTML。
  */
 :root {
-  --bg: oklch(96% 0.012 238);
-  --surface: oklch(99% 0.006 235);
-  --surface-2: oklch(94% 0.014 238);
-  --fg: oklch(23% 0.022 250);
-  --muted: oklch(50% 0.02 245);
-  --muted-2: oklch(52% 0.016 240);
-  --border: oklch(88% 0.014 235);
-  --border-strong: oklch(79% 0.018 235);
+  --bg: #FCFCFA;
+  --surface: #FFFFFF;
+  --surface-2: #F5F5F1;
+  --topbar: #F8F8F4;
+  --fg: #33322E;
+  --muted: #6B6960;
+  --muted-2: #96938A;
+  --border: #E7E6E0;
+  --border-strong: #D6D4CB;
 
-  --accent: #e88330;
-  --accent-text: color-mix(in oklch, #e88330 62%, black 38%);
-  --accent-soft: color-mix(in oklch, #e88330 14%, white 86%);
-  --accent-soft-strong: color-mix(in oklch, #e88330 24%, white 76%);
-  --accent-solid: #e88330;
-  --accent-solid-fg: oklch(20% 0.02 40);
+  --accent: #5DA802;
+  --accent-text: #3F7A02;
+  --accent-soft: #F7FAF1;
+  --accent-soft-strong: #EFF6E7;
+  --accent-solid: #5DA802;
+  --accent-solid-fg: #FFFFFF;
+  /* 中等深度鼠尾草绿，专用于"当前选中"这一类需要比 soft 系列更醒目、但不到按钮实色那么浓的场景。 */
+  --accent-selected: #A9C99A;
 
   --sev-p0: oklch(53% 0.20 24);
   --sev-p0-soft: oklch(94% 0.03 24);
   --sev-p1: oklch(52% 0.14 78);
   --sev-p1-soft: oklch(94% 0.045 78);
-  --sev-p2: var(--muted-2);
-  --sev-p2-soft: oklch(95% 0.004 255);
+  --sev-p2: #96938A;
+  --sev-p2-soft: #F5F5F1;
 
-  --st-todo: var(--muted-2);
-  --st-todo-soft: oklch(95% 0.004 255);
+  --st-todo: #96938A;
+  --st-todo-soft: #F5F5F1;
   --st-progress: oklch(50% 0.16 250);
   --st-progress-soft: oklch(94% 0.03 250);
-  --st-done: oklch(49% 0.13 150);
-  --st-done-soft: oklch(94% 0.035 150);
+  --st-done: #2C7A63;
+  --st-done-soft: #E3F1EC;
   --st-blocked: oklch(53% 0.19 22);
   --st-blocked-soft: oklch(94% 0.03 22);
 

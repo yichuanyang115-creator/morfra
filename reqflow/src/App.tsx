@@ -132,10 +132,11 @@ function App() {
             }}
           />
         }
-        detailContent={
+        detailContent={(width) => (
           <DetailPanel
             requirement={selectedRequirement}
             sources={project?.sources ?? []}
+            width={width}
             fullscreen={detailMode === "fullscreen"}
             activeTab={activeTab}
             onToggleFullscreen={toggleFullscreen}
@@ -229,7 +230,7 @@ function App() {
               }
             }}
           />
-        }
+        )}
       />
     </div>
   );
