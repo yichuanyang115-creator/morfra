@@ -6,28 +6,35 @@ import { StageSection } from "./StageSection";
 import type { Requirement } from "../../types/models";
 import { useUiStore } from "../../stores/uiStore";
 
-function makeRequirement(overrides: Partial<Requirement> = {}): Requirement {
+interface RequirementOverrides extends Partial<Omit<Requirement, "attributeValues">> {
+  priority?: string;
+}
+
+function makeRequirement(overrides: RequirementOverrides = {}): Requirement {
+  const { priority, ...rest } = overrides;
   return {
     id: "r-1",
     name: "需求一",
     stage: "design",
-    priority: "P2",
-    source: "内部想法",
-    assignee: "",
-    deadline: "",
-    progress: null,
-    closureType: null,
     createdAt: "2026-01-01T00:00:00.000Z",
-    releaseMethod: "",
-    releaseDate: "",
     manualOrder: 0,
     body: "",
+    attributeValues: {
+      priority: priority ?? "P2",
+      source: "内部想法",
+      assignee: "",
+      deadline: "",
+      progress: null,
+      release_method: "",
+      release_date: "",
+      result: null,
+    },
     deliverables: [],
     tasks: [],
     acceptance: [],
     transitions: [],
     comments: [],
-    ...overrides,
+    ...rest,
   };
 }
 

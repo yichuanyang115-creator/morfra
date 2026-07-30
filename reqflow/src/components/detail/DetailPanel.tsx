@@ -13,6 +13,7 @@ import { AcceptanceTab } from "./tabs/AcceptanceTab";
 import type { AcceptancePatch } from "./tabs/acceptanceShared";
 import { ActivityTab } from "./tabs/ActivityTab";
 import { TemplateDrawer } from "../editor/TemplateDrawer";
+import { resultOf } from "../../lib/requirementFields";
 
 function PlusIcon() {
   return (
@@ -34,10 +35,7 @@ interface DetailPanelProps {
   onToggleFullscreen: () => void;
   onSelectTab: (tab: DetailTab) => void;
   onRename: (name: string) => void;
-  onFieldChange: <K extends "priority" | "assignee" | "source" | "deadline">(
-    field: K,
-    value: Requirement[K],
-  ) => void;
+  onFieldChange: (field: "priority" | "assignee" | "source" | "deadline", value: string) => void;
   onProgressChange: (progress: number | null) => void;
   onAddSource: (source: string) => void;
   onBodyChange: (markdown: string) => void;
@@ -219,7 +217,7 @@ export function DetailPanel({
             currentStage={requirement.stage}
             transitions={requirement.transitions}
             comments={requirement.comments}
-            closureType={requirement.closureType}
+            closureType={resultOf(requirement)}
             onUpdateNote={onUpdateTransitionNote}
             onAddComment={onAddComment}
             onDelete={onDeleteTransition}

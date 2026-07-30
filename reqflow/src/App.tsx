@@ -7,6 +7,9 @@ import { useProjectStore, currentProject } from "./stores/projectStore";
 import { useRequirementStore } from "./stores/requirementStore";
 import { useChatStore } from "./stores/chatStore";
 import { useUiStore } from "./stores/uiStore";
+import { useSchemaStore } from "./stores/schemaStore";
+import { FIELD_KEYS } from "./lib/requirementFields";
+import { Toast } from "./components/shared/Toast";
 
 function mostRecentRequirementId<T extends { id: string; createdAt: string }>(requirements: T[]): string | null {
   if (requirements.length === 0) return null;
@@ -27,7 +30,8 @@ function App() {
   const loadedProjectId = useRequirementStore((s) => s.loadedProjectId);
   const loadForProject = useRequirementStore((s) => s.loadForProject);
   const createRequirement = useRequirementStore((s) => s.createRequirement);
-  const updateField = useRequirementStore((s) => s.updateField);
+  const renameRequirement = useRequirementStore((s) => s.renameRequirement);
+  const updateAttributeValue = useRequirementStore((s) => s.updateAttributeValue);
   const updateBody = useRequirementStore((s) => s.updateBody);
   const addDeliverable = useRequirementStore((s) => s.addDeliverable);
   const updateDeliverable = useRequirementStore((s) => s.updateDeliverable);
@@ -54,6 +58,11 @@ function App() {
   const chatLoadedProjectId = useChatStore((s) => s.loadedProjectId);
   const loadChatForProject = useChatStore((s) => s.loadForProject);
 
+  const schemaLoadedProjectId = useSchemaStore((s) => s.loadedProjectId);
+  const loadSchemaForProject = useSchemaStore((s) => s.loadForProject);
+  const justMigrated = useSchemaStore((s) => s.justMigrated);
+  const acknowledgeMigration = useSchemaStore((s) => s.acknowledgeMigration);
+
   useEffect(() => {
     void initProjects();
   }, [initProjects]);
@@ -63,6 +72,13 @@ function App() {
       void loadForProject(currentProjectId);
     }
   }, [currentProjectId, loadedProjectId, loadForProject]);
+
+  // REQ-029：打开项目时检测并静默补齐等价 Schema（无 schema.json 即旧项目），迁移发生后弹 toast。
+  useEffect(() => {
+    if (currentProjectId && currentProjectId !== schemaLoadedProjectId) {
+      void loadSchemaForProject(currentProjectId, project?.sources ?? []);
+    }
+  }, [currentProjectId, schemaLoadedProjectId, loadSchemaForProject, project]);
 
   // REQ-024 v2.7：对话框状态和记录按项目落盘，切换项目时跟需求列表一样重新加载。
   useEffect(() => {
@@ -116,16 +132,16 @@ function App() {
             }}
             onSelectRequirement={selectRequirement}
             onProgressChange={(requirementId, progress) => {
-              if (currentProjectId) void updateField(currentProjectId, requirementId, "progress", progress);
+              if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, FIELD_KEYS.progress, progress);
             }}
             onTransition={(requirementId, toStage) => {
               if (currentProjectId) void transitionRequirement(currentProjectId, requirementId, toStage);
             }}
             onReleaseMethodChange={(requirementId, method) => {
-              if (currentProjectId) void updateField(currentProjectId, requirementId, "releaseMethod", method);
+              if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, FIELD_KEYS.releaseMethod, method);
             }}
             onReleaseDateChange={(requirementId, date) => {
-              if (currentProjectId) void updateField(currentProjectId, requirementId, "releaseDate", date);
+              if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, FIELD_KEYS.releaseDate, date);
             }}
             onReorder={(updates) => {
               if (currentProjectId) void reorderManually(currentProjectId, updates);
@@ -143,17 +159,17 @@ function App() {
             onSelectTab={setActiveTab}
             onRename={(name) => {
               if (currentProjectId && selectedRequirementId) {
-                void updateField(currentProjectId, selectedRequirementId, "name", name);
+                void renameRequirement(currentProjectId, selectedRequirementId, name);
               }
             }}
             onFieldChange={(field, value) => {
               if (currentProjectId && selectedRequirementId) {
-                void updateField(currentProjectId, selectedRequirementId, field, value);
+                void updateAttributeValue(currentProjectId, selectedRequirementId, FIELD_KEYS[field], value);
               }
             }}
             onProgressChange={(progress) => {
               if (currentProjectId && selectedRequirementId) {
-                void updateField(currentProjectId, selectedRequirementId, "progress", progress);
+                void updateAttributeValue(currentProjectId, selectedRequirementId, FIELD_KEYS.progress, progress);
               }
             }}
             onAddSource={(source) => {
@@ -232,6 +248,7 @@ function App() {
           />
         )}
       />
+      {justMigrated && <Toast message="项目已自动升级为动态 Schema" onDismiss={acknowledgeMigration} />}
     </div>
   );
 }

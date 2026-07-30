@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { progressOf, releaseDateOf, resultOf } from "../lib/requirementFields";
 
 const files = new Map<string, string>();
 
@@ -483,7 +484,7 @@ describe("requirementStore 流转（transition）与评论", () => {
 
     const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
     expect(updated?.stage).toBe("dev");
-    expect(updated?.closureType).toBeNull();
+    expect(updated ? resultOf(updated) : undefined).toBeNull();
     expect(updated?.transitions).toHaveLength(1);
     expect(updated?.transitions[0].from).toBe("design");
     expect(updated?.transitions[0].to).toBe("dev");
@@ -503,7 +504,7 @@ describe("requirementStore 流转（transition）与评论", () => {
 
     const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
     expect(updated?.stage).toBe("release");
-    expect(updated?.closureType).toBeNull();
+    expect(updated ? resultOf(updated) : undefined).toBeNull();
   });
 
   it("transitionRequirement 流转到归档（正常完成路径）时 closureType 设为 completed", async () => {
@@ -515,7 +516,7 @@ describe("requirementStore 流转（transition）与评论", () => {
 
     const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
     expect(updated?.stage).toBe("archive");
-    expect(updated?.closureType).toBe("completed");
+    expect(updated ? resultOf(updated) : undefined).toBe("completed");
     expect(updated?.transitions[0].to).toBe("archive");
   });
 
@@ -528,7 +529,7 @@ describe("requirementStore 流转（transition）与评论", () => {
 
     const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
     expect(updated?.stage).toBe("archive");
-    expect(updated?.closureType).toBe("abandoned");
+    expect(updated ? resultOf(updated) : undefined).toBe("abandoned");
     expect(updated?.transitions[0].from).toBe("dev");
     expect(updated?.transitions[0].to).toBe("archive");
   });
@@ -604,34 +605,34 @@ describe("requirementStore 流转（transition）与评论", () => {
     await transitionRequirement("proj-1", created.id, "release");
 
     const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
-    expect(updated?.releaseDate).toBe(new Date().toISOString().slice(0, 10));
+    expect(updated ? releaseDateOf(updated) : undefined).toBe(new Date().toISOString().slice(0, 10));
   });
 
   it("transitionRequirement 流转到发布阶段但已手动填写发布时间时，不覆盖已有值", async () => {
-    const { createRequirement, transitionRequirement, updateField } = useRequirementStore.getState();
+    const { createRequirement, transitionRequirement, updateAttributeValue } = useRequirementStore.getState();
     await createRequirement("proj-1", "verify", "需求 K");
     const created = useRequirementStore.getState().requirements[0];
-    await updateField("proj-1", created.id, "releaseDate", "2026-08-01");
+    await updateAttributeValue("proj-1", created.id, "release_date", "2026-08-01");
 
     await transitionRequirement("proj-1", created.id, "release");
 
     const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
-    expect(updated?.releaseDate).toBe("2026-08-01");
+    expect(updated ? releaseDateOf(updated) : undefined).toBe("2026-08-01");
   });
 
   it("transitionRequirement 从归档恢复到活跃阶段时，progress 清零、closureType 清空", async () => {
-    const { createRequirement, transitionRequirement, updateField } = useRequirementStore.getState();
+    const { createRequirement, transitionRequirement, updateAttributeValue } = useRequirementStore.getState();
     await createRequirement("proj-1", "release", "需求 L");
     const created = useRequirementStore.getState().requirements[0];
-    await updateField("proj-1", created.id, "progress", 100);
+    await updateAttributeValue("proj-1", created.id, "progress", 100);
     await transitionRequirement("proj-1", created.id, "archive");
 
     await transitionRequirement("proj-1", created.id, "dev");
 
     const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
     expect(updated?.stage).toBe("dev");
-    expect(updated?.closureType).toBeNull();
-    expect(updated?.progress).toBeNull();
+    expect(updated ? resultOf(updated) : undefined).toBeNull();
+    expect(updated ? progressOf(updated) : undefined).toBeNull();
   });
 
   it("重开应用后（loadForProject 重新读盘）流转记录、说明和评论原样还原", async () => {
@@ -751,5 +752,61 @@ describe("requirementStore manualOrder（手动排序）", () => {
 
     const filePath = `/app-local-data/projects/proj-1/${a.id}.md`;
     expect(files.get(filePath)).toContain("manualOrder: 5");
+  });
+});
+
+describe("requirementStore 加载 Phase 15 之前的旧格式文件（无 attributeValues）", () => {
+  beforeEach(() => {
+    files.clear();
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+  });
+
+  it("旧格式扁平字段现场映射为 attributeValues，closureType 映射为 result，数据不丢（REQ-029）", async () => {
+    const { loadForProject } = useRequirementStore.getState();
+    const legacyId = "legacy-archived";
+    files.set(
+      `/app-local-data/projects/proj-1/${legacyId}.md`,
+      "---\nid: legacy-archived\nname: 旧归档需求\nstage: archive\npriority: P0\nsource: 用户反馈\nassignee: 吴桐\ndeadline: '2026-06-01'\nprogress: 100\nclosureType: abandoned\ncreatedAt: '2026-01-01T00:00:00.000Z'\nreleaseMethod: 全量\nreleaseDate: '2026-05-01'\nmanualOrder: 0\ndeliverables: []\ntasks: []\nacceptance: []\ntransitions: []\ncomments: []\n---\n\n旧正文",
+    );
+    const { readDir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readDir).mockResolvedValueOnce([
+      { name: `${legacyId}.md`, isFile: true, isDirectory: false, isSymlink: false },
+    ] as never);
+
+    await loadForProject("proj-1");
+
+    const loaded = useRequirementStore.getState().requirements.find((r) => r.id === legacyId);
+    expect(loaded?.name).toBe("旧归档需求");
+    expect(resultOf(loaded!)).toBe("abandoned");
+    expect(loaded?.attributeValues).toMatchObject({
+      priority: "P0",
+      source: "用户反馈",
+      assignee: "吴桐",
+      deadline: "2026-06-01",
+      progress: 100,
+      release_method: "全量",
+      release_date: "2026-05-01",
+      result: "abandoned",
+    });
+  });
+
+  it("旧格式文件重新落盘（如编辑一次）后写出新格式（含 attributeValues），不再是扁平字段", async () => {
+    const { loadForProject, renameRequirement } = useRequirementStore.getState();
+    const legacyId = "legacy-to-resave";
+    files.set(
+      `/app-local-data/projects/proj-1/${legacyId}.md`,
+      "---\nid: legacy-to-resave\nname: 旧需求\nstage: verify\npriority: P1\nsource: 内部想法\nassignee: ''\ndeadline: ''\nprogress: null\nclosureType: null\ncreatedAt: '2026-01-01T00:00:00.000Z'\nreleaseMethod: ''\nreleaseDate: ''\nmanualOrder: 0\ndeliverables: []\ntasks: []\nacceptance: []\ntransitions: []\ncomments: []\n---\n\n正文",
+    );
+    const { readDir } = await import("@tauri-apps/plugin-fs");
+    vi.mocked(readDir).mockResolvedValueOnce([
+      { name: `${legacyId}.md`, isFile: true, isDirectory: false, isSymlink: false },
+    ] as never);
+    await loadForProject("proj-1");
+
+    await renameRequirement("proj-1", legacyId, "改名后的需求");
+
+    const raw = files.get(`/app-local-data/projects/proj-1/${legacyId}.md`) ?? "";
+    expect(raw).toContain("attributeValues:");
+    expect(raw).not.toContain("closureType");
   });
 });

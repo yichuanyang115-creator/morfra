@@ -4,9 +4,8 @@ import type { AcceptanceCriterion, Comment, Deliverable, Requirement, Stage, Tas
 import { ensureDir, listFileNames } from "../lib/fs";
 import { projectDir } from "../lib/paths";
 import { todayIso } from "../lib/dates";
+import { FIELD_KEYS, progressOf, releaseDateOf, withAttributeValue } from "../lib/requirementFields";
 import { loadRequirement, saveRequirement } from "./requirementPersistence";
-
-type EditableField = "name" | "priority" | "source" | "assignee" | "deadline" | "progress" | "releaseMethod" | "releaseDate";
 
 interface RequirementState {
   requirements: Requirement[];
@@ -15,12 +14,8 @@ interface RequirementState {
   error: boolean;
   loadForProject: (projectId: string) => Promise<void>;
   createRequirement: (projectId: string, stage: Stage, name: string) => Promise<void>;
-  updateField: (
-    projectId: string,
-    requirementId: string,
-    field: EditableField,
-    value: Requirement[EditableField],
-  ) => Promise<void>;
+  renameRequirement: (projectId: string, requirementId: string, name: string) => Promise<void>;
+  updateAttributeValue: (projectId: string, requirementId: string, key: string, value: unknown) => Promise<void>;
   updateBody: (projectId: string, requirementId: string, body: string) => Promise<void>;
   addDeliverable: (projectId: string, requirementId: string, name: string) => Promise<void>;
   updateDeliverable: (
@@ -120,17 +115,19 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       id: nanoid(),
       name,
       stage,
-      priority: "P2",
-      source: "内部想法",
-      assignee: "",
-      deadline: "",
-      progress: null,
-      closureType: null,
       createdAt: new Date().toISOString(),
-      releaseMethod: "",
-      releaseDate: "",
       manualOrder: minOrder - 1,
       body: "",
+      attributeValues: {
+        [FIELD_KEYS.priority]: "P2",
+        [FIELD_KEYS.source]: "内部想法",
+        [FIELD_KEYS.assignee]: "",
+        [FIELD_KEYS.deadline]: "",
+        [FIELD_KEYS.progress]: null,
+        [FIELD_KEYS.releaseMethod]: "",
+        [FIELD_KEYS.releaseDate]: "",
+        [FIELD_KEYS.result]: null,
+      },
       deliverables: [],
       tasks: [],
       acceptance: [],
@@ -141,8 +138,14 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     set((state) => ({ requirements: [...state.requirements, requirement] }));
   },
 
-  updateField: (projectId, requirementId, field, value) =>
-    mutateRequirement(get, set, projectId, requirementId, (r) => ({ ...r, [field]: value })),
+  renameRequirement: (projectId, requirementId, name) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({ ...r, name })),
+
+  updateAttributeValue: (projectId, requirementId, key, value) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      attributeValues: withAttributeValue(r, key, value),
+    })),
 
   updateBody: (projectId, requirementId, body) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({ ...r, body })),
@@ -229,18 +232,25 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
         by: "我",
         note: "",
       };
-      const closureType: Requirement["closureType"] = abandoned ? "abandoned" : targetStage === "archive" ? "completed" : null;
+      const result = abandoned ? "abandoned" : targetStage === "archive" ? "completed" : null;
       // 恢复：从归档流转回活跃阶段时进度清零（Product-Spec §6.3）
       const restoringFromArchive = r.stage === "archive" && targetStage !== "archive";
-      const progress = restoringFromArchive ? null : r.progress;
+      const progress = restoringFromArchive ? null : progressOf(r);
       // 发布时间默认当前日期（Product-Spec FLOW-006 边界情况），仅在尚未填写时补默认值
-      const releaseDate = targetStage === "release" && !r.releaseDate ? todayIso() : r.releaseDate;
+      const currentReleaseDate = releaseDateOf(r);
+      const releaseDate = targetStage === "release" && !currentReleaseDate ? todayIso() : currentReleaseDate;
       // 换阶段后 manualOrder 是老阶段的值，跟目标阶段已有值不是同一套参照系，
       // 落到目标阶段最小值之前，跟新建置顶体感一致（Product-Spec REQ-001 §426）
       const existingInTarget = get().requirements.filter((req) => req.stage === targetStage && req.id !== r.id);
       const minOrder = existingInTarget.reduce((min, req) => Math.min(min, req.manualOrder), 0);
       const manualOrder = targetStage !== "archive" ? minOrder - 1 : r.manualOrder;
-      return { ...r, stage: targetStage, closureType, progress, releaseDate, manualOrder, transitions: [...r.transitions, record] };
+      const attributeValues = {
+        ...r.attributeValues,
+        [FIELD_KEYS.result]: result,
+        [FIELD_KEYS.progress]: progress,
+        [FIELD_KEYS.releaseDate]: releaseDate,
+      };
+      return { ...r, stage: targetStage, attributeValues, manualOrder, transitions: [...r.transitions, record] };
     }),
 
   updateTransitionNote: (projectId, requirementId, transitionId, note) =>

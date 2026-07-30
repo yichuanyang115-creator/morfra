@@ -2,16 +2,14 @@ import { useState } from "react";
 import type { Priority, Requirement, Stage } from "../../types/models";
 import { StageTransitionDropdown } from "./StageTransitionDropdown";
 import { fmtDate } from "../../lib/dates";
+import { assigneeOf, deadlineOf, priorityOf, progressOf, releaseMethodOf, resultOf, sourceOf } from "../../lib/requirementFields";
 
 interface AttributeGridProps {
   requirement: Requirement;
   sources: string[];
   /** 详情面板逼近 480px 底线（REQ-003 v2.8）时为真，两列网格收缩为单列，无中间过渡态。 */
   compact: boolean;
-  onFieldChange: <K extends "priority" | "assignee" | "source" | "deadline">(
-    field: K,
-    value: Requirement[K],
-  ) => void;
+  onFieldChange: (field: "priority" | "assignee" | "source" | "deadline", value: string) => void;
   onProgressChange: (progress: number | null) => void;
   onAddSource: (source: string) => void;
   onTransition: (toStage: Stage, opts?: { abandoned?: boolean }) => void;
@@ -62,9 +60,9 @@ function stageSlot(requirement: Requirement): { label: string; value: string } {
       return { label: "验收", value: `${passed}/${requirement.acceptance.length}` };
     }
     case "release":
-      return { label: "方式", value: requirement.releaseMethod || "未设置" };
+      return { label: "方式", value: releaseMethodOf(requirement) || "未设置" };
     case "archive":
-      return { label: "结果", value: requirement.closureType === "abandoned" ? "废弃" : "完成" };
+      return { label: "结果", value: resultOf(requirement) === "abandoned" ? "废弃" : "完成" };
     default:
       return { label: "—", value: "—" };
   }
@@ -79,10 +77,16 @@ export function AttributeGrid({
   onAddSource,
   onTransition,
 }: AttributeGridProps) {
-  const [progressInput, setProgressInput] = useState(requirement.progress == null ? "" : String(requirement.progress));
+  const progress = progressOf(requirement);
+  const [progressInput, setProgressInput] = useState(progress == null ? "" : String(progress));
   const [customizingSource, setCustomizingSource] = useState(false);
   const [customSourceValue, setCustomSourceValue] = useState("");
   const slot = stageSlot(requirement);
+  const priority = priorityOf(requirement);
+  const assignee = assigneeOf(requirement);
+  const source = sourceOf(requirement);
+  const deadline = deadlineOf(requirement);
+  const result = resultOf(requirement);
 
   function commitCustomSource() {
     const trimmed = customSourceValue.trim();
@@ -101,7 +105,7 @@ export function AttributeGrid({
     >
       <AttrRow label="优先级">
         <select
-          value={requirement.priority}
+          value={priority}
           onChange={(e) => onFieldChange("priority", e.target.value as Priority)}
           className={selectClass}
           style={selectStyle}
@@ -117,7 +121,7 @@ export function AttributeGrid({
       <AttrRow label="负责人">
         <input
           type="text"
-          defaultValue={requirement.assignee}
+          defaultValue={assignee}
           placeholder="未指定"
           onBlur={(e) => onFieldChange("assignee", e.target.value)}
           className={inputClass}
@@ -146,7 +150,7 @@ export function AttributeGrid({
           />
         ) : (
           <select
-            value={requirement.source}
+            value={source}
             onChange={(e) => {
               if (e.target.value === "__custom__") {
                 setCustomizingSource(true);
@@ -157,8 +161,8 @@ export function AttributeGrid({
             className={selectClass}
             style={selectStyle}
           >
-            {!sources.includes(requirement.source) && requirement.source && (
-              <option value={requirement.source}>{requirement.source}</option>
+            {!sources.includes(source) && source && (
+              <option value={source}>{source}</option>
             )}
             {sources.map((s) => (
               <option key={s} value={s}>
@@ -172,7 +176,7 @@ export function AttributeGrid({
 
       <AttrRow label="进度">
         {requirement.stage === "archive" ? (
-          <span className={readonlyClass}>{requirement.closureType === "abandoned" ? "废弃" : "完成"}</span>
+          <span className={readonlyClass}>{result === "abandoned" ? "废弃" : "完成"}</span>
         ) : (
           <input
             type="number"
@@ -184,7 +188,7 @@ export function AttributeGrid({
             onBlur={() => {
               const clamped = clampProgress(progressInput);
               setProgressInput(clamped == null ? "" : String(clamped));
-              if (clamped !== requirement.progress) onProgressChange(clamped);
+              if (clamped !== progress) onProgressChange(clamped);
             }}
             className={`${inputClass} [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
           />
@@ -194,7 +198,7 @@ export function AttributeGrid({
       <AttrRow label="阶段">
         <StageTransitionDropdown
           currentStage={requirement.stage}
-          closureType={requirement.closureType}
+          closureType={result}
           onTransition={onTransition}
           className={selectClass}
           style={selectStyle}
@@ -208,7 +212,7 @@ export function AttributeGrid({
       <AttrRow label="截止日期">
         <input
           type="date"
-          defaultValue={requirement.deadline}
+          defaultValue={deadline}
           onBlur={(e) => onFieldChange("deadline", e.target.value)}
           className={inputClass}
         />

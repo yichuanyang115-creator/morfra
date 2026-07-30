@@ -5,6 +5,7 @@ import type { Priority, Requirement } from "../../types/models";
 import { RELEASE_METHODS } from "../../types/models";
 import { fmtDate } from "../../lib/dates";
 import { lastTransitionTimestamp, stayDays as computeStayDays, totalDays as computeTotalDays } from "../../lib/requirementMetrics";
+import { assigneeOf, deadlineOf, priorityOf, progressOf, releaseDateOf, releaseMethodOf, resultOf } from "../../lib/requirementFields";
 
 const PRIORITY_STYLE: Record<Priority, string> = {
   P0: "bg-(--sev-p0-soft) text-(--sev-p0)",
@@ -35,7 +36,8 @@ export function RequirementRow({
   onReleaseMethodChange,
   onReleaseDateChange,
 }: RequirementRowProps) {
-  const [progressInput, setProgressInput] = useState(requirement.progress == null ? "" : String(requirement.progress));
+  const progress = progressOf(requirement);
+  const [progressInput, setProgressInput] = useState(progress == null ? "" : String(progress));
   const isArchive = requirement.stage === "archive";
   const { attributes, listeners, setNodeRef, isDragging, transform, transition } = useSortable({
     id: requirement.id,
@@ -44,6 +46,10 @@ export function RequirementRow({
   const isRelease = requirement.stage === "release";
   const stayDays = computeStayDays(requirement);
   const totalDays = computeTotalDays(requirement);
+  const priority = priorityOf(requirement);
+  const releaseMethod = releaseMethodOf(requirement);
+  const releaseDate = releaseDateOf(requirement);
+  const result = resultOf(requirement);
 
   return (
     <div
@@ -69,24 +75,24 @@ export function RequirementRow({
       </div>
       <div className="flex justify-center">
         <span
-          className={`inline-flex h-5 w-fit items-center justify-center rounded-(--r-sm) px-1.75 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.05em] ${PRIORITY_STYLE[requirement.priority]}`}
+          className={`inline-flex h-5 w-fit items-center justify-center rounded-(--r-sm) px-1.75 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.05em] ${PRIORITY_STYLE[priority]}`}
         >
-          {requirement.priority}
+          {priority}
         </span>
       </div>
       <div className="overflow-hidden text-ellipsis text-center font-(family-name:--font-mono) text-[12px] whitespace-nowrap text-(--muted)">
-        {requirement.assignee || "—"}
+        {assigneeOf(requirement) || "—"}
       </div>
       <div className="overflow-hidden text-ellipsis text-center font-(family-name:--font-mono) text-[12px] whitespace-nowrap text-(--muted)">
         {fmtDate(requirement.createdAt)}
       </div>
       <div className="overflow-hidden text-ellipsis text-center font-(family-name:--font-mono) text-[12px] whitespace-nowrap text-(--muted)">
-        {fmtDate(requirement.deadline)}
+        {fmtDate(deadlineOf(requirement))}
       </div>
       {isRelease ? (
         <div onClick={(e) => e.stopPropagation()}>
           <select
-            value={requirement.releaseMethod}
+            value={releaseMethod}
             aria-label="发布方式"
             onChange={(e) => onReleaseMethodChange(e.target.value)}
             className="w-full cursor-pointer rounded border border-transparent bg-transparent px-0.5 text-center font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none hover:border-(--border) hover:bg-(--surface-2) hover:text-(--fg) focus:border-(--border) focus:bg-(--surface-2) focus:text-(--fg)"
@@ -107,12 +113,12 @@ export function RequirementRow({
       {isRelease ? (
         <div className="relative" onClick={(e) => e.stopPropagation()}>
           <span className="pointer-events-none block overflow-hidden text-ellipsis text-center font-(family-name:--font-mono) text-[12px] whitespace-nowrap text-(--muted)">
-            {fmtDate(requirement.releaseDate)}
+            {fmtDate(releaseDate)}
           </span>
           <input
             type="date"
             aria-label="发布时间"
-            value={requirement.releaseDate}
+            value={releaseDate}
             onChange={(e) => onReleaseDateChange(e.target.value)}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           />
@@ -124,7 +130,7 @@ export function RequirementRow({
       )}
       <div className="flex items-center justify-center font-(family-name:--font-mono) text-[12px] text-(--muted)">
         {isArchive ? (
-          <span>{requirement.closureType === "abandoned" ? "废弃" : "完成"}</span>
+          <span>{result === "abandoned" ? "废弃" : "完成"}</span>
         ) : (
           <>
             <input
@@ -138,7 +144,7 @@ export function RequirementRow({
               onBlur={() => {
                 const clamped = clampProgress(progressInput);
                 setProgressInput(clamped == null ? "" : String(clamped));
-                if (clamped !== requirement.progress) onProgressChange(clamped);
+                if (clamped !== progress) onProgressChange(clamped);
               }}
               className="w-7 rounded border border-transparent bg-transparent px-0.5 py-px text-right font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--surface-2) hover:text-(--fg) focus:border-(--border) focus:bg-(--surface-2) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
             />

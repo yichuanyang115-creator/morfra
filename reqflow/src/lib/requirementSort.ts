@@ -1,6 +1,7 @@
 import type { Priority, Requirement } from "../types/models";
 import { diffDaysFromToday } from "./dates";
 import { lastTransitionTimestamp } from "./requirementMetrics";
+import { deadlineOf, priorityOf } from "./requirementFields";
 
 export type SortField = "priority" | "deadline" | "stayDays" | "totalDays" | "createdAt";
 export type SortDir = "asc" | "desc";
@@ -43,9 +44,9 @@ const PRIORITY_RANK: Record<Priority, number> = { P0: 0, P1: 1, P2: 2 };
 function sortFieldValue(requirement: Requirement, field: SortField): number | string {
   switch (field) {
     case "priority":
-      return PRIORITY_RANK[requirement.priority];
+      return PRIORITY_RANK[priorityOf(requirement)];
     case "deadline":
-      return requirement.deadline || "9999-99-99";
+      return deadlineOf(requirement) || "9999-99-99";
     case "stayDays": {
       const d = diffDaysFromToday(lastTransitionTimestamp(requirement));
       return d ?? -1;

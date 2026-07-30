@@ -3,7 +3,8 @@ import { nanoid } from "nanoid";
 import { DEFAULT_SOURCES, type Project } from "../types/models";
 import { ensureDir, listDirNames, readFile, removeDir, writeFile } from "../lib/fs";
 import { parseFrontmatter, stringifyFrontmatter } from "../lib/frontmatter";
-import { projectDir, projectMetaPath, projectsRootDir } from "../lib/paths";
+import { projectDir, projectMetaPath, projectsRootDir, schemaPath } from "../lib/paths";
+import { legacyEquivalentSchema } from "../lib/schemaDefaults";
 
 const DEFAULT_PROJECT_NAME = "默认项目";
 
@@ -43,9 +44,16 @@ async function saveProject(project: Project): Promise<void> {
   await writeFile(metaPath, stringifyFrontmatter(frontmatter, ""));
 }
 
+/** 新建项目时同步初始化 schema.json，用与硬编码字段等价的 Schema（模板选择上线前新建项目行为不变，只是底层已是 schema 驱动）。 */
+async function initSchema(projectId: string, sources: string[]): Promise<void> {
+  const path = await schemaPath(projectId);
+  await writeFile(path, JSON.stringify(legacyEquivalentSchema(sources), null, 2));
+}
+
 async function createDefaultProject(): Promise<Project> {
   const project: Project = { id: nanoid(), name: DEFAULT_PROJECT_NAME, sources: DEFAULT_SOURCES };
   await saveProject(project);
+  await initSchema(project.id, project.sources);
   return project;
 }
 
@@ -89,6 +97,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   createProject: async (name) => {
     const project: Project = { id: nanoid(), name, sources: DEFAULT_SOURCES };
     await saveProject(project);
+    await initSchema(project.id, project.sources);
     set((state) => ({
       projects: [...state.projects, project],
       currentProjectId: project.id,

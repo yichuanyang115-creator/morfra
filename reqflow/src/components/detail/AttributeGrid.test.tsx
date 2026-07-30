@@ -3,22 +3,24 @@ import { render } from "@testing-library/react";
 import { AttributeGrid } from "./AttributeGrid";
 import type { Requirement } from "../../types/models";
 
-function makeRequirement(overrides: Partial<Requirement> = {}): Requirement {
+function makeRequirement(overrides: Partial<Omit<Requirement, "attributeValues">> = {}): Requirement {
   return {
     id: "r-1",
     name: "需求一",
     stage: "design",
-    priority: "P2",
-    source: "内部想法",
-    assignee: "",
-    deadline: "",
-    progress: null,
-    closureType: null,
     createdAt: "2026-01-01T00:00:00.000Z",
-    releaseMethod: "",
-    releaseDate: "",
     manualOrder: 0,
     body: "",
+    attributeValues: {
+      priority: "P2",
+      source: "内部想法",
+      assignee: "",
+      deadline: "",
+      progress: null,
+      release_method: "",
+      release_date: "",
+      result: null,
+    },
     deliverables: [],
     tasks: [],
     acceptance: [],

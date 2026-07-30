@@ -56,17 +56,11 @@ export interface Requirement {
   id: string;
   name: string;
   stage: Stage;
-  priority: Priority;
-  source: string;
-  assignee: string;
-  deadline: string;
-  progress: number | null;
-  closureType: "completed" | "abandoned" | null;
   createdAt: string;
-  releaseMethod: string;
-  releaseDate: string;
   manualOrder: number;
   body: string;
+  /** Schema 驱动的属性值，key 是属性 id（见 lib/requirementFields.ts 的迁移属性 key 常量）。 */
+  attributeValues: Record<string, unknown>;
   deliverables: Deliverable[];
   tasks: Task[];
   acceptance: AcceptanceCriterion[];
