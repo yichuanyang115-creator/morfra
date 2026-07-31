@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
+import type { Attribute } from "../types/schema";
 import {
   BOARD_DEFAULT_WIDTH,
   BOARD_MIN_WIDTH,
   CHAT_MIN_WIDTH,
   DETAIL_MIN_WIDTH,
+  NAME_COLUMN_MIN_WIDTH,
   RESIZER_WIDTH,
   chatMaxWidth,
   chatOccupiedWidth,
   clampBoardWidth,
   clampChatWidth,
   detailPanelWidthFor,
+  gridTemplateColumnsFor,
 } from "./boardWidth";
 
 describe("clampBoardWidth", () => {
@@ -101,6 +104,43 @@ describe("chatOccupiedWidth", () => {
     const viewport = 2000;
     const board = BOARD_DEFAULT_WIDTH;
     expect(chatOccupiedWidth(true, 400, "expanded", board, viewport)).toBe(400 + RESIZER_WIDTH);
+  });
+});
+
+describe("gridTemplateColumnsFor", () => {
+  function makeAttribute(overrides: Partial<Attribute>): Attribute {
+    return { id: "a", name: "属性", type: "text", showOnBoard: true, showOnDetail: true, ...overrides };
+  }
+
+  it("Name 列固定最左，宽度区间为 minmax(140px, 320px)，不受传入属性影响", () => {
+    const result = gridTemplateColumnsFor([]);
+    expect(result).toBe("minmax(140px, 320px)");
+  });
+
+  it("按传入属性顺序依次拼接各自的默认列宽", () => {
+    const attributes = [
+      makeAttribute({ id: "priority", type: "singleSelect" }),
+      makeAttribute({ id: "progress", type: "percent" }),
+      makeAttribute({ id: "deadline", type: "date" }),
+    ];
+    const result = gridTemplateColumnsFor(attributes);
+    expect(result).toBe("minmax(140px, 320px) 56px 40px 56px");
+  });
+
+  it("不同属性类型有各自的默认列宽，不是统一值", () => {
+    const attributes = [
+      makeAttribute({ id: "tags", type: "multiSelect" }),
+      makeAttribute({ id: "done", type: "checkbox" }),
+    ];
+    const result = gridTemplateColumnsFor(attributes);
+    expect(result).toBe("minmax(140px, 320px) 72px 40px");
+  });
+});
+
+describe("BOARD_MIN_WIDTH", () => {
+  it("等于 Name 列最小宽度(140) + 最小滚动区宽度(200) = 340，不再是与旧 8 列内容绑定的写死值", () => {
+    expect(BOARD_MIN_WIDTH).toBe(340);
+    expect(NAME_COLUMN_MIN_WIDTH).toBe(140);
   });
 });
 

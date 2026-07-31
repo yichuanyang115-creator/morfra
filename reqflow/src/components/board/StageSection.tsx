@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { Requirement, Stage } from "../../types/models";
+import type { Requirement } from "../../types/models";
+import type { Attribute, StageOption } from "../../types/schema";
 import { RequirementRow } from "./RequirementRow";
 import { QuickAddInput } from "./QuickAddInput";
 import { ArchiveSearch } from "./ArchiveSearch";
@@ -27,59 +28,60 @@ function PlusIcon() {
 }
 
 interface StageSectionProps {
-  stage: Stage;
-  label: string;
+  stageOption: StageOption;
   requirements: Requirement[];
+  /** 已按 schema 可见属性顺序排好的属性列表，直接传给每一行的 RequirementRow。 */
+  attributes: Attribute[];
   selectedRequirementId: string | null;
   onCreate: (name: string) => void;
   onSelectRequirement: (id: string) => void;
-  onProgressChange: (requirementId: string, progress: number | null) => void;
-  onReleaseMethodChange: (requirementId: string, method: string) => void;
-  onReleaseDateChange: (requirementId: string, date: string) => void;
+  onAttributeChange: (requirementId: string, attributeId: string, value: unknown) => void;
 }
 
 export function StageSection({
-  stage,
-  label,
+  stageOption,
   requirements,
+  attributes,
   selectedRequirementId,
   onCreate,
   onSelectRequirement,
-  onProgressChange,
-  onReleaseMethodChange,
-  onReleaseDateChange,
+  onAttributeChange,
 }: StageSectionProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [draftOpen, setDraftOpen] = useState(false);
-  const [archiveSearch, setArchiveSearch] = useState("");
-  const { setNodeRef, isOver } = useDroppable({ id: stage });
+  const [terminalSearch, setTerminalSearch] = useState("");
+  const { setNodeRef, isOver } = useDroppable({ id: stageOption.id });
 
-  const sort = useUiStore((s) => s.getStageSort(stage));
+  const sort = useUiStore((s) => s.getStageSort(stageOption.id));
   const setStageSortField = useUiStore((s) => s.setStageSortField);
   const setStageSortSecondaryField = useUiStore((s) => s.setStageSortSecondaryField);
   const toggleStageSortDir = useUiStore((s) => s.toggleStageSortDir);
   const restoreStageSort = useUiStore((s) => s.restoreStageSort);
 
-  const isArchive = stage === "archive";
+  const isTerminal = stageOption.isTerminal;
 
-  const visibleRequirements = isArchive
+  const visibleRequirements = isTerminal
     ? requirements
-        .filter((r) => r.name.toLowerCase().includes(archiveSearch.trim().toLowerCase()))
+        .filter((r) => r.name.toLowerCase().includes(terminalSearch.trim().toLowerCase()))
         .sort((a, b) => lastTransitionTimestamp(b).localeCompare(lastTransitionTimestamp(a)))
     : sortRequirementsForStage(requirements, sort);
 
-  const emptyText = isArchive
-    ? archiveSearch.trim()
-      ? "没有匹配的归档需求"
-      : "还没有归档的需求"
-    : `该阶段暂无需求${stage === "collect" ? "，点上方新建记录你的第一个想法" : ""}`;
+  const emptyText = isTerminal
+    ? terminalSearch.trim()
+      ? "没有匹配的需求"
+      : "该阶段暂无需求"
+    : `该阶段暂无需求${stageOption.id === "collect" ? "，点上方新建记录你的第一个想法" : ""}`;
 
   return (
-    <section ref={setNodeRef} className={`mb-1 rounded-(--r-lg) ${isOver ? "bg-(--accent-soft)" : ""}`}>
+    <section
+      ref={setNodeRef}
+      className={`mb-1 rounded-(--r-lg) ${isOver ? "bg-(--accent-soft)" : ""}`}
+    >
       <div
-        className={`my-1.5 flex max-w-(--board-row-max-w) items-center gap-2 rounded-(--r-lg) border px-2.5 py-1.75 ${
-          isOver ? "border-(--accent) bg-(--accent-soft-strong)" : "border-(--accent-soft-strong) bg-(--accent-soft)"
+        className={`my-1.5 flex w-fit min-w-full items-center gap-2 rounded-(--r-lg) border px-2.5 py-1.75 ${
+          isOver ? "border-(--accent) bg-(--accent-soft-strong)" : "border-(--accent-soft-strong)"
         }`}
+        style={{ backgroundColor: isOver ? undefined : stageOption.color }}
       >
         <button
           type="button"
@@ -90,23 +92,23 @@ export function StageSection({
             <ChevronIcon />
           </span>
           <span className="font-(family-name:--font-display) text-[13px] font-[590] tracking-[-0.005em] text-(--fg)">
-            {label}
+            {stageOption.label}
           </span>
           <span className="font-(family-name:--font-mono) text-[11px] text-(--muted-2) [font-variant-numeric:tabular-nums]">
             {requirements.length}
           </span>
         </button>
         <span className="flex-1" />
-        {isArchive ? (
-          <ArchiveSearch value={archiveSearch} onChange={setArchiveSearch} />
+        {isTerminal ? (
+          <ArchiveSearch value={terminalSearch} onChange={setTerminalSearch} />
         ) : (
           <>
             <SortControl
               sort={sort}
-              onSetPrimaryField={(field) => setStageSortField(stage, "primary", field)}
-              onSetSecondaryField={(field) => setStageSortSecondaryField(stage, field)}
-              onToggleDir={(slot) => toggleStageSortDir(stage, slot)}
-              onRestore={() => restoreStageSort(stage)}
+              onSetPrimaryField={(field) => setStageSortField(stageOption.id, "primary", field)}
+              onSetSecondaryField={(field) => setStageSortSecondaryField(stageOption.id, field)}
+              onToggleDir={(slot) => toggleStageSortDir(stageOption.id, slot)}
+              onRestore={() => restoreStageSort(stageOption.id)}
             />
             <button
               type="button"
@@ -125,7 +127,8 @@ export function StageSection({
         <>
           {draftOpen && (
             <QuickAddInput
-              placeholder={stage === "collect" ? "输入想法，回车记录" : "输入名称，回车创建"}
+              placeholder={stageOption.id === "collect" ? "输入想法，回车记录" : "输入名称，回车创建"}
+              attributes={attributes}
               onSubmit={(name) => {
                 onCreate(name);
                 setDraftOpen(false);
@@ -139,17 +142,17 @@ export function StageSection({
             <SortableContext
               items={visibleRequirements.map((r) => r.id)}
               strategy={verticalListSortingStrategy}
-              disabled={isArchive}
+              disabled={isTerminal}
             >
               {visibleRequirements.map((r) => (
                 <RequirementRow
                   key={r.id}
                   requirement={r}
+                  attributes={attributes}
                   selected={r.id === selectedRequirementId}
+                  isTerminal={isTerminal}
                   onSelect={() => onSelectRequirement(r.id)}
-                  onProgressChange={(progress) => onProgressChange(r.id, progress)}
-                  onReleaseMethodChange={(method) => onReleaseMethodChange(r.id, method)}
-                  onReleaseDateChange={(date) => onReleaseDateChange(r.id, date)}
+                  onAttributeChange={(attributeId, value) => onAttributeChange(r.id, attributeId, value)}
                 />
               ))}
             </SortableContext>

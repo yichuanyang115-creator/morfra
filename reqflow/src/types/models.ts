@@ -4,7 +4,14 @@ export interface Project {
   sources: string[];
 }
 
-export type Stage = "collect" | "need" | "design" | "dev" | "verify" | "release" | "archive";
+/**
+ * Phase 16 起阶段由 Schema 动态定义（schemaStore.schema.stageOptions），不再是编译期
+ * 已知的有限集合，故放宽为 string。`STAGES` 常量下方仍保留作为 reqflow 内置模板阶段的
+ * id/label 快照（供 legacyEquivalentSchema 迁移旧项目使用），业务逻辑判断终态与否要查
+ * StageOption.isTerminal，不能再靠字符串比较猜测阶段语义（除了 "archive" 作为内置模板
+ * 归档阶段的字面量 id，在 createRequirement/transitionRequirement 里仍被引用，见相关注释）。
+ */
+export type Stage = string;
 
 export type Priority = "P0" | "P1" | "P2";
 

@@ -1,15 +1,29 @@
+import type { Attribute, AttributeType } from "../types/schema";
+
+/** Name 列固定宽度区间（唯一强制冻结的列，见 REQ-001 MUST 下限 140px）。 */
+export const NAME_COLUMN_MIN_WIDTH = 140;
+const NAME_COLUMN_TEMPLATE = "minmax(140px, 320px)";
+
 /**
- * 看板列宽度上下限（数值来源：需求管理系统原型.html 内 boardWidthBounds 注释推导过程，
- * 已验证方案A"拖详情面板宽度、看板被动吃剩余空间"是结构性问题，改用方案B"看板受拖拽
- * 控制、详情面板占满剩余空间"）。
+ * 冻结列之外至少留出的最小滚动区宽度，保证面板拖到最窄时除了 Name 列还能看见
+ * 一部分属性列，不是"只剩名称、其余全部裁没"。本 Phase 只有 Name 列冻结，
+ * Phase 19 支持多列冻结后 BOARD_MIN_WIDTH 的冻结列宽总和部分需跟着累加。
  */
-export const BOARD_MIN_WIDTH = 641;
+const MIN_SCROLL_AREA_WIDTH = 200;
+
+/**
+ * 看板面板拖拽下限（Phase 16 起：冻结列宽总和 + 最小滚动区，取代原来"整行 8 列
+ * 内容一次性塞进面板"的写死值。看板区域现在靠横向滚动承载动态列数，面板本身
+ * 不再需要宽到能塞下所有列）。
+ */
+export const BOARD_MIN_WIDTH = NAME_COLUMN_MIN_WIDTH + MIN_SCROLL_AREA_WIDTH;
 export const BOARD_DEFAULT_WIDTH = 821;
 /**
  * 详情面板自适应收缩底线（REQ-003 v2.8），低于此改为限制对话框继续拖宽，看板拖拽
  * 不受此约束。改这个值时要同步检查 tauri.conf.json 的 app.windows[0].minWidth——
  * 应用允许缩到的最小窗口宽度必须 ≥ BOARD_MIN_WIDTH + RESIZER_WIDTH + DETAIL_MIN_WIDTH，
- * 否则窗口能被缩到详情面板挤破底线都保不住的宽度（480 对应 minWidth 至少要 1127）。
+ * 否则窗口能被缩到详情面板挤破底线都保不住的宽度（当前 340+6+480=826，tauri.conf.json
+ * 的 minWidth=1127 满足此不变式）。
  */
 export const DETAIL_MIN_WIDTH = 480;
 export const RESIZER_WIDTH = 6;
@@ -21,9 +35,11 @@ export const CHAT_DEFAULT_WIDTH = 320;
 export type DetailLayoutMode = "expanded" | "collapsed" | "fullscreen";
 
 /**
- * 看板行内容本身有上限（名称列封顶 320px + 其余数据列，见 --board-row-max-w），
- * 拖到 BOARD_DEFAULT_WIDTH 内容就已经完全展开贴满，继续往右拖只会露出没有意义
- * 的空白——所以拖拽上限直接封顶在 BOARD_DEFAULT_WIDTH，不再用视口宽度倒推。
+ * 看板面板宽度拖到 BOARD_DEFAULT_WIDTH 时，Phase 15 之前固定 8 列的内容已经
+ * 完全展开贴满，继续往右拖只会露出没有意义的空白——这条历史上限延续下来，
+ * 拖拽上限直接封顶在 BOARD_DEFAULT_WIDTH，不再用视口宽度倒推。看板区域内部
+ * 现在靠横向滚动（见 gridTemplateColumnsFor）承载可能超出面板宽度的动态列数，
+ * 不再要求面板宽度本身容纳全部列。
  * 视口仍然影响下限侧：窗口缩小时如果详情面板会被挤到小于 DETAIL_MIN_WIDTH，
  * 上限相应收紧（收窄看板给详情面板让路），但不会超过 BOARD_DEFAULT_WIDTH。
  * 看板拖拽本身独立于对话框是否打开（REQ-003 v2.8：保护详情面板 480px 底线的
@@ -90,4 +106,35 @@ export function detailPanelWidthFor(
   if (detailMode === "collapsed") return 0;
   if (detailMode === "fullscreen") return viewportWidth - chatOccupied;
   return viewportWidth - clampBoardWidth(boardWidth, viewportWidth) - RESIZER_WIDTH - chatOccupied;
+}
+
+/**
+ * 属性类型的默认列宽（px），延续 Phase 15 之前写死的 8 列宽度作为起点。
+ * Phase 19 起用户可拖拽调宽并持久化到 schema.json viewPreferences，这里的值
+ * 只是列宽从未被用户调整过时的初始值。
+ */
+const DEFAULT_COLUMN_WIDTH_BY_TYPE: Record<AttributeType, number> = {
+  singleSelect: 56,
+  multiSelect: 72,
+  number: 56,
+  percent: 40,
+  date: 56,
+  text: 56,
+  checkbox: 40,
+  attachment: 56,
+  computed: 56,
+};
+
+function defaultColumnWidth(attribute: Attribute): number {
+  return DEFAULT_COLUMN_WIDTH_BY_TYPE[attribute.type];
+}
+
+/**
+ * 从看板可见属性列表生成 CSS grid-template-columns 字符串，Name 列固定最左
+ * （REQ-001 MUST，不参与本函数的动态计算），其余属性列按类型给默认宽度，
+ * 用户尚未在 Phase 19 里调整过列宽时的初始布局。
+ */
+export function gridTemplateColumnsFor(attributes: Attribute[]): string {
+  const columns = attributes.map((a) => `${defaultColumnWidth(a)}px`);
+  return [NAME_COLUMN_TEMPLATE, ...columns].join(" ");
 }

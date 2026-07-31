@@ -131,17 +131,11 @@ function App() {
               if (currentProjectId) void createRequirement(currentProjectId, stage, name);
             }}
             onSelectRequirement={selectRequirement}
-            onProgressChange={(requirementId, progress) => {
-              if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, FIELD_KEYS.progress, progress);
+            onAttributeChange={(requirementId, attributeId, value) => {
+              if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, attributeId, value);
             }}
             onTransition={(requirementId, toStage) => {
               if (currentProjectId) void transitionRequirement(currentProjectId, requirementId, toStage);
-            }}
-            onReleaseMethodChange={(requirementId, method) => {
-              if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, FIELD_KEYS.releaseMethod, method);
-            }}
-            onReleaseDateChange={(requirementId, date) => {
-              if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, FIELD_KEYS.releaseDate, date);
             }}
             onReorder={(updates) => {
               if (currentProjectId) void reorderManually(currentProjectId, updates);

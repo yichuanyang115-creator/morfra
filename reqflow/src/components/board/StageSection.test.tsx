@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import * as dndCore from "@dnd-kit/core";
 import { StageSection } from "./StageSection";
 import type { Requirement } from "../../types/models";
+import type { StageOption } from "../../types/schema";
 import { useUiStore } from "../../stores/uiStore";
 
 interface RequirementOverrides extends Partial<Omit<Requirement, "attributeValues">> {
@@ -38,6 +39,18 @@ function makeRequirement(overrides: RequirementOverrides = {}): Requirement {
   };
 }
 
+const DESIGN_STAGE: StageOption = { id: "design", label: "设计", color: "#F7FAF1", isTerminal: false };
+const DEV_STAGE: StageOption = { id: "dev", label: "开发", color: "#F7FAF1", isTerminal: false };
+const COLLECT_STAGE: StageOption = { id: "collect", label: "收集", color: "#F7FAF1", isTerminal: false };
+const ARCHIVE_STAGE: StageOption = { id: "archive", label: "归档", color: "#F7FAF1", isTerminal: true };
+
+const noop = {
+  attributes: [],
+  onCreate: vi.fn(),
+  onSelectRequirement: vi.fn(),
+  onAttributeChange: vi.fn(),
+};
+
 describe("StageSection", () => {
   beforeEach(() => {
     useUiStore.setState({ boardSort: {} });
@@ -50,17 +63,7 @@ describe("StageSection", () => {
     } as unknown as ReturnType<typeof dndCore.useDroppable>);
 
     const { container } = render(
-      <StageSection
-        stage="design"
-        label="设计"
-        requirements={[]}
-        selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
-      />,
+      <StageSection stageOption={DESIGN_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />,
     );
 
     const section = container.querySelector("section");
@@ -77,17 +80,7 @@ describe("StageSection", () => {
     } as unknown as ReturnType<typeof dndCore.useDroppable>);
 
     const { container } = render(
-      <StageSection
-        stage="design"
-        label="设计"
-        requirements={[]}
-        selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
-      />,
+      <StageSection stageOption={DESIGN_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />,
     );
 
     const section = container.querySelector("section");
@@ -95,59 +88,29 @@ describe("StageSection", () => {
     spy.mockRestore();
   });
 
-  it("useDroppable 用阶段 key 作为可放置区域标识注册", () => {
+  it("useDroppable 用阶段 id 作为可放置区域标识注册", () => {
     const spy = vi.spyOn(dndCore, "useDroppable");
 
-    render(
-      <StageSection
-        stage="dev"
-        label="开发"
-        requirements={[]}
-        selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
-      />,
-    );
+    render(<StageSection stageOption={DEV_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
     expect(spy).toHaveBeenCalledWith({ id: "dev" });
     spy.mockRestore();
   });
 
   it("没有需求时显示空状态文案", () => {
-    render(
-      <StageSection
-        stage="design"
-        label="设计"
-        requirements={[]}
-        selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
-      />,
-    );
+    render(<StageSection stageOption={DESIGN_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
     expect(screen.getByText("该阶段暂无需求")).toBeInTheDocument();
   });
 
-  it("归档阶段不显示新建按钮", () => {
-    render(
-      <StageSection
-        stage="archive"
-        label="归档"
-        requirements={[]}
-        selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
-      />,
-    );
+  it("收集阶段为空时空状态文案带引导语", () => {
+    render(<StageSection stageOption={COLLECT_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
+
+    expect(screen.getByText("该阶段暂无需求，点上方新建记录你的第一个想法")).toBeInTheDocument();
+  });
+
+  it("终态阶段不显示新建按钮", () => {
+    render(<StageSection stageOption={ARCHIVE_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
     expect(screen.queryByLabelText("新建需求")).not.toBeInTheDocument();
   });
@@ -155,17 +118,7 @@ describe("StageSection", () => {
   it("点击新建按钮出现输入框，输入名称回车后 onCreate 收到去除首尾空格的名称，输入框关闭", async () => {
     const onCreate = vi.fn();
     render(
-      <StageSection
-        stage="design"
-        label="设计"
-        requirements={[]}
-        selectedRequirementId={null}
-        onCreate={onCreate}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
-      />,
+      <StageSection stageOption={DESIGN_STAGE} requirements={[]} selectedRequirementId={null} {...noop} onCreate={onCreate} />,
     );
 
     await userEvent.click(screen.getByLabelText("新建需求"));
@@ -179,15 +132,10 @@ describe("StageSection", () => {
   it("点击折叠按钮后不再渲染需求行", async () => {
     render(
       <StageSection
-        stage="design"
-        label="设计"
+        stageOption={DESIGN_STAGE}
         requirements={[makeRequirement({ name: "折叠测试需求" })]}
         selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
+        {...noop}
       />,
     );
 
@@ -200,15 +148,11 @@ describe("StageSection", () => {
     const onSelectRequirement = vi.fn();
     render(
       <StageSection
-        stage="design"
-        label="设计"
+        stageOption={DESIGN_STAGE}
         requirements={[makeRequirement({ id: "r-9", name: "选中测试需求" })]}
         selectedRequirementId={null}
-        onCreate={vi.fn()}
+        {...noop}
         onSelectRequirement={onSelectRequirement}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
       />,
     );
 
@@ -216,49 +160,31 @@ describe("StageSection", () => {
     expect(onSelectRequirement).toHaveBeenCalledWith("r-9");
   });
 
-  it("归档阶段标题行显示搜索框而不是新建按钮", () => {
-    render(
-      <StageSection
-        stage="archive"
-        label="归档"
-        requirements={[]}
-        selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
-      />,
-    );
+  it("终态阶段标题行显示搜索框而不是新建按钮", () => {
+    render(<StageSection stageOption={ARCHIVE_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
     expect(screen.getByPlaceholderText("搜索归档需求…")).toBeInTheDocument();
     expect(screen.queryByLabelText("新建需求")).not.toBeInTheDocument();
   });
 
-  it("归档区域为空且未搜索时提示还没有归档的需求，输入搜索词无匹配时提示没有匹配的归档需求", async () => {
+  it("终态区域为空且未搜索时提示该阶段暂无需求，输入搜索词无匹配时提示没有匹配的需求", async () => {
     render(
       <StageSection
-        stage="archive"
-        label="归档"
+        stageOption={ARCHIVE_STAGE}
         requirements={[makeRequirement({ stage: "archive", name: "已完成需求" })]}
         selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
+        {...noop}
       />,
     );
 
     await userEvent.type(screen.getByPlaceholderText("搜索归档需求…"), "不存在的关键字");
-    expect(screen.getByText("没有匹配的归档需求")).toBeInTheDocument();
+    expect(screen.getByText("没有匹配的需求")).toBeInTheDocument();
   });
 
-  it("归档区域按名称搜索过滤需求行，且按最近流转时间倒序排列", async () => {
+  it("终态区域按名称搜索过滤需求行，且按最近流转时间倒序排列", async () => {
     render(
       <StageSection
-        stage="archive"
-        label="归档"
+        stageOption={ARCHIVE_STAGE}
         requirements={[
           makeRequirement({
             id: "r-old",
@@ -274,11 +200,7 @@ describe("StageSection", () => {
           }),
         ]}
         selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
+        {...noop}
       />,
     );
 
@@ -290,38 +212,14 @@ describe("StageSection", () => {
     expect(screen.queryByText("新的归档需求")).not.toBeInTheDocument();
   });
 
-  it("非归档阶段标题行显示排序控制", () => {
-    render(
-      <StageSection
-        stage="design"
-        label="设计"
-        requirements={[]}
-        selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
-      />,
-    );
+  it("非终态阶段标题行显示排序控制", () => {
+    render(<StageSection stageOption={DESIGN_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
     expect(screen.getByLabelText("排序")).toBeInTheDocument();
   });
 
-  it("归档阶段标题行不显示排序控制", () => {
-    render(
-      <StageSection
-        stage="archive"
-        label="归档"
-        requirements={[]}
-        selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
-      />,
-    );
+  it("终态阶段标题行不显示排序控制", () => {
+    render(<StageSection stageOption={ARCHIVE_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
     expect(screen.queryByLabelText("排序")).not.toBeInTheDocument();
   });
@@ -332,18 +230,13 @@ describe("StageSection", () => {
 
     render(
       <StageSection
-        stage="design"
-        label="设计"
+        stageOption={DESIGN_STAGE}
         requirements={[
           makeRequirement({ id: "r-p2", name: "P2需求", priority: "P2" }),
           makeRequirement({ id: "r-p0", name: "P0需求", priority: "P0" }),
         ]}
         selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
+        {...noop}
       />,
     );
 
@@ -356,22 +249,32 @@ describe("StageSection", () => {
 
     render(
       <StageSection
-        stage="design"
-        label="设计"
+        stageOption={DESIGN_STAGE}
         requirements={[
           makeRequirement({ id: "r-a", name: "A需求", manualOrder: 2 }),
           makeRequirement({ id: "r-b", name: "B需求", manualOrder: 0 }),
         ]}
         selectedRequirementId={null}
-        onCreate={vi.fn()}
-        onSelectRequirement={vi.fn()}
-        onProgressChange={vi.fn()}
-        onReleaseMethodChange={vi.fn()}
-        onReleaseDateChange={vi.fn()}
+        {...noop}
       />,
     );
 
     const names = screen.getAllByText(/需求$/).map((el) => el.textContent);
     expect(names).toEqual(["B需求", "A需求"]);
+  });
+
+  it("阶段标题行背景色读取 stageOption.color", () => {
+    const { container } = render(
+      <StageSection
+        stageOption={{ ...DESIGN_STAGE, color: "#ABCDEF" }}
+        requirements={[]}
+        selectedRequirementId={null}
+        {...noop}
+      />,
+    );
+
+    const section = container.querySelector("section");
+    const header = section?.firstElementChild as HTMLElement;
+    expect(header.style.backgroundColor).toBe("rgb(171, 205, 239)");
   });
 });
