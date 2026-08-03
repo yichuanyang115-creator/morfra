@@ -1,9 +1,11 @@
 import { create } from "zustand";
 import type { Stage } from "../types/models";
 import { defaultStageSort, type StageSort, type SortField } from "../lib/requirementSort";
-import { BOARD_DEFAULT_WIDTH, clampBoardWidth } from "../lib/boardWidth";
+import { BOARD_DEFAULT_WIDTH, clampBoardWidth, type DetailLayoutMode } from "../lib/boardWidth";
 
-export type DetailMode = "expanded" | "collapsed" | "fullscreen";
+/** 详情面板三态，与 lib/boardWidth.ts 的 DetailLayoutMode 是同一套值域，直接复用避免
+ * 两个同语义类型分别声明后维护者改一处忘另一处（Phase 17 code review 发现）。 */
+export type DetailMode = DetailLayoutMode;
 
 export type DetailTab = "body" | "produce" | "tasks" | "acceptance" | "activity";
 
@@ -14,7 +16,7 @@ interface UiState {
   boardSort: Partial<Record<Stage, StageSort>>;
   boardWidth: number;
   selectRequirement: (id: string) => void;
-  toggleCollapsed: () => void;
+  toggleClosed: () => void;
   toggleFullscreen: () => void;
   setActiveTab: (tab: DetailTab) => void;
   getStageSort: (stage: Stage) => StageSort;
@@ -38,13 +40,13 @@ export const useUiStore = create<UiState>((set, get) => ({
     set({
       selectedRequirementId: id,
       activeTab: "body",
-      detailMode: current === "collapsed" ? "expanded" : current,
+      detailMode: current === "closed" ? "expanded" : current,
     });
   },
 
-  toggleCollapsed: () => {
+  toggleClosed: () => {
     const current = get().detailMode;
-    set({ detailMode: current === "collapsed" ? "expanded" : "collapsed" });
+    set({ detailMode: current === "closed" ? "expanded" : "closed" });
   },
 
   toggleFullscreen: () => {

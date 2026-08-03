@@ -17,9 +17,9 @@ describe("uiStore 详情面板三态（AC-002/004/005/006）", () => {
     expect(state.activeTab).toBe("body");
   });
 
-  it("selectRequirement 在收起状态下选中需求会自动展开详情面板", () => {
-    useUiStore.getState().toggleCollapsed();
-    expect(useUiStore.getState().detailMode).toBe("collapsed");
+  it("selectRequirement 在关闭状态下选中需求会自动展开详情面板", () => {
+    useUiStore.getState().toggleClosed();
+    expect(useUiStore.getState().detailMode).toBe("closed");
 
     useUiStore.getState().selectRequirement("req-2");
 
@@ -45,23 +45,23 @@ describe("uiStore 详情面板三态（AC-002/004/005/006）", () => {
     expect(useUiStore.getState().detailMode).toBe("expanded");
   });
 
-  it("toggleCollapsed 在 expanded 和 collapsed 之间切换（AC-006：收起后主内容区恢复全宽）", () => {
+  it("toggleClosed 在 expanded 和 closed 之间切换（AC-006：关闭后主内容区恢复全宽）", () => {
     expect(useUiStore.getState().detailMode).toBe("expanded");
 
-    useUiStore.getState().toggleCollapsed();
-    expect(useUiStore.getState().detailMode).toBe("collapsed");
+    useUiStore.getState().toggleClosed();
+    expect(useUiStore.getState().detailMode).toBe("closed");
 
-    useUiStore.getState().toggleCollapsed();
+    useUiStore.getState().toggleClosed();
     expect(useUiStore.getState().detailMode).toBe("expanded");
   });
 
-  it("toggleCollapsed 在全屏态下调用会切到收起（而非回到 expanded），因为它只认 collapsed↔expanded 这一组", () => {
+  it("toggleClosed 在全屏态下调用会切到关闭（而非回到 expanded），因为它只认 closed↔expanded 这一组", () => {
     useUiStore.getState().toggleFullscreen();
     expect(useUiStore.getState().detailMode).toBe("fullscreen");
 
-    useUiStore.getState().toggleCollapsed();
+    useUiStore.getState().toggleClosed();
 
-    expect(useUiStore.getState().detailMode).toBe("collapsed");
+    expect(useUiStore.getState().detailMode).toBe("closed");
   });
 });
 

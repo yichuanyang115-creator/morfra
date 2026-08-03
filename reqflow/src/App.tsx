@@ -8,7 +8,7 @@ import { useRequirementStore } from "./stores/requirementStore";
 import { useChatStore } from "./stores/chatStore";
 import { useUiStore } from "./stores/uiStore";
 import { useSchemaStore } from "./stores/schemaStore";
-import { FIELD_KEYS } from "./lib/requirementFields";
+import { detailAttributesFor } from "./lib/schemaSelectors";
 import { Toast } from "./components/shared/Toast";
 
 function mostRecentRequirementId<T extends { id: string; createdAt: string }>(requirements: T[]): string | null {
@@ -22,7 +22,6 @@ function App() {
   const projectsError = useProjectStore((s) => s.error);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const project = useProjectStore(currentProject);
-  const addSource = useProjectStore((s) => s.addSource);
 
   const requirements = useRequirementStore((s) => s.requirements);
   const requirementsLoading = useRequirementStore((s) => s.loading);
@@ -53,11 +52,13 @@ function App() {
   const activeTab = useUiStore((s) => s.activeTab);
   const selectRequirement = useUiStore((s) => s.selectRequirement);
   const toggleFullscreen = useUiStore((s) => s.toggleFullscreen);
+  const toggleClosed = useUiStore((s) => s.toggleClosed);
   const setActiveTab = useUiStore((s) => s.setActiveTab);
 
   const chatLoadedProjectId = useChatStore((s) => s.loadedProjectId);
   const loadChatForProject = useChatStore((s) => s.loadForProject);
 
+  const schema = useSchemaStore((s) => s.schema);
   const schemaLoadedProjectId = useSchemaStore((s) => s.loadedProjectId);
   const loadSchemaForProject = useSchemaStore((s) => s.loadForProject);
   const justMigrated = useSchemaStore((s) => s.justMigrated);
@@ -115,6 +116,10 @@ function App() {
   }
 
   const selectedRequirement = requirements.find((r) => r.id === selectedRequirementId) ?? null;
+  const detailAttributes = detailAttributesFor(schema);
+  const selectedStageOption = selectedRequirement
+    ? schema?.stageOptions.find((s) => s.id === selectedRequirement.stage)
+    : undefined;
 
   return (
     <div className="flex h-screen w-screen flex-col">
@@ -145,29 +150,23 @@ function App() {
         detailContent={(width) => (
           <DetailPanel
             requirement={selectedRequirement}
-            sources={project?.sources ?? []}
+            attributes={detailAttributes}
+            isTerminal={selectedStageOption?.isTerminal ?? false}
             width={width}
             fullscreen={detailMode === "fullscreen"}
             activeTab={activeTab}
             onToggleFullscreen={toggleFullscreen}
+            onClose={toggleClosed}
             onSelectTab={setActiveTab}
             onRename={(name) => {
               if (currentProjectId && selectedRequirementId) {
                 void renameRequirement(currentProjectId, selectedRequirementId, name);
               }
             }}
-            onFieldChange={(field, value) => {
+            onAttributeChange={(attributeId, value) => {
               if (currentProjectId && selectedRequirementId) {
-                void updateAttributeValue(currentProjectId, selectedRequirementId, FIELD_KEYS[field], value);
+                void updateAttributeValue(currentProjectId, selectedRequirementId, attributeId, value);
               }
-            }}
-            onProgressChange={(progress) => {
-              if (currentProjectId && selectedRequirementId) {
-                void updateAttributeValue(currentProjectId, selectedRequirementId, FIELD_KEYS.progress, progress);
-              }
-            }}
-            onAddSource={(source) => {
-              if (currentProjectId) void addSource(currentProjectId, source);
             }}
             onBodyChange={(body) => {
               if (currentProjectId && selectedRequirementId) {

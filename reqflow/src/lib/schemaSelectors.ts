@@ -20,3 +20,13 @@ export function boardAttributesFor(schema: Schema | null): Attribute[] {
   const visible = schema.attributes.filter((a) => a.showOnBoard);
   return sortByColumnOrder(visible, schema.viewPreferences.columnOrder);
 }
+
+/**
+ * 详情面板可见属性列表：showOnDetail 过滤，按 schema.attributes 原始定义顺序渲染
+ * （REQ-004 MUST"属性区排序独立于看板列序"——不复用 columnOrder，天然与看板列序
+ * 解耦。Schema 设置页尚未提供详情页专属排序配置，Phase 18 补齐后再接入独立排序）。
+ */
+export function detailAttributesFor(schema: Schema | null): Attribute[] {
+  if (!schema) return [];
+  return schema.attributes.filter((a) => a.showOnDetail);
+}

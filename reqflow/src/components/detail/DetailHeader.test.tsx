@@ -31,7 +31,7 @@ function makeRequirement(overrides: Partial<Omit<Requirement, "attributeValues">
   };
 }
 
-describe("DetailHeader（AC-005/006：全屏展开与收起按钮）", () => {
+describe("DetailHeader（AC-005/006：全屏展开与关闭按钮）", () => {
   it("非全屏时显示进入全屏按钮，点击触发 onToggleFullscreen", async () => {
     const onToggleFullscreen = vi.fn();
     render(
@@ -40,6 +40,7 @@ describe("DetailHeader（AC-005/006：全屏展开与收起按钮）", () => {
         fullscreen={false}
         onRename={vi.fn()}
         onToggleFullscreen={onToggleFullscreen}
+        onClose={vi.fn()}
       />,
     );
 
@@ -57,6 +58,7 @@ describe("DetailHeader（AC-005/006：全屏展开与收起按钮）", () => {
         fullscreen={true}
         onRename={vi.fn()}
         onToggleFullscreen={onToggleFullscreen}
+        onClose={vi.fn()}
       />,
     );
 
@@ -75,6 +77,7 @@ describe("DetailHeader（AC-005/006：全屏展开与收起按钮）", () => {
         fullscreen={false}
         onRename={onRename}
         onToggleFullscreen={vi.fn()}
+        onClose={vi.fn()}
       />,
     );
 
@@ -94,6 +97,7 @@ describe("DetailHeader（AC-005/006：全屏展开与收起按钮）", () => {
         fullscreen={false}
         onRename={onRename}
         onToggleFullscreen={vi.fn()}
+        onClose={vi.fn()}
       />,
     );
 
@@ -102,5 +106,22 @@ describe("DetailHeader（AC-005/006：全屏展开与收起按钮）", () => {
     await userEvent.tab();
 
     expect(onRename).not.toHaveBeenCalled();
+  });
+
+  it("点击关闭×按钮触发 onClose（AC-006：详情面板关闭恢复主内容区全宽）", async () => {
+    const onClose = vi.fn();
+    render(
+      <DetailHeader
+        requirement={makeRequirement()}
+        fullscreen={false}
+        onRename={vi.fn()}
+        onToggleFullscreen={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "关闭" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -21,7 +21,47 @@ function ChevDownIcon() {
   );
 }
 
-function SettingsIcon() {
+function FilterIcon() {
+  return (
+    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
+      <path
+        d="M4 4.5h12l-4.5 5.5v4.3l-3 1.5v-5.8L4 4.5Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SortIcon() {
+  return (
+    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
+      <path d="M6.5 4v11M6.5 4 4 6.5M6.5 4 9 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M13.5 16V5M13.5 16 11 13.5M13.5 16 16 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function FieldsIcon() {
+  return (
+    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
+      <path d="M4 5.5h2M4 10h2M4 14.5h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M8.5 5.5h7.5M8.5 10h7.5M8.5 14.5h7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function AppSettingsIcon() {
+  return (
+    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="6.8" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M10 9.2v4M10 6.7h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SchemaSettingsIcon() {
   return (
     <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
       <path
@@ -35,24 +75,12 @@ function SettingsIcon() {
   );
 }
 
-function PanelToggleIcon({ collapsed }: { collapsed: boolean }) {
-  const d = collapsed ? "M7.5 4.5 13 10l-5.5 5.5" : "M12 4.5 6 10l6 5.5";
-  return (
-    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
-      <path d={d} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export function Topbar() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const project = useProjectStore(currentProject);
   const requirements = useRequirementStore((s) => s.requirements);
-  const detailMode = useUiStore((s) => s.detailMode);
-  const toggleCollapsed = useUiStore((s) => s.toggleCollapsed);
   const selectRequirement = useUiStore((s) => s.selectRequirement);
-  const detailCollapsed = detailMode === "collapsed";
 
   return (
     <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--topbar) px-2.5 border-b border-(--border)">
@@ -73,22 +101,42 @@ export function Topbar() {
       <div className="flex flex-none items-center gap-0.5">
         <button
           type="button"
-          aria-label="设置"
-          aria-haspopup="true"
-          onClick={() => setSettingsOpen((v) => !v)}
+          aria-label="筛选"
           className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
         >
-          <SettingsIcon />
+          <FilterIcon />
         </button>
-        <ChatToggle />
         <button
           type="button"
-          aria-label={detailCollapsed ? "展开详情" : "收起详情"}
-          onClick={toggleCollapsed}
+          aria-label="排序"
           className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
         >
-          <PanelToggleIcon collapsed={detailCollapsed} />
+          <SortIcon />
         </button>
+        <button
+          type="button"
+          aria-label="字段"
+          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+        >
+          <FieldsIcon />
+        </button>
+        <button
+          type="button"
+          aria-label="应用设置"
+          aria-haspopup="true"
+          onClick={() => setAppSettingsOpen((v) => !v)}
+          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+        >
+          <AppSettingsIcon />
+        </button>
+        <button
+          type="button"
+          aria-label="Schema 设置"
+          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+        >
+          <SchemaSettingsIcon />
+        </button>
+        <ChatToggle />
       </div>
 
       {switcherOpen && (
@@ -98,10 +146,10 @@ export function Topbar() {
         </>
       )}
 
-      {settingsOpen && (
+      {appSettingsOpen && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setSettingsOpen(false)} />
-          <SettingsPanel onClose={() => setSettingsOpen(false)} />
+          <div className="fixed inset-0 z-40" onClick={() => setAppSettingsOpen(false)} />
+          <SettingsPanel onClose={() => setAppSettingsOpen(false)} />
         </>
       )}
     </header>

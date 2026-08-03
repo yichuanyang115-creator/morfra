@@ -33,7 +33,7 @@ function gridTemplate(detailMode: DetailMode, boardWidth: number, chatWidth: num
   switch (detailMode) {
     case "expanded":
       return `${boardWidth}px ${RESIZER_WIDTH}px 1fr ${chatResizer}px ${chatWidth}px`;
-    case "collapsed":
+    case "closed":
       return `1fr 0 0 ${chatResizer}px ${chatWidth}px`;
     case "fullscreen":
       return `0 0 1fr ${chatResizer}px ${chatWidth}px`;

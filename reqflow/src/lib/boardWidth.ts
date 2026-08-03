@@ -32,7 +32,7 @@ export const RESIZER_WIDTH = 6;
 export const CHAT_MIN_WIDTH = 240;
 export const CHAT_DEFAULT_WIDTH = 320;
 
-export type DetailLayoutMode = "expanded" | "collapsed" | "fullscreen";
+export type DetailLayoutMode = "expanded" | "closed" | "fullscreen";
 
 /**
  * 看板面板宽度拖到 BOARD_DEFAULT_WIDTH 时，Phase 15 之前固定 8 列的内容已经
@@ -53,14 +53,14 @@ export function clampBoardWidth(width: number, viewportWidth: number): number {
 
 /**
  * 对话框拖拽上限（REQ-024 v2.8）：视口宽度减去看板占用（含自己的分隔条）、详情面板
- * 底线 480px、对话框自己的分隔条。collapsed 态详情面板本就是 0 宽度、没有 480px 底线
+ * 底线 480px、对话框自己的分隔条。closed 态详情面板本就是 0 宽度、没有 480px 底线
  * 要保，看板也不占独立列（并入主内容区撑满剩余空间）；fullscreen 态看板不显示，
  * 只保留详情底线。用的是看板"当前实际宽度"（已夹过），不是拖拽中的原始值，避免和
  * clampBoardWidth 形成循环依赖——看板拖拽不读对话框状态，对话框拖拽读看板结果，
  * 单向依赖。
  */
 export function chatMaxWidth(detailMode: DetailLayoutMode, boardWidth: number, viewportWidth: number): number {
-  const detailFloor = detailMode === "collapsed" ? 0 : DETAIL_MIN_WIDTH;
+  const detailFloor = detailMode === "closed" ? 0 : DETAIL_MIN_WIDTH;
   const boardOccupied = detailMode === "expanded" ? clampBoardWidth(boardWidth, viewportWidth) + RESIZER_WIDTH : 0;
   const reserved = boardOccupied + detailFloor + RESIZER_WIDTH;
   return Math.max(CHAT_MIN_WIDTH, viewportWidth - reserved);
@@ -94,7 +94,7 @@ export function chatOccupiedWidth(
 
 /**
  * 详情面板的实际像素宽度：expanded 态 = 视口 - 看板(含分隔条) - 对话框占用；
- * fullscreen 态 = 视口 - 对话框占用（看板不显示）；collapsed 态为 0。
+ * fullscreen 态 = 视口 - 对话框占用（看板不显示）；closed 态为 0。
  * chatOccupied 由 chatOccupiedWidth 算出后传入。
  */
 export function detailPanelWidthFor(
@@ -103,7 +103,7 @@ export function detailPanelWidthFor(
   viewportWidth: number,
   chatOccupied: number,
 ): number {
-  if (detailMode === "collapsed") return 0;
+  if (detailMode === "closed") return 0;
   if (detailMode === "fullscreen") return viewportWidth - chatOccupied;
   return viewportWidth - clampBoardWidth(boardWidth, viewportWidth) - RESIZER_WIDTH - chatOccupied;
 }

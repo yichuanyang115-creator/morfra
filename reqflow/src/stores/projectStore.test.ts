@@ -156,18 +156,4 @@ describe("projectStore CRUD（REQ-018/FLOW-009 多项目管理）", () => {
     expect(state.projects[0].id).toBe(only.id);
   });
 
-  it("addSource 新增自定义来源后加入该项目的 sources 列表，重复添加不产生重复项", async () => {
-    const { createProject, addSource } = useProjectStore.getState();
-    await createProject("项目甲");
-    const id = useProjectStore.getState().projects[0].id;
-    const originalCount = useProjectStore.getState().projects[0].sources.length;
-
-    await addSource(id, "战略合作");
-    await addSource(id, "战略合作");
-
-    const project = useProjectStore.getState().projects.find((p) => p.id === id);
-    expect(project?.sources).toContain("战略合作");
-    expect(project?.sources.filter((s) => s === "战略合作")).toHaveLength(1);
-    expect(project?.sources.length).toBe(originalCount + 1);
-  });
 });

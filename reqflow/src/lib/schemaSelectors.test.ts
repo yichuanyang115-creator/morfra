@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Attribute, Schema } from "../types/schema";
-import { boardAttributesFor } from "./schemaSelectors";
+import { boardAttributesFor, detailAttributesFor } from "./schemaSelectors";
 
 function makeAttribute(overrides: Partial<Attribute>): Attribute {
   return { id: "a", name: "属性", type: "text", showOnBoard: true, showOnDetail: true, ...overrides };
@@ -48,5 +48,27 @@ describe("boardAttributesFor", () => {
       ["b", "a"],
     );
     expect(boardAttributesFor(schema).map((a) => a.id)).toEqual(["b", "a", "new"]);
+  });
+});
+
+describe("detailAttributesFor", () => {
+  it("schema 为 null 时返回空数组", () => {
+    expect(detailAttributesFor(null)).toEqual([]);
+  });
+
+  it("过滤掉 showOnDetail 为 false 的属性", () => {
+    const schema = makeSchema([
+      makeAttribute({ id: "a", showOnDetail: true }),
+      makeAttribute({ id: "b", showOnDetail: false }),
+    ]);
+    expect(detailAttributesFor(schema).map((a) => a.id)).toEqual(["a"]);
+  });
+
+  it("按 schema.attributes 原始顺序渲染，不受 columnOrder 影响（REQ-004：详情页排序独立于看板列序）", () => {
+    const schema = makeSchema(
+      [makeAttribute({ id: "b" }), makeAttribute({ id: "a" })],
+      ["a", "b"],
+    );
+    expect(detailAttributesFor(schema).map((a) => a.id)).toEqual(["b", "a"]);
   });
 });

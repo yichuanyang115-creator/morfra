@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Deliverable, Requirement, Stage, Task } from "../../types/models";
+import type { Attribute } from "../../types/schema";
 import type { DetailTab } from "../../stores/uiStore";
 import { DETAIL_MIN_WIDTH } from "../../lib/boardWidth";
 import { DetailHeader } from "./DetailHeader";
@@ -25,7 +26,10 @@ function PlusIcon() {
 
 interface DetailPanelProps {
   requirement: Requirement | null;
-  sources: string[];
+  /** 已按 schema showOnDetail 过滤好的属性列表，见 lib/schemaSelectors.ts 的 detailAttributesFor。 */
+  attributes: Attribute[];
+  /** 该实体所属阶段是否终态（见 Attribute Grid 的 result 只读规则，REQ-022）。 */
+  isTerminal: boolean;
   /** 详情面板当前实际渲染宽度，由 MainLayout 用 detailPanelWidthFor 算出后传入——
    * 单一来源，不在这里用 ResizeObserver 反推（DOM 测量链路太长，任何一层布局细节
    * 偏差都会导致算出的宽度和真实值不一致，且难以定位）。 */
@@ -33,11 +37,10 @@ interface DetailPanelProps {
   fullscreen: boolean;
   activeTab: DetailTab;
   onToggleFullscreen: () => void;
+  onClose: () => void;
   onSelectTab: (tab: DetailTab) => void;
   onRename: (name: string) => void;
-  onFieldChange: (field: "priority" | "assignee" | "source" | "deadline", value: string) => void;
-  onProgressChange: (progress: number | null) => void;
-  onAddSource: (source: string) => void;
+  onAttributeChange: (attributeId: string, value: unknown) => void;
   onBodyChange: (markdown: string) => void;
   onCreateDeliverable: (name: string) => void;
   onUpdateDeliverable: (
@@ -62,16 +65,16 @@ interface DetailPanelProps {
 
 export function DetailPanel({
   requirement,
-  sources,
+  attributes,
+  isTerminal,
   width,
   fullscreen,
   activeTab,
   onToggleFullscreen,
+  onClose,
   onSelectTab,
   onRename,
-  onFieldChange,
-  onProgressChange,
-  onAddSource,
+  onAttributeChange,
   onBodyChange,
   onCreateDeliverable,
   onUpdateDeliverable,
@@ -114,14 +117,14 @@ export function DetailPanel({
         fullscreen={fullscreen}
         onRename={onRename}
         onToggleFullscreen={onToggleFullscreen}
+        onClose={onClose}
       />
       <AttributeGrid
         requirement={requirement}
-        sources={sources}
+        attributes={attributes}
+        isTerminal={isTerminal}
         compact={compact}
-        onFieldChange={onFieldChange}
-        onProgressChange={onProgressChange}
-        onAddSource={onAddSource}
+        onAttributeChange={onAttributeChange}
         onTransition={onTransition}
       />
       <TabBar

@@ -29,14 +29,23 @@ function FullscreenEnterIcon() {
   );
 }
 
+function CloseIcon() {
+  return (
+    <svg className="icon icon-sm" viewBox="0 0 20 20" fill="none">
+      <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 interface DetailHeaderProps {
   requirement: Requirement;
   fullscreen: boolean;
   onRename: (name: string) => void;
   onToggleFullscreen: () => void;
+  onClose: () => void;
 }
 
-export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullscreen }: DetailHeaderProps) {
+export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullscreen, onClose }: DetailHeaderProps) {
   const [name, setName] = useState(requirement.name);
 
   return (
@@ -56,6 +65,14 @@ export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullsc
         className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface-2) hover:text-(--fg)"
       >
         {fullscreen ? <FullscreenExitIcon /> : <FullscreenEnterIcon />}
+      </button>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="关闭"
+        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface-2) hover:text-(--fg)"
+      >
+        <CloseIcon />
       </button>
     </div>
   );

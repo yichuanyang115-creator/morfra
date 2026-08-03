@@ -41,7 +41,7 @@ describe("SearchBox", () => {
   it("聚焦但输入为空白字符时不展示下拉浮层", async () => {
     render(<SearchBox requirements={[]} onJumpToRequirement={vi.fn()} />);
 
-    await userEvent.type(screen.getByPlaceholderText("搜索需求名称…"), "   ");
+    await userEvent.type(screen.getByPlaceholderText("搜索名称…"), "   ");
 
     expect(screen.queryByText("没有匹配的需求")).not.toBeInTheDocument();
   });
@@ -57,7 +57,7 @@ describe("SearchBox", () => {
       />,
     );
 
-    await userEvent.type(screen.getByPlaceholderText("搜索需求名称…"), "登录");
+    await userEvent.type(screen.getByPlaceholderText("搜索名称…"), "登录");
 
     expect(screen.getByText("登录页优化")).toBeInTheDocument();
     expect(screen.getByText("开发")).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe("SearchBox", () => {
       <SearchBox requirements={[makeRequirement({ name: "ABC需求" })]} onJumpToRequirement={vi.fn()} />,
     );
 
-    await userEvent.type(screen.getByPlaceholderText("搜索需求名称…"), "abc");
+    await userEvent.type(screen.getByPlaceholderText("搜索名称…"), "abc");
 
     expect(screen.getByText("ABC需求")).toBeInTheDocument();
   });
@@ -79,7 +79,7 @@ describe("SearchBox", () => {
       <SearchBox requirements={[makeRequirement({ name: "登录页优化" })]} onJumpToRequirement={vi.fn()} />,
     );
 
-    await userEvent.type(screen.getByPlaceholderText("搜索需求名称…"), "不存在的关键字");
+    await userEvent.type(screen.getByPlaceholderText("搜索名称…"), "不存在的关键字");
 
     expect(screen.getByText("没有匹配的需求")).toBeInTheDocument();
   });
@@ -93,7 +93,7 @@ describe("SearchBox", () => {
       />,
     );
 
-    const input = screen.getByPlaceholderText("搜索需求名称…");
+    const input = screen.getByPlaceholderText("搜索名称…");
     await userEvent.type(input, "登录");
     await userEvent.click(screen.getByText("登录页优化"));
 
@@ -110,7 +110,7 @@ describe("SearchBox", () => {
       </div>,
     );
 
-    await userEvent.type(screen.getByPlaceholderText("搜索需求名称…"), "登录");
+    await userEvent.type(screen.getByPlaceholderText("搜索名称…"), "登录");
     expect(screen.getByText("登录页优化")).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId("outside"));
@@ -122,7 +122,7 @@ describe("SearchBox", () => {
       <SearchBox requirements={[makeRequirement({ name: "登录页优化" })]} onJumpToRequirement={vi.fn()} />,
     );
 
-    await userEvent.type(screen.getByPlaceholderText("搜索需求名称…"), "登录");
+    await userEvent.type(screen.getByPlaceholderText("搜索名称…"), "登录");
     expect(screen.getByText("登录页优化")).toBeInTheDocument();
 
     await userEvent.keyboard("{Escape}");
@@ -134,7 +134,7 @@ describe("SearchBox", () => {
       <SearchBox requirements={[makeRequirement({ name: "登录页优化" })]} onJumpToRequirement={vi.fn()} />,
     );
 
-    const input = screen.getByPlaceholderText("搜索需求名称…");
+    const input = screen.getByPlaceholderText("搜索名称…");
     await userEvent.type(input, "登录");
     expect(screen.getByText("登录页优化")).toBeInTheDocument();
 

@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DetailPanel } from "./DetailPanel";
 import type { Requirement } from "../../types/models";
+import type { Attribute } from "../../types/schema";
 
 function makeRequirement(overrides: Partial<Omit<Requirement, "attributeValues">> = {}): Requirement {
   return {
@@ -31,12 +32,15 @@ function makeRequirement(overrides: Partial<Omit<Requirement, "attributeValues">
   };
 }
 
+function makeAttribute(overrides: Partial<Attribute>): Attribute {
+  return { id: "a", name: "属性", type: "text", showOnBoard: true, showOnDetail: true, ...overrides };
+}
+
 const noopHandlers = {
+  onClose: vi.fn(),
   onSelectTab: vi.fn(),
   onRename: vi.fn(),
-  onFieldChange: vi.fn(),
-  onProgressChange: vi.fn(),
-  onAddSource: vi.fn(),
+  onAttributeChange: vi.fn(),
   onBodyChange: vi.fn(),
   onCreateDeliverable: vi.fn(),
   onUpdateDeliverable: vi.fn(),
@@ -58,7 +62,8 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     render(
       <DetailPanel
         requirement={null}
-        sources={[]}
+        attributes={[]}
+        isTerminal={false}
         width={800}
         fullscreen={false}
         activeTab="body"
@@ -74,7 +79,8 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     render(
       <DetailPanel
         requirement={makeRequirement({ name: "登录页优化" })}
-        sources={["内部想法"]}
+        attributes={[makeAttribute({ id: "assignee", name: "负责人", type: "text" })]}
+        isTerminal={false}
         width={800}
         fullscreen={false}
         activeTab="body"
@@ -84,6 +90,7 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     );
 
     expect(screen.getByDisplayValue("登录页优化")).toBeInTheDocument();
+    expect(screen.getByText("负责人")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "正文" })).toHaveAttribute("aria-selected", "true");
   });
 
@@ -92,7 +99,8 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     render(
       <DetailPanel
         requirement={makeRequirement()}
-        sources={[]}
+        attributes={[]}
+        isTerminal={false}
         width={800}
         fullscreen={false}
         activeTab="body"
@@ -106,11 +114,33 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     expect(onToggleFullscreen).toHaveBeenCalledTimes(1);
   });
 
+  it("点击关闭×按钮触发 onClose（AC-006：面板关闭主内容区恢复全宽）", async () => {
+    const onClose = vi.fn();
+    render(
+      <DetailPanel
+        requirement={makeRequirement()}
+        attributes={[]}
+        isTerminal={false}
+        width={800}
+        fullscreen={false}
+        activeTab="body"
+        onToggleFullscreen={vi.fn()}
+        {...noopHandlers}
+        onClose={onClose}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "关闭" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("切换到 produce Tab 后渲染产出 Tab 内容而不是正文编辑器", () => {
     render(
       <DetailPanel
         requirement={makeRequirement()}
-        sources={[]}
+        attributes={[]}
+        isTerminal={false}
         width={800}
         fullscreen={false}
         activeTab="produce"
@@ -129,7 +159,8 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     const { container: wideContainer } = render(
       <DetailPanel
         requirement={makeRequirement()}
-        sources={[]}
+        attributes={[]}
+        isTerminal={false}
         width={800}
         fullscreen={false}
         activeTab="body"
@@ -143,7 +174,8 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     const { container: narrowContainer } = render(
       <DetailPanel
         requirement={makeRequirement()}
-        sources={[]}
+        attributes={[]}
+        isTerminal={false}
         width={480}
         fullscreen={false}
         activeTab="body"
@@ -159,7 +191,8 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     const { rerender } = render(
       <DetailPanel
         requirement={makeRequirement({ id: "r-1", name: "需求一" })}
-        sources={[]}
+        attributes={[]}
+        isTerminal={false}
         width={800}
         fullscreen={false}
         activeTab="body"
@@ -172,7 +205,8 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
     rerender(
       <DetailPanel
         requirement={makeRequirement({ id: "r-2", name: "需求二" })}
-        sources={[]}
+        attributes={[]}
+        isTerminal={false}
         width={800}
         fullscreen={false}
         activeTab="body"

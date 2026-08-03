@@ -56,9 +56,9 @@ describe("chatMaxWidth", () => {
     expect(chatMaxWidth("expanded", board, viewport)).toBe(expected);
   });
 
-  it("collapsed 态：详情面板本就是 0 宽度，没有 480 底线要保，看板也不占列，上限只减自己的分隔条", () => {
+  it("closed 态：详情面板本就是 0 宽度，没有 480 底线要保，看板也不占列，上限只减自己的分隔条", () => {
     const viewport = 1600;
-    expect(chatMaxWidth("collapsed", BOARD_DEFAULT_WIDTH, viewport)).toBe(viewport - RESIZER_WIDTH);
+    expect(chatMaxWidth("closed", BOARD_DEFAULT_WIDTH, viewport)).toBe(viewport - RESIZER_WIDTH);
   });
 
   it("fullscreen 态：看板不显示，只保留详情底线和自己的分隔条", () => {
@@ -145,8 +145,8 @@ describe("BOARD_MIN_WIDTH", () => {
 });
 
 describe("detailPanelWidthFor", () => {
-  it("collapsed 态返回 0，不管看板宽度、视口或对话框占用多大", () => {
-    expect(detailPanelWidthFor("collapsed", BOARD_DEFAULT_WIDTH, 2000, 326)).toBe(0);
+  it("closed 态返回 0，不管看板宽度、视口或对话框占用多大", () => {
+    expect(detailPanelWidthFor("closed", BOARD_DEFAULT_WIDTH, 2000, 326)).toBe(0);
   });
 
   it("fullscreen 态返回 视口 - 对话框占用（看板不显示）", () => {

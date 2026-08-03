@@ -60,10 +60,10 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
     expect(screen.getByRole("separator", { name: BOARD_RESIZER_LABEL })).toBeInTheDocument();
   });
 
-  it("collapsed：详情面板宽度归零，看板分隔条不渲染，主内容区仍可见（AC-006：收起后主内容区撑满）", () => {
+  it("closed：详情面板宽度归零，看板分隔条不渲染，主内容区仍可见（AC-006：收起后主内容区撑满）", () => {
     render(
       <MainLayout
-        detailMode="collapsed"
+        detailMode="closed"
         boardContent={<div>看板内容</div>}
         detailContent={() => <div>详情内容</div>}
       />,
@@ -93,15 +93,15 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
     const { container: expandedContainer } = render(
       <MainLayout detailMode="expanded" boardContent={<div />} detailContent={() => <div />} />,
     );
-    const { container: collapsedContainer } = render(
-      <MainLayout detailMode="collapsed" boardContent={<div />} detailContent={() => <div />} />,
+    const { container: closedContainer } = render(
+      <MainLayout detailMode="closed" boardContent={<div />} detailContent={() => <div />} />,
     );
 
     const expandedGrid = expandedContainer.firstElementChild as HTMLElement;
-    const collapsedGrid = collapsedContainer.firstElementChild as HTMLElement;
+    const closedGrid = closedContainer.firstElementChild as HTMLElement;
 
     expect(expandedGrid.style.gridTemplateColumns).toBe(`${BOARD_DEFAULT_WIDTH}px 6px 1fr 0px 0px`);
-    expect(collapsedGrid.style.gridTemplateColumns).toBe("1fr 0 0 0px 0px");
+    expect(closedGrid.style.gridTemplateColumns).toBe("1fr 0 0 0px 0px");
   });
 
   it("拖动分隔条：向右拖动增加看板宽度，向左拖动减少看板宽度（REQ-003 MUST 分隔条支持拖拽调整详情面板宽度）", () => {
@@ -149,7 +149,7 @@ describe("MainLayout（AC-005/006：详情面板三态布局联动，REQ-003 分
     expect(grid.style.gridTemplateColumns).toBe(`${BOARD_DEFAULT_WIDTH - 40}px 6px 1fr 0px 0px`);
   });
 
-  it("collapsed/fullscreen 态下看板分隔条不渲染，无法拖拽调宽", () => {
+  it("closed/fullscreen 态下看板分隔条不渲染，无法拖拽调宽", () => {
     render(<MainLayout detailMode="fullscreen" boardContent={<div />} detailContent={() => <div />} />);
     expect(screen.queryByRole("separator", { name: BOARD_RESIZER_LABEL })).not.toBeInTheDocument();
   });
@@ -244,7 +244,7 @@ describe("MainLayout 对话框独立第三栏（REQ-003 / REQ-024 v2.8：显隐�
     vi.stubGlobal("innerWidth", 2000);
     useChatStore.setState({ open: true });
 
-    render(<MainLayout detailMode="collapsed" boardContent={<div />} detailContent={() => <div />} />);
+    render(<MainLayout detailMode="closed" boardContent={<div />} detailContent={() => <div />} />);
 
     expect(screen.getByPlaceholderText(CHAT_INPUT_PLACEHOLDER)).toBeInTheDocument();
   });

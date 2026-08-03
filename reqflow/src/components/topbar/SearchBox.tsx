@@ -54,7 +54,7 @@ export function SearchBox({ requirements, onJumpToRequirement }: SearchBoxProps)
         </span>
         <input
           type="text"
-          placeholder="搜索需求名称…"
+          placeholder="搜索名称…"
           value={query}
           onFocus={() => setOpen(true)}
           onChange={(e) => {

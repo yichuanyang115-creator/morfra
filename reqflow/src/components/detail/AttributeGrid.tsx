@@ -1,40 +1,21 @@
-import { useState } from "react";
-import type { Priority, Requirement, Stage } from "../../types/models";
+import type { Requirement, Stage } from "../../types/models";
+import type { Attribute } from "../../types/schema";
 import { StageTransitionDropdown } from "./StageTransitionDropdown";
-import { fmtDate } from "../../lib/dates";
-import { assigneeOf, deadlineOf, priorityOf, progressOf, releaseMethodOf, resultOf, sourceOf } from "../../lib/requirementFields";
+import { AttributeField, selectClass, selectStyle } from "./AttributeField";
+import { resultOf } from "../../lib/requirementFields";
 
 interface AttributeGridProps {
   requirement: Requirement;
-  sources: string[];
+  /** 已按 schema showOnDetail 过滤好的属性列表（排序在调用方完成，见 detailAttributesFor）。 */
+  attributes: Attribute[];
   /** 详情面板逼近 480px 底线（REQ-003 v2.8）时为真，两列网格收缩为单列，无中间过渡态。 */
   compact: boolean;
-  onFieldChange: (field: "priority" | "assignee" | "source" | "deadline", value: string) => void;
-  onProgressChange: (progress: number | null) => void;
-  onAddSource: (source: string) => void;
+  /** 该实体所属阶段是否终态：终态阶段的"结果"类属性只读，跟看板行 RequirementRow 的
+   * readOnly 规则保持一致（值由流转产生，不允许在属性区手动改，见 REQ-022）。 */
+  isTerminal: boolean;
+  onAttributeChange: (attributeId: string, value: unknown) => void;
   onTransition: (toStage: Stage, opts?: { abandoned?: boolean }) => void;
 }
-
-function clampProgress(value: string): number | null {
-  const n = Number.parseInt(value, 10);
-  if (Number.isNaN(n)) return null;
-  return Math.max(0, Math.min(100, n));
-}
-
-const inputClass =
-  "block h-7 w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--fg) outline-none hover:border-(--border) hover:bg-(--surface) focus:border-(--border) focus:bg-(--surface)";
-
-const SELECT_ARROW_URL =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2368748a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")";
-
-const selectClass = `${inputClass} cursor-pointer appearance-none bg-no-repeat pr-5`;
-const selectStyle: React.CSSProperties = {
-  backgroundImage: SELECT_ARROW_URL,
-  backgroundPosition: "right 2px center",
-  backgroundSize: "16px",
-};
-
-const readonlyClass = "block h-7 w-full rounded-(--r-sm) border border-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--muted)";
 
 function AttrRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -45,156 +26,14 @@ function AttrRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function stageSlot(requirement: Requirement): { label: string; value: string } {
-  switch (requirement.stage) {
-    case "design": {
-      const done = requirement.deliverables.filter((d) => d.checked).length;
-      return { label: "产出", value: `${done}/${requirement.deliverables.length}` };
-    }
-    case "dev": {
-      const done = requirement.tasks.filter((t) => t.status === "done").length;
-      return { label: "任务", value: `${done}/${requirement.tasks.length}` };
-    }
-    case "verify": {
-      const passed = requirement.acceptance.filter((a) => a.result === "pass").length;
-      return { label: "验收", value: `${passed}/${requirement.acceptance.length}` };
-    }
-    case "release":
-      return { label: "方式", value: releaseMethodOf(requirement) || "未设置" };
-    case "archive":
-      return { label: "结果", value: resultOf(requirement) === "abandoned" ? "废弃" : "完成" };
-    default:
-      return { label: "—", value: "—" };
-  }
-}
-
-export function AttributeGrid({
-  requirement,
-  sources,
-  compact,
-  onFieldChange,
-  onProgressChange,
-  onAddSource,
-  onTransition,
-}: AttributeGridProps) {
-  const progress = progressOf(requirement);
-  const [progressInput, setProgressInput] = useState(progress == null ? "" : String(progress));
-  const [customizingSource, setCustomizingSource] = useState(false);
-  const [customSourceValue, setCustomSourceValue] = useState("");
-  const slot = stageSlot(requirement);
-  const priority = priorityOf(requirement);
-  const assignee = assigneeOf(requirement);
-  const source = sourceOf(requirement);
-  const deadline = deadlineOf(requirement);
+export function AttributeGrid({ requirement, attributes, compact, isTerminal, onAttributeChange, onTransition }: AttributeGridProps) {
   const result = resultOf(requirement);
-
-  function commitCustomSource() {
-    const trimmed = customSourceValue.trim();
-    if (trimmed) {
-      onAddSource(trimmed);
-      onFieldChange("source", trimmed);
-    }
-    setCustomizingSource(false);
-    setCustomSourceValue("");
-  }
 
   return (
     <div
       className="mx-4 my-3 grid items-center gap-y-2 gap-x-2.5 rounded-(--r-lg) bg-(--accent-soft) p-3"
       style={{ gridTemplateColumns: compact ? "58px minmax(0, 1fr)" : "58px minmax(0, 1fr) 58px minmax(0, 1fr)" }}
     >
-      <AttrRow label="优先级">
-        <select
-          value={priority}
-          onChange={(e) => onFieldChange("priority", e.target.value as Priority)}
-          className={selectClass}
-          style={selectStyle}
-        >
-          {(["P0", "P1", "P2"] as const).map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-      </AttrRow>
-
-      <AttrRow label="负责人">
-        <input
-          type="text"
-          defaultValue={assignee}
-          placeholder="未指定"
-          onBlur={(e) => onFieldChange("assignee", e.target.value)}
-          className={inputClass}
-        />
-      </AttrRow>
-
-      <AttrRow label="来源">
-        {customizingSource ? (
-          <input
-            type="text"
-            autoFocus
-            placeholder="输入新来源名称"
-            value={customSourceValue}
-            onChange={(e) => setCustomSourceValue(e.target.value)}
-            onBlur={commitCustomSource}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                commitCustomSource();
-              } else if (e.key === "Escape") {
-                setCustomizingSource(false);
-                setCustomSourceValue("");
-              }
-            }}
-            className={inputClass}
-          />
-        ) : (
-          <select
-            value={source}
-            onChange={(e) => {
-              if (e.target.value === "__custom__") {
-                setCustomizingSource(true);
-              } else {
-                onFieldChange("source", e.target.value);
-              }
-            }}
-            className={selectClass}
-            style={selectStyle}
-          >
-            {!sources.includes(source) && source && (
-              <option value={source}>{source}</option>
-            )}
-            {sources.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-            <option value="__custom__">自定义…</option>
-          </select>
-        )}
-      </AttrRow>
-
-      <AttrRow label="进度">
-        {requirement.stage === "archive" ? (
-          <span className={readonlyClass}>{result === "abandoned" ? "废弃" : "完成"}</span>
-        ) : (
-          <input
-            type="number"
-            min={0}
-            max={100}
-            placeholder="未填写"
-            value={progressInput}
-            onChange={(e) => setProgressInput(e.target.value)}
-            onBlur={() => {
-              const clamped = clampProgress(progressInput);
-              setProgressInput(clamped == null ? "" : String(clamped));
-              if (clamped !== progress) onProgressChange(clamped);
-            }}
-            className={`${inputClass} [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
-          />
-        )}
-      </AttrRow>
-
       <AttrRow label="阶段">
         <StageTransitionDropdown
           currentStage={requirement.stage}
@@ -205,22 +44,16 @@ export function AttributeGrid({
         />
       </AttrRow>
 
-      <AttrRow label={slot.label}>
-        <span className={readonlyClass}>{slot.value}</span>
-      </AttrRow>
-
-      <AttrRow label="截止日期">
-        <input
-          type="date"
-          defaultValue={deadline}
-          onBlur={(e) => onFieldChange("deadline", e.target.value)}
-          className={inputClass}
-        />
-      </AttrRow>
-
-      <AttrRow label="创建时间">
-        <span className={readonlyClass}>{fmtDate(requirement.createdAt)}</span>
-      </AttrRow>
+      {attributes.map((attribute) => (
+        <AttrRow key={attribute.id} label={attribute.name}>
+          <AttributeField
+            attribute={attribute}
+            requirement={requirement}
+            readOnly={isTerminal && attribute.id === "result"}
+            onChange={(value) => onAttributeChange(attribute.id, value)}
+          />
+        </AttrRow>
+      ))}
     </div>
   );
 }

@@ -25,7 +25,6 @@ interface ProjectState {
   createProject: (name: string) => Promise<void>;
   renameProject: (id: string, name: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
-  addSource: (projectId: string, source: string) => Promise<void>;
 }
 
 async function loadProject(id: string): Promise<Project | null> {
@@ -126,16 +125,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       projects: remaining,
       currentProjectId: currentProjectId === id ? remaining[0].id : currentProjectId,
     });
-  },
-
-  addSource: async (projectId, source) => {
-    const project = get().projects.find((p) => p.id === projectId);
-    if (!project || project.sources.includes(source)) return;
-    const updated: Project = { ...project, sources: [...project.sources, source] };
-    await saveProject(updated);
-    set((state) => ({
-      projects: state.projects.map((p) => (p.id === projectId ? updated : p)),
-    }));
   },
 }));
 
