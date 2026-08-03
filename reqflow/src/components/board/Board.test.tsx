@@ -10,14 +10,18 @@ import { useUiStore } from "../../stores/uiStore";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { legacyEquivalentSchema } from "../../lib/schemaDefaults";
 
-let capturedOnDragEnd: ((event: DragEndEvent) => void) | null = null;
+// Board.tsx 自己有一层 DndContext（阶段拖拽/行内排序），BoardHeader.tsx 内部
+// 另有一层独立的 DndContext（列头拖拽调序，见 Task 3）。mock 全局替换后两层都会
+// 命中这个 mock，渲染顺序上 Board 的外层先渲染、BoardHeader 的内层后渲染——用数组
+// 按渲染顺序收集，取第一个即 Board 自己的 onDragEnd，避免被内层覆盖。
+const capturedOnDragEnds: ((event: DragEndEvent) => void)[] = [];
 
 vi.mock("@dnd-kit/core", async () => {
   const actual = await vi.importActual<typeof import("@dnd-kit/core")>("@dnd-kit/core");
   return {
     ...actual,
     DndContext: ({ children, onDragEnd }: { children: ReactNode; onDragEnd: (event: DragEndEvent) => void }) => {
-      capturedOnDragEnd = onDragEnd;
+      capturedOnDragEnds.push(onDragEnd);
       return children;
     },
   };
@@ -66,6 +70,7 @@ const noop = {
   onReorder: vi.fn(),
   onEditAttribute: vi.fn(),
   onColumnWidthCommit: vi.fn(async () => undefined),
+  onColumnOrderCommit: vi.fn(),
 };
 
 describe("resolveDropTransition", () => {
@@ -186,7 +191,13 @@ describe("Board", () => {
   beforeEach(() => {
     useSchemaStore.setState({ schema: legacyEquivalentSchema([]), loadedProjectId: "p-1", justMigrated: false });
     useUiStore.setState({ boardSort: {} });
+    capturedOnDragEnds.length = 0;
   });
+
+  /** Board 自己的 DndContext 先渲染（外层），BoardHeader 的列头拖拽 DndContext 后渲染（内层）。 */
+  function boardOnDragEnd(event: DragEndEvent) {
+    capturedOnDragEnds[0]?.(event);
+  }
 
   it("loading 为 true 时渲染骨架屏，不渲染阶段列表", () => {
     render(
@@ -262,7 +273,7 @@ describe("Board", () => {
       />,
     );
 
-    capturedOnDragEnd?.({
+    boardOnDragEnd({
       active: { id: "r-1" },
       over: { id: "dev" },
     } as unknown as DragEndEvent);
@@ -284,7 +295,7 @@ describe("Board", () => {
       />,
     );
 
-    capturedOnDragEnd?.({
+    boardOnDragEnd({
       active: { id: "r-1" },
       over: { id: "design" },
     } as unknown as DragEndEvent);
@@ -309,7 +320,7 @@ describe("Board", () => {
       />,
     );
 
-    capturedOnDragEnd?.({
+    boardOnDragEnd({
       active: { id: "r-1" },
       over: { id: "r-2" },
     } as unknown as DragEndEvent);
@@ -335,7 +346,7 @@ describe("Board", () => {
       />,
     );
 
-    capturedOnDragEnd?.({
+    boardOnDragEnd({
       active: { id: "r-1" },
       over: { id: "r-2" },
     } as unknown as DragEndEvent);
@@ -402,6 +413,26 @@ describe("Board", () => {
 
       const header = screen.getByText("优先级").closest("div[style*='grid-template-columns']") as HTMLElement;
       expect(header.style.gridTemplateColumns).toContain("200px");
+    });
+  });
+
+  describe("列序拖拽联动（REQ-001 MUST：表头拖拽调序松手后持久化）", () => {
+    it("表头列头拖拽结束时，Board 把 BoardHeader 算出的新顺序原样转发给 onColumnOrderCommit", () => {
+      const onColumnOrderCommit = vi.fn();
+      render(
+        <Board requirements={[]} loading={false} error={false} selectedRequirementId={null} {...noop} onColumnOrderCommit={onColumnOrderCommit} />,
+      );
+
+      // BoardHeader 内部的列头拖拽 DndContext 比 Board 自己的 DndContext 后渲染，
+      // 是 capturedOnDragEnds 数组里的第二个（索引 1）。
+      capturedOnDragEnds[1]?.({
+        active: { id: "priority" },
+        over: { id: "assignee" },
+      } as unknown as DragEndEvent);
+
+      expect(onColumnOrderCommit).toHaveBeenCalled();
+      const orderedIds = onColumnOrderCommit.mock.calls[0][0] as string[];
+      expect(orderedIds.indexOf("priority")).toBeGreaterThan(orderedIds.indexOf("assignee"));
     });
   });
 });

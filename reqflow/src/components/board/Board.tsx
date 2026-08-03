@@ -75,6 +75,8 @@ interface BoardProps {
   onEditAttribute: (attributeId: string) => void;
   /** 列宽拖拽松手后持久化到 schema.json viewPreferences.columnWidths（见 REQ-001 MUST）。 */
   onColumnWidthCommit: (attributeId: string, width: number) => Promise<void>;
+  /** 表头拖拽调序松手后持久化到 schema.json viewPreferences.columnOrder（见 REQ-001 MUST）。 */
+  onColumnOrderCommit: (orderedIds: string[]) => void;
 }
 
 export function Board({
@@ -89,6 +91,7 @@ export function Board({
   onReorder,
   onEditAttribute,
   onColumnWidthCommit,
+  onColumnOrderCommit,
 }: BoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const schema = useSchemaStore((s) => s.schema);
@@ -152,6 +155,7 @@ export function Board({
             // 卡在拖拽结束值上，后续渲染再也读不到 store 里的真实宽度。
             void onColumnWidthCommit(attributeId, width).finally(() => setDraftColumnWidths(null));
           }}
+          onReorder={onColumnOrderCommit}
         />
 
         {stageOptions.map((s) => (

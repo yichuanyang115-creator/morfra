@@ -1,8 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import type { DragEndEvent } from "@dnd-kit/core";
 import { BoardHeader } from "./BoardHeader";
 import type { Attribute } from "../../types/schema";
+
+let capturedOnDragEnd: ((event: DragEndEvent) => void) | null = null;
+
+vi.mock("@dnd-kit/core", async () => {
+  const actual = await vi.importActual<typeof import("@dnd-kit/core")>("@dnd-kit/core");
+  return {
+    ...actual,
+    DndContext: ({ children, onDragEnd }: { children: ReactNode; onDragEnd: (event: DragEndEvent) => void }) => {
+      capturedOnDragEnd = onDragEnd;
+      return children;
+    },
+  };
+});
 
 function makeAttribute(overrides: Partial<Attribute>): Attribute {
   return { id: "a", name: "属性", type: "text", showOnBoard: true, showOnDetail: true, ...overrides };
@@ -12,6 +27,7 @@ const noop = {
   onEditAttribute: vi.fn(),
   onColumnWidthChange: vi.fn(),
   onColumnWidthCommit: vi.fn(),
+  onReorder: vi.fn(),
 };
 
 describe("BoardHeader", () => {
@@ -158,6 +174,69 @@ describe("BoardHeader", () => {
       fireEvent.pointerMove(handle, { clientX: 140, pointerId: 1 });
 
       expect(onColumnWidthChange).toHaveBeenCalledWith("priority", 160);
+    });
+  });
+
+  describe("列序拖拽（REQ-001 MUST：拖表头调序，松手后列位变化持久化）", () => {
+    it("拖拽结束时把两列换位后的完整属性 id 顺序传给 onReorder", () => {
+      const onReorder = vi.fn();
+      render(
+        <BoardHeader
+          attributes={[
+            makeAttribute({ id: "priority", name: "优先级" }),
+            makeAttribute({ id: "assignee", name: "负责人" }),
+            makeAttribute({ id: "deadline", name: "截止日期" }),
+          ]}
+          columnWidths={{}}
+          {...noop}
+          onReorder={onReorder}
+        />,
+      );
+
+      capturedOnDragEnd?.({
+        active: { id: "priority" },
+        over: { id: "deadline" },
+      } as unknown as DragEndEvent);
+
+      expect(onReorder).toHaveBeenCalledWith(["assignee", "deadline", "priority"]);
+    });
+
+    it("拖到自己身上（active 和 over 相同）时不触发 onReorder", () => {
+      const onReorder = vi.fn();
+      render(
+        <BoardHeader
+          attributes={[makeAttribute({ id: "priority", name: "优先级" }), makeAttribute({ id: "assignee", name: "负责人" })]}
+          columnWidths={{}}
+          {...noop}
+          onReorder={onReorder}
+        />,
+      );
+
+      capturedOnDragEnd?.({
+        active: { id: "priority" },
+        over: { id: "priority" },
+      } as unknown as DragEndEvent);
+
+      expect(onReorder).not.toHaveBeenCalled();
+    });
+
+    it("拖拽落点没有命中任何列（over 为 undefined）时不触发 onReorder", () => {
+      const onReorder = vi.fn();
+      render(
+        <BoardHeader
+          attributes={[makeAttribute({ id: "priority", name: "优先级" })]}
+          columnWidths={{}}
+          {...noop}
+          onReorder={onReorder}
+        />,
+      );
+
+      capturedOnDragEnd?.({
+        active: { id: "priority" },
+        over: undefined,
+      } as unknown as DragEndEvent);
+
+      expect(onReorder).not.toHaveBeenCalled();
     });
   });
 });
