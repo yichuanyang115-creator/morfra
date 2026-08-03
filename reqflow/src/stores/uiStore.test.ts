@@ -153,3 +153,33 @@ describe("uiStore 看板宽度（REQ-003 分隔条拖拽）", () => {
     expect(useUiStore.getState().boardWidth).toBe(BOARD_MIN_WIDTH);
   });
 });
+
+describe("uiStore Schema 设置页导航状态（Phase 18）", () => {
+  beforeEach(() => {
+    useUiStore.setState({ settingsSection: null });
+  });
+
+  it("openSettings 不传参数时默认打开阶段区域", () => {
+    useUiStore.getState().openSettings();
+    expect(useUiStore.getState().settingsSection).toEqual({ kind: "stages" });
+  });
+
+  it("openSettings 传入目标区域时直接定位（右键表头跳转场景）", () => {
+    useUiStore.getState().openSettings({ kind: "attributes", attributeId: "priority" });
+    expect(useUiStore.getState().settingsSection).toEqual({ kind: "attributes", attributeId: "priority" });
+  });
+
+  it("setSettingsSection 切换左侧导航区域", () => {
+    useUiStore.getState().openSettings();
+    useUiStore.getState().setSettingsSection({ kind: "tab", tabId: "tasks" });
+
+    expect(useUiStore.getState().settingsSection).toEqual({ kind: "tab", tabId: "tasks" });
+  });
+
+  it("closeSettings 关闭设置页", () => {
+    useUiStore.getState().openSettings();
+    useUiStore.getState().closeSettings();
+
+    expect(useUiStore.getState().settingsSection).toBeNull();
+  });
+});

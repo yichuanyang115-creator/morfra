@@ -9,12 +9,20 @@ export type DetailMode = DetailLayoutMode;
 
 export type DetailTab = "body" | "produce" | "tasks" | "acceptance" | "activity";
 
+/** Schema 设置页左侧导航的三个区域，"tab" 携带具体 tabId 定位到某个 Tab 的字段配置。 */
+export type SettingsSection =
+  | { kind: "stages" }
+  | { kind: "attributes"; attributeId?: string }
+  | { kind: "tab"; tabId: string };
+
 interface UiState {
   selectedRequirementId: string | null;
   detailMode: DetailMode;
   activeTab: DetailTab;
   boardSort: Partial<Record<Stage, StageSort>>;
   boardWidth: number;
+  /** null = 设置页未打开。非 null 时 App 用它整屏替换看板内容区（见 REQ-025）。 */
+  settingsSection: SettingsSection | null;
   selectRequirement: (id: string) => void;
   toggleClosed: () => void;
   toggleFullscreen: () => void;
@@ -26,6 +34,9 @@ interface UiState {
   restoreStageSort: (stage: Stage) => void;
   setStageSortManual: (stage: Stage) => void;
   setBoardWidth: (width: number, viewportWidth: number) => void;
+  openSettings: (section?: SettingsSection) => void;
+  setSettingsSection: (section: SettingsSection) => void;
+  closeSettings: () => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -34,6 +45,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   activeTab: "body",
   boardSort: {},
   boardWidth: BOARD_DEFAULT_WIDTH,
+  settingsSection: null,
 
   selectRequirement: (id) => {
     const current = get().detailMode;
@@ -99,5 +111,17 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   setBoardWidth: (width, viewportWidth) => {
     set({ boardWidth: clampBoardWidth(width, viewportWidth) });
+  },
+
+  openSettings: (section) => {
+    set({ settingsSection: section ?? { kind: "stages" } });
+  },
+
+  setSettingsSection: (section) => {
+    set({ settingsSection: section });
+  },
+
+  closeSettings: () => {
+    set({ settingsSection: null });
   },
 }));

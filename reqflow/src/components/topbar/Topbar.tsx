@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useProjectStore, currentProject } from "../../stores/projectStore";
 import { useRequirementStore } from "../../stores/requirementStore";
 import { useUiStore } from "../../stores/uiStore";
+import { useSchemaStore } from "../../stores/schemaStore";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 import { SearchBox } from "./SearchBox";
 import { SettingsPanel } from "./SettingsPanel";
@@ -81,6 +82,9 @@ export function Topbar() {
   const project = useProjectStore(currentProject);
   const requirements = useRequirementStore((s) => s.requirements);
   const selectRequirement = useUiStore((s) => s.selectRequirement);
+  const openSettings = useUiStore((s) => s.openSettings);
+  const settingsSection = useUiStore((s) => s.settingsSection);
+  const schemaLoaded = useSchemaStore((s) => s.schema !== null);
 
   return (
     <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--topbar) px-2.5 border-b border-(--border)">
@@ -132,7 +136,11 @@ export function Topbar() {
         <button
           type="button"
           aria-label="Schema 设置"
-          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+          disabled={!schemaLoaded}
+          onClick={() => openSettings()}
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent disabled:cursor-not-allowed disabled:opacity-40 ${
+            settingsSection ? "bg-(--accent-soft) text-(--accent-text)" : "text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+          }`}
         >
           <SchemaSettingsIcon />
         </button>

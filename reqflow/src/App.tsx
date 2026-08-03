@@ -3,6 +3,7 @@ import { Topbar } from "./components/topbar/Topbar";
 import { MainLayout } from "./components/layout/MainLayout";
 import { Board } from "./components/board/Board";
 import { DetailPanel } from "./components/detail/DetailPanel";
+import { SchemaSettingsPage } from "./components/settings/SchemaSettingsPage";
 import { useProjectStore, currentProject } from "./stores/projectStore";
 import { useRequirementStore } from "./stores/requirementStore";
 import { useChatStore } from "./stores/chatStore";
@@ -64,6 +65,10 @@ function App() {
   const justMigrated = useSchemaStore((s) => s.justMigrated);
   const acknowledgeMigration = useSchemaStore((s) => s.acknowledgeMigration);
 
+  const settingsSection = useUiStore((s) => s.settingsSection);
+  const setSettingsSection = useUiStore((s) => s.setSettingsSection);
+  const closeSettings = useUiStore((s) => s.closeSettings);
+
   useEffect(() => {
     void initProjects();
   }, [initProjects]);
@@ -124,123 +129,132 @@ function App() {
   return (
     <div className="flex h-screen w-screen flex-col">
       <Topbar />
-      <MainLayout
-        detailMode={detailMode}
-        boardContent={
-          <Board
-            requirements={requirements}
-            loading={requirementsLoading || currentProjectId !== loadedProjectId}
-            error={requirementsError}
-            selectedRequirementId={selectedRequirementId}
-            onCreate={(stage, name) => {
-              if (currentProjectId) void createRequirement(currentProjectId, stage, name);
-            }}
-            onSelectRequirement={selectRequirement}
-            onAttributeChange={(requirementId, attributeId, value) => {
-              if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, attributeId, value);
-            }}
-            onTransition={(requirementId, toStage) => {
-              if (currentProjectId) void transitionRequirement(currentProjectId, requirementId, toStage);
-            }}
-            onReorder={(updates) => {
-              if (currentProjectId) void reorderManually(currentProjectId, updates);
-            }}
-          />
-        }
-        detailContent={(width) => (
-          <DetailPanel
-            requirement={selectedRequirement}
-            attributes={detailAttributes}
-            isTerminal={selectedStageOption?.isTerminal ?? false}
-            width={width}
-            fullscreen={detailMode === "fullscreen"}
-            activeTab={activeTab}
-            onToggleFullscreen={toggleFullscreen}
-            onClose={toggleClosed}
-            onSelectTab={setActiveTab}
-            onRename={(name) => {
-              if (currentProjectId && selectedRequirementId) {
-                void renameRequirement(currentProjectId, selectedRequirementId, name);
-              }
-            }}
-            onAttributeChange={(attributeId, value) => {
-              if (currentProjectId && selectedRequirementId) {
-                void updateAttributeValue(currentProjectId, selectedRequirementId, attributeId, value);
-              }
-            }}
-            onBodyChange={(body) => {
-              if (currentProjectId && selectedRequirementId) {
-                void updateBody(currentProjectId, selectedRequirementId, body);
-              }
-            }}
-            onCreateDeliverable={(name) => {
-              if (currentProjectId && selectedRequirementId) {
-                void addDeliverable(currentProjectId, selectedRequirementId, name);
-              }
-            }}
-            onUpdateDeliverable={(deliverableId, patch) => {
-              if (currentProjectId && selectedRequirementId) {
-                void updateDeliverable(currentProjectId, selectedRequirementId, deliverableId, patch);
-              }
-            }}
-            onRemoveDeliverable={(deliverableId) => {
-              if (currentProjectId && selectedRequirementId) {
-                void removeDeliverable(currentProjectId, selectedRequirementId, deliverableId);
-              }
-            }}
-            onCreateTask={(task) => {
-              if (currentProjectId && selectedRequirementId) {
-                void addTask(currentProjectId, selectedRequirementId, task);
-              }
-            }}
-            onUpdateTask={(taskId, patch) => {
-              if (currentProjectId && selectedRequirementId) {
-                void updateTask(currentProjectId, selectedRequirementId, taskId, patch);
-              }
-            }}
-            onRemoveTask={(taskId) => {
-              if (currentProjectId && selectedRequirementId) {
-                void removeTask(currentProjectId, selectedRequirementId, taskId);
-              }
-            }}
-            onCreateAcceptance={(desc) => {
-              if (currentProjectId && selectedRequirementId) {
-                void addAcceptance(currentProjectId, selectedRequirementId, desc);
-              }
-            }}
-            onUpdateAcceptance={(acceptanceId, patch) => {
-              if (currentProjectId && selectedRequirementId) {
-                void updateAcceptance(currentProjectId, selectedRequirementId, acceptanceId, patch);
-              }
-            }}
-            onRemoveAcceptance={(acceptanceId) => {
-              if (currentProjectId && selectedRequirementId) {
-                void removeAcceptance(currentProjectId, selectedRequirementId, acceptanceId);
-              }
-            }}
-            onTransition={(toStage, opts) => {
-              if (currentProjectId && selectedRequirementId) {
-                void transitionRequirement(currentProjectId, selectedRequirementId, toStage, opts);
-              }
-            }}
-            onUpdateTransitionNote={(transitionId, note) => {
-              if (currentProjectId && selectedRequirementId) {
-                void updateTransitionNote(currentProjectId, selectedRequirementId, transitionId, note);
-              }
-            }}
-            onAddComment={(transitionId, content) => {
-              if (currentProjectId && selectedRequirementId) {
-                void addComment(currentProjectId, selectedRequirementId, transitionId, content);
-              }
-            }}
-            onDeleteTransition={(transitionId) => {
-              if (currentProjectId && selectedRequirementId) {
-                void removeTransition(currentProjectId, selectedRequirementId, transitionId);
-              }
-            }}
-          />
-        )}
-      />
+      {settingsSection && schema ? (
+        <SchemaSettingsPage
+          schema={schema}
+          section={settingsSection}
+          onSelectSection={setSettingsSection}
+          onClose={closeSettings}
+        />
+      ) : (
+        <MainLayout
+          detailMode={detailMode}
+          boardContent={
+            <Board
+              requirements={requirements}
+              loading={requirementsLoading || currentProjectId !== loadedProjectId}
+              error={requirementsError}
+              selectedRequirementId={selectedRequirementId}
+              onCreate={(stage, name) => {
+                if (currentProjectId) void createRequirement(currentProjectId, stage, name);
+              }}
+              onSelectRequirement={selectRequirement}
+              onAttributeChange={(requirementId, attributeId, value) => {
+                if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, attributeId, value);
+              }}
+              onTransition={(requirementId, toStage) => {
+                if (currentProjectId) void transitionRequirement(currentProjectId, requirementId, toStage);
+              }}
+              onReorder={(updates) => {
+                if (currentProjectId) void reorderManually(currentProjectId, updates);
+              }}
+            />
+          }
+          detailContent={(width) => (
+            <DetailPanel
+              requirement={selectedRequirement}
+              attributes={detailAttributes}
+              isTerminal={selectedStageOption?.isTerminal ?? false}
+              width={width}
+              fullscreen={detailMode === "fullscreen"}
+              activeTab={activeTab}
+              onToggleFullscreen={toggleFullscreen}
+              onClose={toggleClosed}
+              onSelectTab={setActiveTab}
+              onRename={(name) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void renameRequirement(currentProjectId, selectedRequirementId, name);
+                }
+              }}
+              onAttributeChange={(attributeId, value) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void updateAttributeValue(currentProjectId, selectedRequirementId, attributeId, value);
+                }
+              }}
+              onBodyChange={(body) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void updateBody(currentProjectId, selectedRequirementId, body);
+                }
+              }}
+              onCreateDeliverable={(name) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void addDeliverable(currentProjectId, selectedRequirementId, name);
+                }
+              }}
+              onUpdateDeliverable={(deliverableId, patch) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void updateDeliverable(currentProjectId, selectedRequirementId, deliverableId, patch);
+                }
+              }}
+              onRemoveDeliverable={(deliverableId) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void removeDeliverable(currentProjectId, selectedRequirementId, deliverableId);
+                }
+              }}
+              onCreateTask={(task) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void addTask(currentProjectId, selectedRequirementId, task);
+                }
+              }}
+              onUpdateTask={(taskId, patch) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void updateTask(currentProjectId, selectedRequirementId, taskId, patch);
+                }
+              }}
+              onRemoveTask={(taskId) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void removeTask(currentProjectId, selectedRequirementId, taskId);
+                }
+              }}
+              onCreateAcceptance={(desc) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void addAcceptance(currentProjectId, selectedRequirementId, desc);
+                }
+              }}
+              onUpdateAcceptance={(acceptanceId, patch) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void updateAcceptance(currentProjectId, selectedRequirementId, acceptanceId, patch);
+                }
+              }}
+              onRemoveAcceptance={(acceptanceId) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void removeAcceptance(currentProjectId, selectedRequirementId, acceptanceId);
+                }
+              }}
+              onTransition={(toStage, opts) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void transitionRequirement(currentProjectId, selectedRequirementId, toStage, opts);
+                }
+              }}
+              onUpdateTransitionNote={(transitionId, note) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void updateTransitionNote(currentProjectId, selectedRequirementId, transitionId, note);
+                }
+              }}
+              onAddComment={(transitionId, content) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void addComment(currentProjectId, selectedRequirementId, transitionId, content);
+                }
+              }}
+              onDeleteTransition={(transitionId) => {
+                if (currentProjectId && selectedRequirementId) {
+                  void removeTransition(currentProjectId, selectedRequirementId, transitionId);
+                }
+              }}
+            />
+          )}
+        />
+      )}
       {justMigrated && <Toast message="项目已自动升级为动态 Schema" onDismiss={acknowledgeMigration} />}
     </div>
   );
