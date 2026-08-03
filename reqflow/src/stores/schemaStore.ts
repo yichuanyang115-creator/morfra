@@ -20,6 +20,7 @@ interface SchemaState {
   addStageOption: (projectId: string, stageOption: StageOption) => Promise<void>;
   updateStageOption: (projectId: string, stageOptionId: string, patch: Partial<StageOption>) => Promise<void>;
   removeStageOption: (projectId: string, stageOptionId: string) => Promise<void>;
+  reorderStageOptions: (projectId: string, orderedIds: string[]) => Promise<void>;
   addTab: (projectId: string, tab: TabDefinition) => Promise<void>;
   updateTab: (projectId: string, tabId: string, patch: Partial<TabDefinition>) => Promise<void>;
   removeTab: (projectId: string, tabId: string) => Promise<void>;
@@ -92,10 +93,19 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
     })),
 
   removeStageOption: (projectId, stageOptionId) =>
-    mutateSchema(get, set, projectId, (schema) => ({
-      ...schema,
-      stageOptions: schema.stageOptions.filter((s) => s.id !== stageOptionId),
-    })),
+    mutateSchema(get, set, projectId, (schema) => {
+      // Stage 选项最少 1 个，不允许清空到 0（Product-Spec REQ-025 MUST），store 层兜底
+      // 而不是只靠 UI 禁用——防止调用方漏加保护导致应用进入无阶段可用的坏状态。
+      if (schema.stageOptions.length <= 1) return schema;
+      return { ...schema, stageOptions: schema.stageOptions.filter((s) => s.id !== stageOptionId) };
+    }),
+
+  reorderStageOptions: (projectId, orderedIds) =>
+    mutateSchema(get, set, projectId, (schema) => {
+      const byId = new Map(schema.stageOptions.map((s) => [s.id, s]));
+      const reordered = orderedIds.map((id) => byId.get(id)).filter((s): s is StageOption => s !== undefined);
+      return { ...schema, stageOptions: reordered };
+    }),
 
   addTab: (projectId, tab) =>
     mutateSchema(get, set, projectId, (schema) => ({
@@ -118,5 +128,10 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
 
 /** 生成一个新属性 id（Schema 讨论稿拍板：复用 nanoid）。 */
 export function newAttributeId(): string {
+  return nanoid();
+}
+
+/** 生成一个新阶段选项 id，同样复用 nanoid（内置模板阶段用固定字面量 id，用户自建阶段走这里）。 */
+export function newStageOptionId(): string {
   return nanoid();
 }

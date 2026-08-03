@@ -104,6 +104,35 @@ describe("schemaStore 属性/阶段/Tab CRUD", () => {
     expect(useSchemaStore.getState().schema?.stageOptions.some((s) => s.id === "extra")).toBe(false);
   });
 
+  it("removeStageOption 只剩最后一个阶段选项时拒绝删除（REQ-025：最少保留 1 个）", async () => {
+    const { removeStageOption } = useSchemaStore.getState();
+    const onlyStageId = useSchemaStore.getState().schema!.stageOptions[0].id;
+
+    // 迁移后的 legacy schema 有 7 个阶段，先删到只剩 1 个再验证防呆
+    for (const s of useSchemaStore.getState().schema!.stageOptions.slice(1)) {
+      await removeStageOption("proj-1", s.id);
+    }
+    expect(useSchemaStore.getState().schema?.stageOptions).toHaveLength(1);
+
+    await removeStageOption("proj-1", onlyStageId);
+
+    expect(useSchemaStore.getState().schema?.stageOptions).toHaveLength(1);
+    expect(useSchemaStore.getState().schema?.stageOptions[0].id).toBe(onlyStageId);
+  });
+
+  it("reorderStageOptions 按传入的 id 顺序重排阶段选项并落盘", async () => {
+    const { addStageOption, reorderStageOptions } = useSchemaStore.getState();
+    await addStageOption("proj-1", { id: "extra", label: "额外阶段", color: "hsl(0,0%,0%)", isTerminal: false });
+    const originalOrder = useSchemaStore.getState().schema!.stageOptions.map((s) => s.id);
+    const reversed = originalOrder.slice().reverse();
+
+    await reorderStageOptions("proj-1", reversed);
+
+    expect(useSchemaStore.getState().schema?.stageOptions.map((s) => s.id)).toEqual(reversed);
+    const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
+    expect(JSON.parse(raw).stageOptions.map((s: { id: string }) => s.id)).toEqual(reversed);
+  });
+
   it("addTab / updateTab / removeTab 基础 CRUD 正常工作", async () => {
     const { addTab, updateTab, removeTab } = useSchemaStore.getState();
     await addTab("proj-1", { id: "custom-tab", name: "自定义 Tab", renderer: "generic", visible: true });

@@ -25,11 +25,18 @@ export interface Attribute {
   computedKind?: "stayDays" | "totalDays" | "createdAt";
 }
 
+/** 阶段覆盖映射：该阶段下 fromAttributeId 被 toAttributeId 替换（占同一列位）。见 Schema-自定义机制-讨论稿 §4.2，Phase 20 接引擎生效，本 Phase 只落配置。 */
+export interface AttributeOverride {
+  fromAttributeId: string;
+  toAttributeId: string;
+}
+
 export interface StageOption {
   id: string;
   label: string;
   color: string;
   isTerminal: boolean;
+  attributeOverrides?: AttributeOverride[];
 }
 
 export type TabRenderer = "body" | "deliverables" | "tasks" | "acceptance" | "activity" | "generic";

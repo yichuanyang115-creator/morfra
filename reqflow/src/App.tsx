@@ -68,6 +68,10 @@ function App() {
   const settingsSection = useUiStore((s) => s.settingsSection);
   const setSettingsSection = useUiStore((s) => s.setSettingsSection);
   const closeSettings = useUiStore((s) => s.closeSettings);
+  const addStageOption = useSchemaStore((s) => s.addStageOption);
+  const updateStageOption = useSchemaStore((s) => s.updateStageOption);
+  const removeStageOption = useSchemaStore((s) => s.removeStageOption);
+  const reorderStageOptions = useSchemaStore((s) => s.reorderStageOptions);
 
   useEffect(() => {
     void initProjects();
@@ -125,6 +129,10 @@ function App() {
   const selectedStageOption = selectedRequirement
     ? schema?.stageOptions.find((s) => s.id === selectedRequirement.stage)
     : undefined;
+  const entityCountByStage = requirements.reduce<Record<string, number>>((acc, r) => {
+    acc[r.stage] = (acc[r.stage] ?? 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <div className="flex h-screen w-screen flex-col">
@@ -133,8 +141,21 @@ function App() {
         <SchemaSettingsPage
           schema={schema}
           section={settingsSection}
+          entityCountByStage={entityCountByStage}
           onSelectSection={setSettingsSection}
           onClose={closeSettings}
+          onReorderStages={(orderedIds) => {
+            if (currentProjectId) void reorderStageOptions(currentProjectId, orderedIds);
+          }}
+          onAddStage={(stageOption) => {
+            if (currentProjectId) void addStageOption(currentProjectId, stageOption);
+          }}
+          onUpdateStage={(stageOptionId, patch) => {
+            if (currentProjectId) void updateStageOption(currentProjectId, stageOptionId, patch);
+          }}
+          onRemoveStage={(stageOptionId) => {
+            if (currentProjectId) void removeStageOption(currentProjectId, stageOptionId);
+          }}
         />
       ) : (
         <MainLayout

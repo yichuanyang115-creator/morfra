@@ -14,22 +14,57 @@ function makeSchema(): Schema {
   };
 }
 
+const stageManagerProps = {
+  entityCountByStage: {},
+  onReorderStages: vi.fn(),
+  onAddStage: vi.fn(),
+  onUpdateStage: vi.fn(),
+  onRemoveStage: vi.fn(),
+};
+
 describe("SchemaSettingsPage（Phase 18 骨架）", () => {
-  it("渲染左侧导航（阶段/属性/各 Tab）和当前区域内容", () => {
+  it("渲染左侧导航（阶段/属性/各 Tab）和属性区域占位内容", () => {
     render(
-      <SchemaSettingsPage schema={makeSchema()} section={{ kind: "stages" }} onSelectSection={vi.fn()} onClose={vi.fn()} />,
+      <SchemaSettingsPage
+        schema={makeSchema()}
+        section={{ kind: "attributes" }}
+        onSelectSection={vi.fn()}
+        onClose={vi.fn()}
+        {...stageManagerProps}
+      />,
     );
 
     expect(screen.getByText("阶段")).toBeInTheDocument();
     expect(screen.getByText("属性")).toBeInTheDocument();
     expect(screen.getByText("任务")).toBeInTheDocument();
-    expect(screen.getByText("阶段管理区域即将上线")).toBeInTheDocument();
+    expect(screen.getByText("属性管理区域即将上线")).toBeInTheDocument();
+  });
+
+  it("阶段区域渲染 StageManager（新建阶段入口）而非占位文案", () => {
+    render(
+      <SchemaSettingsPage
+        schema={makeSchema()}
+        section={{ kind: "stages" }}
+        onSelectSection={vi.fn()}
+        onClose={vi.fn()}
+        {...stageManagerProps}
+      />,
+    );
+
+    expect(screen.getByText("收集")).toBeInTheDocument();
+    expect(screen.getByLabelText("新建阶段")).toBeInTheDocument();
   });
 
   it("点击导航项触发 onSelectSection 切换区域", async () => {
     const onSelectSection = vi.fn();
     render(
-      <SchemaSettingsPage schema={makeSchema()} section={{ kind: "stages" }} onSelectSection={onSelectSection} onClose={vi.fn()} />,
+      <SchemaSettingsPage
+        schema={makeSchema()}
+        section={{ kind: "stages" }}
+        onSelectSection={onSelectSection}
+        onClose={vi.fn()}
+        {...stageManagerProps}
+      />,
     );
 
     await userEvent.click(screen.getByText("属性"));
@@ -41,14 +76,30 @@ describe("SchemaSettingsPage（Phase 18 骨架）", () => {
 
   it("点击关闭按钮触发 onClose", async () => {
     const onClose = vi.fn();
-    render(<SchemaSettingsPage schema={makeSchema()} section={{ kind: "stages" }} onSelectSection={vi.fn()} onClose={onClose} />);
+    render(
+      <SchemaSettingsPage
+        schema={makeSchema()}
+        section={{ kind: "attributes" }}
+        onSelectSection={vi.fn()}
+        onClose={onClose}
+        {...stageManagerProps}
+      />,
+    );
 
     await userEvent.click(screen.getByLabelText("关闭设置"));
     expect(onClose).toHaveBeenCalled();
   });
 
   it("保存为模板按钮本 Phase 是禁用占位", () => {
-    render(<SchemaSettingsPage schema={makeSchema()} section={{ kind: "stages" }} onSelectSection={vi.fn()} onClose={vi.fn()} />);
+    render(
+      <SchemaSettingsPage
+        schema={makeSchema()}
+        section={{ kind: "attributes" }}
+        onSelectSection={vi.fn()}
+        onClose={vi.fn()}
+        {...stageManagerProps}
+      />,
+    );
 
     expect(screen.getByText("保存为模板")).toBeDisabled();
   });

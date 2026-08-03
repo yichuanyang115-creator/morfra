@@ -1,6 +1,7 @@
-import type { Schema } from "../../types/schema";
+import type { StageOption, Schema } from "../../types/schema";
 import type { SettingsSection } from "../../stores/uiStore";
 import { SettingsNav } from "./SettingsNav";
+import { StageManager } from "./StageManager";
 
 function CloseIcon() {
   return (
@@ -13,17 +14,62 @@ function CloseIcon() {
 interface SchemaSettingsPageProps {
   schema: Schema;
   section: SettingsSection;
+  entityCountByStage: Record<string, number>;
   onSelectSection: (section: SettingsSection) => void;
   onClose: () => void;
+  onReorderStages: (orderedIds: string[]) => void;
+  onAddStage: (stageOption: StageOption) => void;
+  onUpdateStage: (stageOptionId: string, patch: Partial<StageOption>) => void;
+  onRemoveStage: (stageOptionId: string) => void;
 }
 
-/** 区域内容渲染留空占位，阶段/属性/Tab 管理区分别在各自 Task 中接入。 */
-function SectionContent({ section }: { section: SettingsSection }) {
-  const label = section.kind === "stages" ? "阶段管理" : section.kind === "attributes" ? "属性管理" : "Tab 字段配置";
+/** 属性/Tab 管理区留空占位，分别在各自 Task 中接入。 */
+function SectionContent({
+  schema,
+  section,
+  entityCountByStage,
+  onReorderStages,
+  onAddStage,
+  onUpdateStage,
+  onRemoveStage,
+}: {
+  schema: Schema;
+  section: SettingsSection;
+  entityCountByStage: Record<string, number>;
+  onReorderStages: (orderedIds: string[]) => void;
+  onAddStage: (stageOption: StageOption) => void;
+  onUpdateStage: (stageOptionId: string, patch: Partial<StageOption>) => void;
+  onRemoveStage: (stageOptionId: string) => void;
+}) {
+  if (section.kind === "stages") {
+    return (
+      <StageManager
+        stageOptions={schema.stageOptions}
+        entityCountByStage={entityCountByStage}
+        availableAttributes={schema.attributes}
+        onReorder={onReorderStages}
+        onAdd={onAddStage}
+        onUpdate={onUpdateStage}
+        onRemove={onRemoveStage}
+      />
+    );
+  }
+
+  const label = section.kind === "attributes" ? "属性管理" : "Tab 字段配置";
   return <div className="p-5 text-[13px] text-(--muted-2)">{label}区域即将上线</div>;
 }
 
-export function SchemaSettingsPage({ schema, section, onSelectSection, onClose }: SchemaSettingsPageProps) {
+export function SchemaSettingsPage({
+  schema,
+  section,
+  entityCountByStage,
+  onSelectSection,
+  onClose,
+  onReorderStages,
+  onAddStage,
+  onUpdateStage,
+  onRemoveStage,
+}: SchemaSettingsPageProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-none items-center justify-between border-b border-(--border) px-4.5 py-3">
@@ -51,7 +97,15 @@ export function SchemaSettingsPage({ schema, section, onSelectSection, onClose }
       <div className="flex min-h-0 flex-1">
         <SettingsNav schema={schema} section={section} onSelect={onSelectSection} />
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <SectionContent section={section} />
+          <SectionContent
+            schema={schema}
+            section={section}
+            entityCountByStage={entityCountByStage}
+            onReorderStages={onReorderStages}
+            onAddStage={onAddStage}
+            onUpdateStage={onUpdateStage}
+            onRemoveStage={onRemoveStage}
+          />
         </div>
       </div>
     </div>
