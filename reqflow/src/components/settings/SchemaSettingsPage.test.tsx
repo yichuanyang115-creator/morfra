@@ -20,10 +20,21 @@ const stageManagerProps = {
   onAddStage: vi.fn(),
   onUpdateStage: vi.fn(),
   onRemoveStage: vi.fn(),
+  onReorderAttributes: vi.fn(),
+  onAddAttribute: vi.fn(),
+  onUpdateAttribute: vi.fn(),
+  onRemoveAttribute: vi.fn(),
+  countValuedAttribute: vi.fn(() => 0),
+  getTypeChangeImpact: vi.fn(() => ({ totalCount: 0, lostCount: 0 })),
+  onConfirmTypeChange: vi.fn(),
+  onReorderTabs: vi.fn(),
+  onAddTab: vi.fn(),
+  onUpdateTab: vi.fn(),
+  onRemoveTab: vi.fn(),
 };
 
 describe("SchemaSettingsPage（Phase 18 骨架）", () => {
-  it("渲染左侧导航（阶段/属性/各 Tab）和属性区域占位内容", () => {
+  it("渲染左侧导航（阶段/属性/各 Tab）和属性区域内容", () => {
     render(
       <SchemaSettingsPage
         schema={makeSchema()}
@@ -37,7 +48,22 @@ describe("SchemaSettingsPage（Phase 18 骨架）", () => {
     expect(screen.getByText("阶段")).toBeInTheDocument();
     expect(screen.getByText("属性")).toBeInTheDocument();
     expect(screen.getByText("任务")).toBeInTheDocument();
-    expect(screen.getByText("属性管理区域即将上线")).toBeInTheDocument();
+    expect(screen.getByLabelText("新建属性")).toBeInTheDocument();
+  });
+
+  it("属性区域渲染 AttributeManager（新建属性入口）而非占位文案", () => {
+    render(
+      <SchemaSettingsPage
+        schema={makeSchema()}
+        section={{ kind: "attributes" }}
+        onSelectSection={vi.fn()}
+        onClose={vi.fn()}
+        {...stageManagerProps}
+      />,
+    );
+
+    expect(screen.getByText("优先级")).toBeInTheDocument();
+    expect(screen.queryByText("属性管理区域即将上线")).not.toBeInTheDocument();
   });
 
   it("阶段区域渲染 StageManager（新建阶段入口）而非占位文案", () => {
@@ -88,6 +114,22 @@ describe("SchemaSettingsPage（Phase 18 骨架）", () => {
 
     await userEvent.click(screen.getByLabelText("关闭设置"));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("Tab 区域渲染 TabManager（新建 Tab 入口）而非占位文案", () => {
+    render(
+      <SchemaSettingsPage
+        schema={makeSchema()}
+        section={{ kind: "tab", tabId: "tasks" }}
+        onSelectSection={vi.fn()}
+        onClose={vi.fn()}
+        {...stageManagerProps}
+      />,
+    );
+
+    expect(screen.getByLabelText("新建 Tab")).toBeInTheDocument();
+    // 进入时该 tabId 对应行自动展开详情，显示名输入框可见
+    expect(screen.getByDisplayValue("任务")).toBeInTheDocument();
   });
 
   it("保存为模板按钮本 Phase 是禁用占位", () => {

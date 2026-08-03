@@ -1,7 +1,9 @@
-import type { StageOption, Schema } from "../../types/schema";
+import type { Attribute, AttributeType, StageOption, TabDefinition, Schema } from "../../types/schema";
 import type { SettingsSection } from "../../stores/uiStore";
 import { SettingsNav } from "./SettingsNav";
 import { StageManager } from "./StageManager";
+import { AttributeManager } from "./AttributeManager";
+import { TabManager } from "./TabManager";
 
 function CloseIcon() {
   return (
@@ -21,9 +23,19 @@ interface SchemaSettingsPageProps {
   onAddStage: (stageOption: StageOption) => void;
   onUpdateStage: (stageOptionId: string, patch: Partial<StageOption>) => void;
   onRemoveStage: (stageOptionId: string) => void;
+  onReorderAttributes: (orderedIds: string[]) => void;
+  onAddAttribute: (attribute: Attribute) => void;
+  onUpdateAttribute: (attributeId: string, patch: Partial<Attribute>) => void;
+  onRemoveAttribute: (attributeId: string) => void;
+  countValuedAttribute: (attributeId: string) => number;
+  getTypeChangeImpact: (attributeId: string, toType: AttributeType) => { totalCount: number; lostCount: number };
+  onConfirmTypeChange: (attributeId: string, toType: AttributeType) => void;
+  onReorderTabs: (orderedIds: string[]) => void;
+  onAddTab: (tab: TabDefinition) => void;
+  onUpdateTab: (tabId: string, patch: Partial<TabDefinition>) => void;
+  onRemoveTab: (tabId: string) => void;
 }
 
-/** 属性/Tab 管理区留空占位，分别在各自 Task 中接入。 */
 function SectionContent({
   schema,
   section,
@@ -32,15 +44,18 @@ function SectionContent({
   onAddStage,
   onUpdateStage,
   onRemoveStage,
-}: {
-  schema: Schema;
-  section: SettingsSection;
-  entityCountByStage: Record<string, number>;
-  onReorderStages: (orderedIds: string[]) => void;
-  onAddStage: (stageOption: StageOption) => void;
-  onUpdateStage: (stageOptionId: string, patch: Partial<StageOption>) => void;
-  onRemoveStage: (stageOptionId: string) => void;
-}) {
+  onReorderAttributes,
+  onAddAttribute,
+  onUpdateAttribute,
+  onRemoveAttribute,
+  countValuedAttribute,
+  getTypeChangeImpact,
+  onConfirmTypeChange,
+  onReorderTabs,
+  onAddTab,
+  onUpdateTab,
+  onRemoveTab,
+}: Omit<SchemaSettingsPageProps, "onSelectSection" | "onClose">) {
   if (section.kind === "stages") {
     return (
       <StageManager
@@ -55,8 +70,31 @@ function SectionContent({
     );
   }
 
-  const label = section.kind === "attributes" ? "属性管理" : "Tab 字段配置";
-  return <div className="p-5 text-[13px] text-(--muted-2)">{label}区域即将上线</div>;
+  if (section.kind === "tab") {
+    return (
+      <TabManager
+        tabs={schema.tabs}
+        selectedTabId={section.tabId}
+        onReorder={onReorderTabs}
+        onAdd={onAddTab}
+        onUpdate={onUpdateTab}
+        onRemove={onRemoveTab}
+      />
+    );
+  }
+
+  return (
+    <AttributeManager
+      attributes={schema.attributes}
+      onReorder={onReorderAttributes}
+      onAdd={onAddAttribute}
+      onUpdate={onUpdateAttribute}
+      onRemove={onRemoveAttribute}
+      countValued={countValuedAttribute}
+      getTypeChangeImpact={getTypeChangeImpact}
+      onConfirmTypeChange={onConfirmTypeChange}
+    />
+  );
 }
 
 export function SchemaSettingsPage({
@@ -69,6 +107,17 @@ export function SchemaSettingsPage({
   onAddStage,
   onUpdateStage,
   onRemoveStage,
+  onReorderAttributes,
+  onAddAttribute,
+  onUpdateAttribute,
+  onRemoveAttribute,
+  countValuedAttribute,
+  getTypeChangeImpact,
+  onConfirmTypeChange,
+  onReorderTabs,
+  onAddTab,
+  onUpdateTab,
+  onRemoveTab,
 }: SchemaSettingsPageProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -105,6 +154,17 @@ export function SchemaSettingsPage({
             onAddStage={onAddStage}
             onUpdateStage={onUpdateStage}
             onRemoveStage={onRemoveStage}
+            onReorderAttributes={onReorderAttributes}
+            onAddAttribute={onAddAttribute}
+            onUpdateAttribute={onUpdateAttribute}
+            onRemoveAttribute={onRemoveAttribute}
+            countValuedAttribute={countValuedAttribute}
+            getTypeChangeImpact={getTypeChangeImpact}
+            onConfirmTypeChange={onConfirmTypeChange}
+            onReorderTabs={onReorderTabs}
+            onAddTab={onAddTab}
+            onUpdateTab={onUpdateTab}
+            onRemoveTab={onRemoveTab}
           />
         </div>
       </div>

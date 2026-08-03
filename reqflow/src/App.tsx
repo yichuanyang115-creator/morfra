@@ -10,6 +10,8 @@ import { useChatStore } from "./stores/chatStore";
 import { useUiStore } from "./stores/uiStore";
 import { useSchemaStore } from "./stores/schemaStore";
 import { detailAttributesFor } from "./lib/schemaSelectors";
+import { countValuedAttribute, typeChangeImpact } from "./lib/attributeImpact";
+import { convertAttributeValue, optionsForTypeChange } from "./lib/attributeTypeConversion";
 import { Toast } from "./components/shared/Toast";
 
 function mostRecentRequirementId<T extends { id: string; createdAt: string }>(requirements: T[]): string | null {
@@ -72,6 +74,15 @@ function App() {
   const updateStageOption = useSchemaStore((s) => s.updateStageOption);
   const removeStageOption = useSchemaStore((s) => s.removeStageOption);
   const reorderStageOptions = useSchemaStore((s) => s.reorderStageOptions);
+  const addAttribute = useSchemaStore((s) => s.addAttribute);
+  const updateAttribute = useSchemaStore((s) => s.updateAttribute);
+  const removeAttribute = useSchemaStore((s) => s.removeAttribute);
+  const reorderAttributes = useSchemaStore((s) => s.reorderAttributes);
+  const cascadeAttributeChange = useRequirementStore((s) => s.cascadeAttributeChange);
+  const addTab = useSchemaStore((s) => s.addTab);
+  const updateTab = useSchemaStore((s) => s.updateTab);
+  const removeTab = useSchemaStore((s) => s.removeTab);
+  const reorderTabs = useSchemaStore((s) => s.reorderTabs);
 
   useEffect(() => {
     void initProjects();
@@ -155,6 +166,49 @@ function App() {
           }}
           onRemoveStage={(stageOptionId) => {
             if (currentProjectId) void removeStageOption(currentProjectId, stageOptionId);
+          }}
+          onReorderAttributes={(orderedIds) => {
+            if (currentProjectId) void reorderAttributes(currentProjectId, orderedIds);
+          }}
+          onAddAttribute={(attribute) => {
+            if (currentProjectId) void addAttribute(currentProjectId, attribute);
+          }}
+          onUpdateAttribute={(attributeId, patch) => {
+            if (currentProjectId) void updateAttribute(currentProjectId, attributeId, patch);
+          }}
+          onRemoveAttribute={(attributeId) => {
+            if (currentProjectId) {
+              void removeAttribute(currentProjectId, attributeId);
+              void cascadeAttributeChange(currentProjectId, attributeId, () => undefined);
+            }
+          }}
+          countValuedAttribute={(attributeId) => countValuedAttribute(requirements, attributeId)}
+          getTypeChangeImpact={(attributeId, toType) => {
+            const attribute = schema.attributes.find((a) => a.id === attributeId);
+            if (!attribute) return { totalCount: requirements.length, lostCount: 0 };
+            return typeChangeImpact(requirements, attribute, toType);
+          }}
+          onConfirmTypeChange={(attributeId, toType) => {
+            if (!currentProjectId) return;
+            const attribute = schema.attributes.find((a) => a.id === attributeId);
+            if (!attribute) return;
+            const toOptions = optionsForTypeChange(attribute, toType);
+            void updateAttribute(currentProjectId, attributeId, { type: toType, options: toOptions });
+            void cascadeAttributeChange(currentProjectId, attributeId, (value) =>
+              convertAttributeValue(value, attribute, toType, toOptions).value,
+            );
+          }}
+          onReorderTabs={(orderedIds) => {
+            if (currentProjectId) void reorderTabs(currentProjectId, orderedIds);
+          }}
+          onAddTab={(tab) => {
+            if (currentProjectId) void addTab(currentProjectId, tab);
+          }}
+          onUpdateTab={(tabId, patch) => {
+            if (currentProjectId) void updateTab(currentProjectId, tabId, patch);
+          }}
+          onRemoveTab={(tabId) => {
+            if (currentProjectId) void removeTab(currentProjectId, tabId);
           }}
         />
       ) : (

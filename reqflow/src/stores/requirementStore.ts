@@ -55,6 +55,8 @@ interface RequirementState {
   addComment: (projectId: string, requirementId: string, transitionId: string, content: string) => Promise<void>;
   removeTransition: (projectId: string, requirementId: string, transitionId: string) => Promise<void>;
   reorderManually: (projectId: string, updates: { requirementId: string; manualOrder: number }[]) => Promise<void>;
+  /** 对全部需求的某个属性值做批量转换（改属性类型/删属性时的级联，见 Product-Spec REQ-025 删除连带影响）。 */
+  cascadeAttributeChange: (projectId: string, attributeId: string, transform: (value: unknown) => unknown) => Promise<void>;
 }
 
 type Get = () => RequirementState;
@@ -278,6 +280,19 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     const updated = current.map((r) => (byId.has(r.id) ? { ...r, manualOrder: byId.get(r.id)! } : r));
     await Promise.all(
       updated.filter((r) => byId.has(r.id)).map((r) => saveRequirement(projectId, r)),
+    );
+    set({ requirements: updated });
+  },
+
+  cascadeAttributeChange: async (projectId, attributeId, transform) => {
+    const current = get().requirements;
+    const updated = current.map((r) =>
+      attributeId in r.attributeValues
+        ? { ...r, attributeValues: withAttributeValue(r, attributeId, transform(r.attributeValues[attributeId])) }
+        : r,
+    );
+    await Promise.all(
+      updated.filter((r, i) => r !== current[i]).map((r) => saveRequirement(projectId, r)),
     );
     set({ requirements: updated });
   },

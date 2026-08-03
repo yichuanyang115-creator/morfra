@@ -87,6 +87,18 @@ describe("schemaStore 属性/阶段/Tab CRUD", () => {
     expect(useSchemaStore.getState().schema?.attributes.some((a) => a.id === "priority")).toBe(false);
   });
 
+  it("reorderAttributes 按传入的 id 顺序重排属性并落盘", async () => {
+    const { reorderAttributes } = useSchemaStore.getState();
+    const originalOrder = useSchemaStore.getState().schema!.attributes.map((a) => a.id);
+    const reversed = originalOrder.slice().reverse();
+
+    await reorderAttributes("proj-1", reversed);
+
+    expect(useSchemaStore.getState().schema?.attributes.map((a) => a.id)).toEqual(reversed);
+    const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
+    expect(JSON.parse(raw).attributes.map((a: { id: string }) => a.id)).toEqual(reversed);
+  });
+
   it("updateStageOption 修改阶段颜色和终态标记", async () => {
     const { updateStageOption } = useSchemaStore.getState();
     await updateStageOption("proj-1", "collect", { color: "hsl(0, 0%, 0%)", isTerminal: true });
@@ -143,5 +155,18 @@ describe("schemaStore 属性/阶段/Tab CRUD", () => {
 
     await removeTab("proj-1", "custom-tab");
     expect(useSchemaStore.getState().schema?.tabs.some((t) => t.id === "custom-tab")).toBe(false);
+  });
+
+  it("reorderTabs 按传入的 id 顺序重排 Tab 并落盘", async () => {
+    const { addTab, reorderTabs } = useSchemaStore.getState();
+    await addTab("proj-1", { id: "extra-tab", name: "额外 Tab", renderer: "generic", visible: true });
+    const originalOrder = useSchemaStore.getState().schema!.tabs.map((t) => t.id);
+    const reversed = originalOrder.slice().reverse();
+
+    await reorderTabs("proj-1", reversed);
+
+    expect(useSchemaStore.getState().schema?.tabs.map((t) => t.id)).toEqual(reversed);
+    const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
+    expect(JSON.parse(raw).tabs.map((t: { id: string }) => t.id)).toEqual(reversed);
   });
 });

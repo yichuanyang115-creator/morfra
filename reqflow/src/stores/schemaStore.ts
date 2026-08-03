@@ -21,9 +21,11 @@ interface SchemaState {
   updateStageOption: (projectId: string, stageOptionId: string, patch: Partial<StageOption>) => Promise<void>;
   removeStageOption: (projectId: string, stageOptionId: string) => Promise<void>;
   reorderStageOptions: (projectId: string, orderedIds: string[]) => Promise<void>;
+  reorderAttributes: (projectId: string, orderedIds: string[]) => Promise<void>;
   addTab: (projectId: string, tab: TabDefinition) => Promise<void>;
   updateTab: (projectId: string, tabId: string, patch: Partial<TabDefinition>) => Promise<void>;
   removeTab: (projectId: string, tabId: string) => Promise<void>;
+  reorderTabs: (projectId: string, orderedIds: string[]) => Promise<void>;
 }
 
 type Get = () => SchemaState;
@@ -80,6 +82,13 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
       attributes: schema.attributes.filter((a) => a.id !== attributeId),
     })),
 
+  reorderAttributes: (projectId, orderedIds) =>
+    mutateSchema(get, set, projectId, (schema) => {
+      const byId = new Map(schema.attributes.map((a) => [a.id, a]));
+      const reordered = orderedIds.map((id) => byId.get(id)).filter((a): a is Attribute => a !== undefined);
+      return { ...schema, attributes: reordered };
+    }),
+
   addStageOption: (projectId, stageOption) =>
     mutateSchema(get, set, projectId, (schema) => ({
       ...schema,
@@ -124,6 +133,13 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
       ...schema,
       tabs: schema.tabs.filter((t) => t.id !== tabId),
     })),
+
+  reorderTabs: (projectId, orderedIds) =>
+    mutateSchema(get, set, projectId, (schema) => {
+      const byId = new Map(schema.tabs.map((t) => [t.id, t]));
+      const reordered = orderedIds.map((id) => byId.get(id)).filter((t): t is TabDefinition => t !== undefined);
+      return { ...schema, tabs: reordered };
+    }),
 }));
 
 /** 生成一个新属性 id（Schema 讨论稿拍板：复用 nanoid）。 */
@@ -133,5 +149,15 @@ export function newAttributeId(): string {
 
 /** 生成一个新阶段选项 id，同样复用 nanoid（内置模板阶段用固定字面量 id，用户自建阶段走这里）。 */
 export function newStageOptionId(): string {
+  return nanoid();
+}
+
+/** 生成一个新 Tab id，同样复用 nanoid（预制 Tab 用固定字面量 id，用户自建 Tab 走这里）。 */
+export function newTabId(): string {
+  return nanoid();
+}
+
+/** 生成一个新单选/多选选项 id，同样复用 nanoid。 */
+export function newSelectOptionId(): string {
   return nanoid();
 }

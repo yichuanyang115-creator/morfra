@@ -15,6 +15,12 @@ export interface SelectOption {
   color?: string;
 }
 
+/** 属性依赖显示条件（单条件）：本属性仅当 attributeId 取 value 时显示。见 Schema-自定义机制-讨论稿 §4.1，Phase 20 接引擎生效，本 Phase 只落配置。 */
+export interface AttributeDependency {
+  attributeId: string;
+  value: unknown;
+}
+
 export interface Attribute {
   id: string;
   name: string;
@@ -23,6 +29,7 @@ export interface Attribute {
   showOnBoard: boolean;
   showOnDetail: boolean;
   computedKind?: "stayDays" | "totalDays" | "createdAt";
+  dependsOn?: AttributeDependency;
 }
 
 /** 阶段覆盖映射：该阶段下 fromAttributeId 被 toAttributeId 替换（占同一列位）。见 Schema-自定义机制-讨论稿 §4.2，Phase 20 接引擎生效，本 Phase 只落配置。 */

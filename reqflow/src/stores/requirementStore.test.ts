@@ -755,6 +755,53 @@ describe("requirementStore manualOrder（手动排序）", () => {
   });
 });
 
+describe("requirementStore.cascadeAttributeChange（Phase 18：改类型/删属性的批量级联）", () => {
+  beforeEach(() => {
+    files.clear();
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+  });
+
+  it("对填了该属性值的需求应用 transform 并落盘，未填值的需求不受影响", async () => {
+    const { createRequirement, updateAttributeValue, cascadeAttributeChange } = useRequirementStore.getState();
+    await createRequirement("proj-1", "design", "需求 A");
+    await createRequirement("proj-1", "design", "需求 B");
+    const [a, b] = useRequirementStore.getState().requirements;
+    await updateAttributeValue("proj-1", a.id, "custom", "旧值");
+
+    await cascadeAttributeChange("proj-1", "custom", () => "新值");
+
+    const updated = useRequirementStore.getState().requirements;
+    expect(updated.find((r) => r.id === a.id)?.attributeValues.custom).toBe("新值");
+    expect(updated.find((r) => r.id === b.id)?.attributeValues.custom).toBeUndefined();
+
+    const raw = files.get(`/app-local-data/projects/proj-1/${a.id}.md`) ?? "";
+    expect(raw).toContain("新值");
+  });
+
+  it("transform 返回 undefined 时（删属性场景）该属性值从记录中清空", async () => {
+    const { createRequirement, updateAttributeValue, cascadeAttributeChange } = useRequirementStore.getState();
+    await createRequirement("proj-1", "design", "需求 A");
+    const created = useRequirementStore.getState().requirements[0];
+    await updateAttributeValue("proj-1", created.id, "custom", "值");
+
+    await cascadeAttributeChange("proj-1", "custom", () => undefined);
+
+    const updated = useRequirementStore.getState().requirements.find((r) => r.id === created.id);
+    expect(updated?.attributeValues.custom).toBeUndefined();
+  });
+
+  it("没有需求填过该属性时不触发任何落盘", async () => {
+    const { createRequirement, cascadeAttributeChange } = useRequirementStore.getState();
+    await createRequirement("proj-1", "design", "需求 A");
+    const created = useRequirementStore.getState().requirements[0];
+    const before = files.get(`/app-local-data/projects/proj-1/${created.id}.md`);
+
+    await cascadeAttributeChange("proj-1", "never_set", () => "新值");
+
+    expect(files.get(`/app-local-data/projects/proj-1/${created.id}.md`)).toBe(before);
+  });
+});
+
 describe("requirementStore 加载 Phase 15 之前的旧格式文件（无 attributeValues）", () => {
   beforeEach(() => {
     files.clear();
