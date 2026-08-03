@@ -54,6 +54,12 @@ describe("AttributeManager", () => {
     expect(screen.queryByText("显示名")).not.toBeInTheDocument();
   });
 
+  it("传入 selectedAttributeId 时进入即自动展开对应行（右键表头「编辑此属性」跳转场景）", () => {
+    render(<AttributeManager {...baseProps} selectedAttributeId="assignee" />);
+
+    expect(screen.getByDisplayValue("负责人")).toBeInTheDocument();
+  });
+
   it("展开计算属性时类型锁定，不可改类型", async () => {
     render(<AttributeManager {...baseProps} />);
 

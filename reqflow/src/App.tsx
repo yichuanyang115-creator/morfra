@@ -70,6 +70,7 @@ function App() {
   const settingsSection = useUiStore((s) => s.settingsSection);
   const setSettingsSection = useUiStore((s) => s.setSettingsSection);
   const closeSettings = useUiStore((s) => s.closeSettings);
+  const openSettings = useUiStore((s) => s.openSettings);
   const addStageOption = useSchemaStore((s) => s.addStageOption);
   const updateStageOption = useSchemaStore((s) => s.updateStageOption);
   const removeStageOption = useSchemaStore((s) => s.removeStageOption);
@@ -233,6 +234,7 @@ function App() {
               onReorder={(updates) => {
                 if (currentProjectId) void reorderManually(currentProjectId, updates);
               }}
+              onEditAttribute={(attributeId) => openSettings({ kind: "attributes", attributeId })}
             />
           }
           detailContent={(width) => (

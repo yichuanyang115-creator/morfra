@@ -116,6 +116,20 @@ describe("SchemaSettingsPage（Phase 18 骨架）", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("section 携带 attributeId 时（右键表头跳转）进入即自动展开对应属性行", () => {
+    render(
+      <SchemaSettingsPage
+        schema={makeSchema()}
+        section={{ kind: "attributes", attributeId: "priority" }}
+        onSelectSection={vi.fn()}
+        onClose={vi.fn()}
+        {...stageManagerProps}
+      />,
+    );
+
+    expect(screen.getByDisplayValue("优先级")).toBeInTheDocument();
+  });
+
   it("Tab 区域渲染 TabManager（新建 Tab 入口）而非占位文案", () => {
     render(
       <SchemaSettingsPage

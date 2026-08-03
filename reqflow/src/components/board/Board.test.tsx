@@ -64,6 +64,7 @@ const noop = {
   onAttributeChange: vi.fn(),
   onTransition: vi.fn(),
   onReorder: vi.fn(),
+  onEditAttribute: vi.fn(),
 };
 
 describe("resolveDropTransition", () => {

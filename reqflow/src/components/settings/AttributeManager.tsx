@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Attribute, AttributeType } from "../../types/schema";
@@ -22,6 +22,8 @@ interface TypeChangeImpact {
 
 interface AttributeManagerProps {
   attributes: Attribute[];
+  /** 从右键表头"编辑此属性"跳转进入时携带的目标属性 id，进入时自动展开对应行（见 REQ-025 设置页入口）。 */
+  selectedAttributeId?: string;
   onReorder: (orderedIds: string[]) => void;
   onAdd: (attribute: Attribute) => void;
   onUpdate: (attributeId: string, patch: Partial<Attribute>) => void;
@@ -36,6 +38,7 @@ interface AttributeManagerProps {
 
 export function AttributeManager({
   attributes,
+  selectedAttributeId,
   onReorder,
   onAdd,
   onUpdate,
@@ -45,7 +48,7 @@ export function AttributeManager({
   onConfirmTypeChange,
 }: AttributeManagerProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(selectedAttributeId ?? null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [typeChangeRequest, setTypeChangeRequest] = useState<{ attributeId: string; toType: AttributeType; impact: TypeChangeImpact } | null>(
     null,
@@ -53,6 +56,10 @@ export function AttributeManager({
   const [draftName, setDraftName] = useState("");
   const [draftType, setDraftType] = useState<AttributeType>("text");
   const [draftError, setDraftError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedAttributeId) setExpandedId(selectedAttributeId);
+  }, [selectedAttributeId]);
 
   function handleDragEnd(event: DragEndEvent) {
     const activeId = event.active.id;

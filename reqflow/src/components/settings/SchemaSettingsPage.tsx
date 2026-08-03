@@ -86,6 +86,7 @@ function SectionContent({
   return (
     <AttributeManager
       attributes={schema.attributes}
+      selectedAttributeId={section.attributeId}
       onReorder={onReorderAttributes}
       onAdd={onAddAttribute}
       onUpdate={onUpdateAttribute}

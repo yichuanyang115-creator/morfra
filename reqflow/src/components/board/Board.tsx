@@ -70,6 +70,8 @@ interface BoardProps {
   onAttributeChange: (requirementId: string, attributeId: string, value: unknown) => void;
   onTransition: (requirementId: string, toStage: Stage) => void;
   onReorder: (updates: { requirementId: string; manualOrder: number }[]) => void;
+  /** 右键表头"编辑此属性"跳转到 Schema 设置页对应属性（见 REQ-025 设置页入口）。 */
+  onEditAttribute: (attributeId: string) => void;
 }
 
 export function Board({
@@ -82,6 +84,7 @@ export function Board({
   onAttributeChange,
   onTransition,
   onReorder,
+  onEditAttribute,
 }: BoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const schema = useSchemaStore((s) => s.schema);
@@ -127,7 +130,7 @@ export function Board({
         {requirements.length === 0 && (
           <EmptyState text="还没有需求，点收集阶段的新建按钮记录你的第一个想法" />
         )}
-        <BoardHeader attributes={boardAttributes} />
+        <BoardHeader attributes={boardAttributes} onEditAttribute={onEditAttribute} />
 
         {stageOptions.map((s) => (
           <StageSection
