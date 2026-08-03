@@ -125,7 +125,8 @@ const DEFAULT_COLUMN_WIDTH_BY_TYPE: Record<AttributeType, number> = {
   computed: 56,
 };
 
-function defaultColumnWidth(attribute: Attribute): number {
+/** 属性类型的默认列宽，也是拖拽调宽的下限（REQ-001 MUST"下限=各自默认宽度"）。 */
+export function defaultColumnWidth(attribute: Attribute): number {
   return DEFAULT_COLUMN_WIDTH_BY_TYPE[attribute.type];
 }
 

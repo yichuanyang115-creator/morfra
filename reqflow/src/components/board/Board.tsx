@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import type { Requirement, Stage } from "../../types/models";
@@ -72,6 +73,8 @@ interface BoardProps {
   onReorder: (updates: { requirementId: string; manualOrder: number }[]) => void;
   /** 右键表头"编辑此属性"跳转到 Schema 设置页对应属性（见 REQ-025 设置页入口）。 */
   onEditAttribute: (attributeId: string) => void;
+  /** 列宽拖拽松手后持久化到 schema.json viewPreferences.columnWidths（见 REQ-001 MUST）。 */
+  onColumnWidthCommit: (attributeId: string, width: number) => Promise<void>;
 }
 
 export function Board({
@@ -85,11 +88,16 @@ export function Board({
   onTransition,
   onReorder,
   onEditAttribute,
+  onColumnWidthCommit,
 }: BoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const schema = useSchemaStore((s) => s.schema);
   const stageOptions = schema?.stageOptions ?? [];
   const boardAttributes = boardAttributesFor(schema);
+  // 拖拽过程中的实时列宽只存在这里，不逐帧写 schemaStore（那样每次 pointermove 都会
+  // 触发一次文件写入）。松手（onColumnWidthCommit）时才真正持久化，见 App.tsx。
+  const [draftColumnWidths, setDraftColumnWidths] = useState<Record<string, number> | null>(null);
+  const columnWidths = draftColumnWidths ?? schema?.viewPreferences.columnWidths ?? {};
 
   if (loading) {
     return <Skeleton />;
@@ -130,7 +138,21 @@ export function Board({
         {requirements.length === 0 && (
           <EmptyState text="还没有需求，点收集阶段的新建按钮记录你的第一个想法" />
         )}
-        <BoardHeader attributes={boardAttributes} onEditAttribute={onEditAttribute} />
+        <BoardHeader
+          attributes={boardAttributes}
+          columnWidths={columnWidths}
+          onEditAttribute={onEditAttribute}
+          onColumnWidthChange={(attributeId, width) =>
+            setDraftColumnWidths({ ...(draftColumnWidths ?? schema?.viewPreferences.columnWidths ?? {}), [attributeId]: width })
+          }
+          onColumnWidthCommit={(attributeId, width) => {
+            // 持久化写盘是异步的（mutateSchema 先 await writeFile 再更新 store），
+            // 草稿宽度要等落盘更新完 schema 后才能清掉，否则中间会闪回拖拽前的旧宽度。
+            // 用 finally 而不是 then：写盘失败也要清掉草稿，否则 draftColumnWidths
+            // 卡在拖拽结束值上，后续渲染再也读不到 store 里的真实宽度。
+            void onColumnWidthCommit(attributeId, width).finally(() => setDraftColumnWidths(null));
+          }}
+        />
 
         {stageOptions.map((s) => (
           <StageSection
@@ -138,6 +160,7 @@ export function Board({
             stageOption={s}
             requirements={requirements.filter((r) => r.stage === s.id)}
             attributes={boardAttributes}
+            columnWidths={columnWidths}
             selectedRequirementId={selectedRequirementId}
             onCreate={(name) => onCreate(s.id, name)}
             onSelectRequirement={onSelectRequirement}

@@ -6,17 +6,19 @@ interface QuickAddInputProps {
   placeholder: string;
   /** 已按 schema 可见属性顺序排好的属性列表，用于生成和需求行一致的 grid 列数。 */
   attributes: Attribute[];
+  /** 用户拖拽调整过的列宽，需要跟表头/需求行用同一份值才能保持列对齐（见 BoardHeader.tsx）。 */
+  columnWidths: Record<string, number>;
   onSubmit: (name: string) => void;
   onCancel: () => void;
 }
 
-export function QuickAddInput({ placeholder, attributes, onSubmit, onCancel }: QuickAddInputProps) {
+export function QuickAddInput({ placeholder, attributes, columnWidths, onSubmit, onCancel }: QuickAddInputProps) {
   const [value, setValue] = useState("");
 
   return (
     <div
       className="grid w-fit min-w-full items-center gap-3 border-b border-(--border) bg-(--accent-soft) px-2 py-2"
-      style={{ gridTemplateColumns: gridTemplateColumnsFor(attributes) }}
+      style={{ gridTemplateColumns: gridTemplateColumnsFor(attributes, columnWidths) }}
     >
       <input
         type="text"

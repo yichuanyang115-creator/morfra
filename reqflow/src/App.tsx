@@ -79,6 +79,7 @@ function App() {
   const updateAttribute = useSchemaStore((s) => s.updateAttribute);
   const removeAttribute = useSchemaStore((s) => s.removeAttribute);
   const reorderAttributes = useSchemaStore((s) => s.reorderAttributes);
+  const setColumnWidth = useSchemaStore((s) => s.setColumnWidth);
   const cascadeAttributeChange = useRequirementStore((s) => s.cascadeAttributeChange);
   const addTab = useSchemaStore((s) => s.addTab);
   const updateTab = useSchemaStore((s) => s.updateTab);
@@ -235,6 +236,10 @@ function App() {
                 if (currentProjectId) void reorderManually(currentProjectId, updates);
               }}
               onEditAttribute={(attributeId) => openSettings({ kind: "attributes", attributeId })}
+              onColumnWidthCommit={(attributeId, width) => {
+                if (!currentProjectId) return Promise.resolve();
+                return setColumnWidth(currentProjectId, attributeId, width);
+              }}
             />
           }
           detailContent={(width) => (

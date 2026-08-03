@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { DragEndEvent } from "@dnd-kit/core";
 import { Board, resolveDropTransition, resolveReorder } from "./Board";
@@ -65,6 +65,7 @@ const noop = {
   onTransition: vi.fn(),
   onReorder: vi.fn(),
   onEditAttribute: vi.fn(),
+  onColumnWidthCommit: vi.fn(async () => undefined),
 };
 
 describe("resolveDropTransition", () => {
@@ -340,5 +341,67 @@ describe("Board", () => {
     } as unknown as DragEndEvent);
 
     expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  describe("列宽拖拽联动（REQ-001 MUST：表头拖宽时需求行同步跟着变宽，保持列对齐）", () => {
+    it("拖拽表头列宽手柄时，需求行的 grid 列宽跟着表头实时同步变化", () => {
+      render(
+        <Board
+          requirements={[makeRequirement({ id: "r-1", name: "看板行", stage: "design" })]}
+          loading={false}
+          error={false}
+          selectedRequirementId={null}
+          {...noop}
+        />,
+      );
+      const handle = screen.getByLabelText("调整「优先级」列宽");
+      const row = screen.getByText("看板行").closest("div[style*='grid-template-columns']") as HTMLElement;
+      const widthBefore = row.style.gridTemplateColumns;
+
+      fireEvent.pointerDown(handle, { clientX: 100, pointerId: 1 });
+      fireEvent.pointerMove(handle, { clientX: 160, pointerId: 1 });
+
+      expect(row.style.gridTemplateColumns).not.toBe(widthBefore);
+      expect(row.style.gridTemplateColumns).toContain("116px");
+    });
+
+    it("松手后调用 onColumnWidthCommit，携带属性 id 和最终宽度", async () => {
+      const onColumnWidthCommit = vi.fn(async () => undefined);
+      render(
+        <Board
+          requirements={[]}
+          loading={false}
+          error={false}
+          selectedRequirementId={null}
+          {...noop}
+          onColumnWidthCommit={onColumnWidthCommit}
+        />,
+      );
+      const handle = screen.getByLabelText("调整「优先级」列宽");
+
+      fireEvent.pointerDown(handle, { clientX: 100, pointerId: 1 });
+      fireEvent.pointerMove(handle, { clientX: 160, pointerId: 1 });
+      fireEvent.pointerUp(handle, { clientX: 160, pointerId: 1 });
+
+      expect(onColumnWidthCommit).toHaveBeenCalledWith("priority", 116);
+    });
+
+    it("已持久化的列宽（schema.viewPreferences.columnWidths）作为初始渲染宽度", () => {
+      useSchemaStore.setState({
+        schema: {
+          ...legacyEquivalentSchema([]),
+          viewPreferences: { columnOrder: [], columnWidths: { priority: 200 }, frozenCount: 0 },
+        },
+        loadedProjectId: "p-1",
+        justMigrated: false,
+      });
+
+      render(
+        <Board requirements={[]} loading={false} error={false} selectedRequirementId={null} {...noop} />,
+      );
+
+      const header = screen.getByText("优先级").closest("div[style*='grid-template-columns']") as HTMLElement;
+      expect(header.style.gridTemplateColumns).toContain("200px");
+    });
   });
 });

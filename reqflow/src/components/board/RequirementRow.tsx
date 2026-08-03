@@ -9,6 +9,8 @@ interface RequirementRowProps {
   requirement: Requirement;
   /** 已按 schema 可见属性顺序排好的属性列表（showOnBoard 过滤 + 排序在调用方完成）。 */
   attributes: Attribute[];
+  /** 用户拖拽调整过的列宽，需要跟表头用同一份值才能保持列对齐（见 BoardHeader.tsx）。 */
+  columnWidths: Record<string, number>;
   selected: boolean;
   /** 该行所属阶段是否终态：终态阶段的"结果"类属性只读，不允许在看板行内改（值由流转产生）。 */
   isTerminal: boolean;
@@ -19,6 +21,7 @@ interface RequirementRowProps {
 export function RequirementRow({
   requirement,
   attributes,
+  columnWidths,
   selected,
   isTerminal,
   onSelect,
@@ -36,7 +39,7 @@ export function RequirementRow({
       {...sortableAttributes}
       onClick={onSelect}
       style={{
-        gridTemplateColumns: gridTemplateColumnsFor(attributes),
+        gridTemplateColumns: gridTemplateColumnsFor(attributes, columnWidths),
         transform: CSS.Transform.toString(transform),
         transition,
       }}

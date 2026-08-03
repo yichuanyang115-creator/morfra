@@ -54,6 +54,7 @@ function renderRow(overrides: Partial<Parameters<typeof RequirementRow>[0]> = {}
     <RequirementRow
       requirement={makeRequirement()}
       attributes={[PRIORITY_ATTR]}
+      columnWidths={{}}
       selected={false}
       isTerminal={false}
       onSelect={vi.fn()}

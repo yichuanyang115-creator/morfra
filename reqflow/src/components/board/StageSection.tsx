@@ -32,6 +32,8 @@ interface StageSectionProps {
   requirements: Requirement[];
   /** 已按 schema 可见属性顺序排好的属性列表，直接传给每一行的 RequirementRow。 */
   attributes: Attribute[];
+  /** 用户拖拽调整过的列宽，需要跟表头用同一份值才能保持列对齐（见 BoardHeader.tsx）。 */
+  columnWidths: Record<string, number>;
   selectedRequirementId: string | null;
   onCreate: (name: string) => void;
   onSelectRequirement: (id: string) => void;
@@ -42,6 +44,7 @@ export function StageSection({
   stageOption,
   requirements,
   attributes,
+  columnWidths,
   selectedRequirementId,
   onCreate,
   onSelectRequirement,
@@ -129,6 +132,7 @@ export function StageSection({
             <QuickAddInput
               placeholder={stageOption.id === "collect" ? "输入想法，回车记录" : "输入名称，回车创建"}
               attributes={attributes}
+              columnWidths={columnWidths}
               onSubmit={(name) => {
                 onCreate(name);
                 setDraftOpen(false);
@@ -149,6 +153,7 @@ export function StageSection({
                   key={r.id}
                   requirement={r}
                   attributes={attributes}
+                  columnWidths={columnWidths}
                   selected={r.id === selectedRequirementId}
                   isTerminal={isTerminal}
                   onSelect={() => onSelectRequirement(r.id)}
