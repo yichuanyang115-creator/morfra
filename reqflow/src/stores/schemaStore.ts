@@ -26,6 +26,9 @@ interface SchemaState {
   updateTab: (projectId: string, tabId: string, patch: Partial<TabDefinition>) => Promise<void>;
   removeTab: (projectId: string, tabId: string) => Promise<void>;
   reorderTabs: (projectId: string, orderedIds: string[]) => Promise<void>;
+  setColumnOrder: (projectId: string, orderedIds: string[]) => Promise<void>;
+  setColumnWidth: (projectId: string, attributeId: string, width: number) => Promise<void>;
+  setFrozenCount: (projectId: string, count: number) => Promise<void>;
 }
 
 type Get = () => SchemaState;
@@ -140,6 +143,30 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
       const reordered = orderedIds.map((id) => byId.get(id)).filter((t): t is TabDefinition => t !== undefined);
       return { ...schema, tabs: reordered };
     }),
+
+  // 视图偏好（列宽/列序/冻结）不改 attributes 数组本身，只写 viewPreferences——
+  // 讨论稿 §7 把它归为"可逆、不动 Schema"的一层，与 reorderAttributes 改属性
+  // 定义顺序是两件不同的事（见 schemaSelectors.boardAttributesFor 的排序优先级）。
+  setColumnOrder: (projectId, orderedIds) =>
+    mutateSchema(get, set, projectId, (schema) => ({
+      ...schema,
+      viewPreferences: { ...schema.viewPreferences, columnOrder: orderedIds },
+    })),
+
+  setColumnWidth: (projectId, attributeId, width) =>
+    mutateSchema(get, set, projectId, (schema) => ({
+      ...schema,
+      viewPreferences: {
+        ...schema.viewPreferences,
+        columnWidths: { ...schema.viewPreferences.columnWidths, [attributeId]: width },
+      },
+    })),
+
+  setFrozenCount: (projectId, count) =>
+    mutateSchema(get, set, projectId, (schema) => ({
+      ...schema,
+      viewPreferences: { ...schema.viewPreferences, frozenCount: count },
+    })),
 }));
 
 /** 生成一个新属性 id（Schema 讨论稿拍板：复用 nanoid）。 */

@@ -11,6 +11,7 @@ import {
   chatOccupiedWidth,
   clampBoardWidth,
   clampChatWidth,
+  columnWidthFor,
   detailPanelWidthFor,
   gridTemplateColumnsFor,
 } from "./boardWidth";
@@ -107,11 +108,11 @@ describe("chatOccupiedWidth", () => {
   });
 });
 
-describe("gridTemplateColumnsFor", () => {
-  function makeAttribute(overrides: Partial<Attribute>): Attribute {
-    return { id: "a", name: "属性", type: "text", showOnBoard: true, showOnDetail: true, ...overrides };
-  }
+function makeAttribute(overrides: Partial<Attribute>): Attribute {
+  return { id: "a", name: "属性", type: "text", showOnBoard: true, showOnDetail: true, ...overrides };
+}
 
+describe("gridTemplateColumnsFor", () => {
   it("Name 列固定最左，宽度区间为 minmax(140px, 320px)，不受传入属性影响", () => {
     const result = gridTemplateColumnsFor([]);
     expect(result).toBe("minmax(140px, 320px)");
@@ -134,6 +135,36 @@ describe("gridTemplateColumnsFor", () => {
     ];
     const result = gridTemplateColumnsFor(attributes);
     expect(result).toBe("minmax(140px, 320px) 72px 40px");
+  });
+
+  it("columnWidths 里有该属性的存值时用存值，没有时回退到类型默认宽度", () => {
+    const attributes = [makeAttribute({ id: "priority", type: "singleSelect" }), makeAttribute({ id: "deadline", type: "date" })];
+    const result = gridTemplateColumnsFor(attributes, { priority: 90 });
+    expect(result).toBe("minmax(140px, 320px) 90px 56px");
+  });
+
+  it("columnWidths 里存的值低于类型默认宽度时夹到默认宽度（下限保护）", () => {
+    const attributes = [makeAttribute({ id: "priority", type: "singleSelect" })];
+    const result = gridTemplateColumnsFor(attributes, { priority: 10 });
+    expect(result).toBe("minmax(140px, 320px) 56px");
+  });
+});
+
+describe("columnWidthFor", () => {
+  it("未调整过时返回类型默认宽度", () => {
+    expect(columnWidthFor(makeAttribute({ id: "priority", type: "singleSelect" }), {})).toBe(56);
+  });
+
+  it("存值大于默认宽度时返回存值", () => {
+    expect(columnWidthFor(makeAttribute({ id: "priority", type: "singleSelect" }), { priority: 120 })).toBe(120);
+  });
+
+  it("存值为 0 时夹到默认宽度", () => {
+    expect(columnWidthFor(makeAttribute({ id: "priority", type: "singleSelect" }), { priority: 0 })).toBe(56);
+  });
+
+  it("存值为 NaN 时回退到默认宽度，不透传 NaN", () => {
+    expect(columnWidthFor(makeAttribute({ id: "priority", type: "singleSelect" }), { priority: Number.NaN })).toBe(56);
   });
 });
 

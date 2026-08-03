@@ -169,4 +169,36 @@ describe("schemaStore 属性/阶段/Tab CRUD", () => {
     const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
     expect(JSON.parse(raw).tabs.map((t: { id: string }) => t.id)).toEqual(reversed);
   });
+
+  it("setColumnOrder 写入 viewPreferences.columnOrder，不改变 attributes 数组本身的顺序", async () => {
+    const { setColumnOrder } = useSchemaStore.getState();
+    const originalAttributeOrder = useSchemaStore.getState().schema!.attributes.map((a) => a.id);
+
+    await setColumnOrder("proj-1", ["deadline", "priority"]);
+
+    expect(useSchemaStore.getState().schema?.viewPreferences.columnOrder).toEqual(["deadline", "priority"]);
+    expect(useSchemaStore.getState().schema?.attributes.map((a) => a.id)).toEqual(originalAttributeOrder);
+    const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
+    expect(JSON.parse(raw).viewPreferences.columnOrder).toEqual(["deadline", "priority"]);
+  });
+
+  it("setColumnWidth 只更新目标属性的宽度，不影响其他属性已存的宽度", async () => {
+    const { setColumnWidth } = useSchemaStore.getState();
+    await setColumnWidth("proj-1", "priority", 80);
+    await setColumnWidth("proj-1", "deadline", 120);
+
+    const widths = useSchemaStore.getState().schema?.viewPreferences.columnWidths;
+    expect(widths).toEqual({ priority: 80, deadline: 120 });
+    const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
+    expect(JSON.parse(raw).viewPreferences.columnWidths).toEqual({ priority: 80, deadline: 120 });
+  });
+
+  it("setFrozenCount 写入 viewPreferences.frozenCount 并落盘", async () => {
+    const { setFrozenCount } = useSchemaStore.getState();
+    await setFrozenCount("proj-1", 2);
+
+    expect(useSchemaStore.getState().schema?.viewPreferences.frozenCount).toBe(2);
+    const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
+    expect(JSON.parse(raw).viewPreferences.frozenCount).toBe(2);
+  });
 });

@@ -130,11 +130,22 @@ function defaultColumnWidth(attribute: Attribute): number {
 }
 
 /**
- * 从看板可见属性列表生成 CSS grid-template-columns 字符串，Name 列固定最左
- * （REQ-001 MUST，不参与本函数的动态计算），其余属性列按类型给默认宽度，
- * 用户尚未在 Phase 19 里调整过列宽时的初始布局。
+ * 属性列的有效宽度：用户拖拽调宽后存在 viewPreferences.columnWidths 里的值优先，
+ * 没调过就用类型默认宽度。下限夹到默认宽度（REQ-001 MUST"下限=各自默认宽度"），
+ * 防止存量数据里出现意外写入的过小宽度。
  */
-export function gridTemplateColumnsFor(attributes: Attribute[]): string {
-  const columns = attributes.map((a) => `${defaultColumnWidth(a)}px`);
+export function columnWidthFor(attribute: Attribute, columnWidths: Record<string, number>): number {
+  const stored = columnWidths[attribute.id];
+  const min = defaultColumnWidth(attribute);
+  return stored !== undefined && Number.isFinite(stored) ? Math.max(min, stored) : min;
+}
+
+/**
+ * 从看板可见属性列表生成 CSS grid-template-columns 字符串，Name 列固定最左
+ * （REQ-001 MUST，不参与本函数的动态计算）。其余属性列宽度：用户拖拽调整过
+ * 就用 columnWidths 里存的值（Phase 19 起持久化），没调过就用类型默认宽度。
+ */
+export function gridTemplateColumnsFor(attributes: Attribute[], columnWidths: Record<string, number> = {}): string {
+  const columns = attributes.map((a) => `${columnWidthFor(a, columnWidths)}px`);
   return [NAME_COLUMN_TEMPLATE, ...columns].join(" ");
 }

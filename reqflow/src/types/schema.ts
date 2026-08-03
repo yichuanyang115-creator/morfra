@@ -58,6 +58,8 @@ export interface TabDefinition {
 export interface ViewPreferences {
   columnOrder: string[];
   columnWidths: Record<string, number>;
+  /** 从左向右连续冻结的属性列数量，不含固定冻结的 Name 列（见 REQ-001 列冻结）。 */
+  frozenCount: number;
 }
 
 export interface Schema {

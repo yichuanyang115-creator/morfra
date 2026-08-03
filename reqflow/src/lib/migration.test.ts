@@ -62,4 +62,24 @@ describe("migrateIfNeeded", () => {
       expect.arrayContaining(["priority", "assignee", "source", "deadline", "progress", "release_method", "release_date", "result"]),
     );
   });
+
+  it("读回 Phase 19 之前写入的 schema.json（无 viewPreferences.frozenCount）时补默认值 0，不丢失已有的列宽/列序", async () => {
+    files.set(
+      "/app-local-data/projects/proj-1/schema.json",
+      JSON.stringify({
+        version: 1,
+        stageOptions: [],
+        attributes: [],
+        tabs: [],
+        viewPreferences: { columnOrder: ["priority"], columnWidths: { priority: 80 } },
+      }),
+    );
+
+    const { migrated, schema } = await migrateIfNeeded("proj-1", []);
+
+    expect(migrated).toBe(false);
+    expect(schema.viewPreferences.frozenCount).toBe(0);
+    expect(schema.viewPreferences.columnOrder).toEqual(["priority"]);
+    expect(schema.viewPreferences.columnWidths).toEqual({ priority: 80 });
+  });
 });

@@ -12,7 +12,7 @@ function makeSchema(attributes: Attribute[], columnOrder: string[] = []): Schema
     stageOptions: [],
     attributes,
     tabs: [],
-    viewPreferences: { columnOrder, columnWidths: {} },
+    viewPreferences: { columnOrder, columnWidths: {}, frozenCount: 0 },
   };
 }
 
