@@ -55,6 +55,7 @@ function renderRow(overrides: Partial<Parameters<typeof RequirementRow>[0]> = {}
       requirement={makeRequirement()}
       attributes={[PRIORITY_ATTR]}
       columnWidths={{}}
+      frozenCount={0}
       selected={false}
       isTerminal={false}
       onSelect={vi.fn()}
@@ -196,5 +197,51 @@ describe("RequirementRow", () => {
   it("Name 列固定渲染需求名称，不受 attributes 列表内容影响", () => {
     renderRow({ requirement: makeRequirement({ name: "固定名称测试" }), attributes: [] });
     expect(screen.getByText("固定名称测试")).toBeInTheDocument();
+  });
+
+  describe("列冻结（REQ-001 MUST：从左向右连续扩展，Name 默认冻结）", () => {
+    function mockSortable() {
+      return vi.spyOn(dndSortable, "useSortable").mockReturnValue({
+        attributes: {},
+        listeners: {},
+        setNodeRef: vi.fn(),
+        isDragging: false,
+        transform: null,
+        transition: undefined,
+      } as unknown as ReturnType<typeof dndSortable.useSortable>);
+    }
+
+    // Name 单元格的 sticky 用 Tailwind 类（left-0）而不是内联 style，style.left 是空串；
+    // 冻结列用内联 left 偏移。这里只收集冻结列的偏移，Name 的 sticky 单独断言。
+    function frozenLefts(container: HTMLElement): string[] {
+      return Array.from(container.querySelectorAll(".sticky"))
+        .map((el) => (el as HTMLElement).style.left)
+        .filter((left) => left !== "")
+        .sort();
+    }
+
+    it("frozenCount=0（默认）时只有 Name 单元格是 sticky，属性列不冻结", () => {
+      const spy = mockSortable();
+      const { container } = renderRow({ attributes: [PRIORITY_ATTR, RESULT_ATTR] });
+      expect(container.querySelector(".sticky")).not.toBeNull();
+      expect(frozenLefts(container)).toEqual([]);
+      spy.mockRestore();
+    });
+
+    it("冻结列外包一层 sticky 定位的 div，left 偏移 = Name 最小宽 140 + 列间距 12", () => {
+      const spy = mockSortable();
+      const { container } = renderRow({ attributes: [PRIORITY_ATTR, RESULT_ATTR], frozenCount: 1, columnWidths: { priority: 90 } });
+      // 列宽的存值只影响它右侧列的偏移，不影响它自己：priority 的 left 仍是 152
+      expect(frozenLefts(container)).toEqual(["152px"]);
+      spy.mockRestore();
+    });
+
+    it("冻结范围跨多列时逐列累加各自的列宽和间距，非冻结列不包 sticky", () => {
+      const spy = mockSortable();
+      const { container } = renderRow({ attributes: [PRIORITY_ATTR, RESULT_ATTR], frozenCount: 2 });
+      // priority(152) + result(152 + 56 + 12 = 220)
+      expect(frozenLefts(container)).toEqual(["152px", "220px"]);
+      spy.mockRestore();
+    });
   });
 });

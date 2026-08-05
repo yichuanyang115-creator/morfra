@@ -47,6 +47,7 @@ const ARCHIVE_STAGE: StageOption = { id: "archive", label: "归档", color: "#F7
 const noop = {
   attributes: [],
   columnWidths: {},
+  frozenCount: 0,
   onCreate: vi.fn(),
   onSelectRequirement: vi.fn(),
   onAttributeChange: vi.fn(),

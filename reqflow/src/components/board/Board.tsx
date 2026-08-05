@@ -73,6 +73,10 @@ interface BoardProps {
   onReorder: (updates: { requirementId: string; manualOrder: number }[]) => void;
   /** 右键表头"编辑此属性"跳转到 Schema 设置页对应属性（见 REQ-025 设置页入口）。 */
   onEditAttribute: (attributeId: string) => void;
+  /** 右键表头"隐藏此属性"：updateAttribute(showOnBoard:false)，视图偏好可逆（讨论稿 §7）。 */
+  onHideAttribute: (attributeId: string) => void;
+  /** 右键表头"冻结至此列"：setFrozenCount(count)，count = 目标列索引 + 1（REQ-001 MUST）。 */
+  onFreezeTo: (count: number) => void;
   /** 列宽拖拽松手后持久化到 schema.json viewPreferences.columnWidths（见 REQ-001 MUST）。 */
   onColumnWidthCommit: (attributeId: string, width: number) => Promise<void>;
   /** 表头拖拽调序松手后持久化到 schema.json viewPreferences.columnOrder（见 REQ-001 MUST）。 */
@@ -90,6 +94,8 @@ export function Board({
   onTransition,
   onReorder,
   onEditAttribute,
+  onHideAttribute,
+  onFreezeTo,
   onColumnWidthCommit,
   onColumnOrderCommit,
 }: BoardProps) {
@@ -97,6 +103,8 @@ export function Board({
   const schema = useSchemaStore((s) => s.schema);
   const stageOptions = schema?.stageOptions ?? [];
   const boardAttributes = boardAttributesFor(schema);
+  // 冻结列数来自 viewPreferences.frozenCount（默认 0 = 只冻结 Name 列，见 REQ-001 MUST）。
+  const frozenCount = schema?.viewPreferences.frozenCount ?? 0;
   // 拖拽过程中的实时列宽只存在这里，不逐帧写 schemaStore（那样每次 pointermove 都会
   // 触发一次文件写入）。松手（onColumnWidthCommit）时才真正持久化，见 App.tsx。
   const [draftColumnWidths, setDraftColumnWidths] = useState<Record<string, number> | null>(null);
@@ -144,7 +152,10 @@ export function Board({
         <BoardHeader
           attributes={boardAttributes}
           columnWidths={columnWidths}
+          frozenCount={frozenCount}
           onEditAttribute={onEditAttribute}
+          onHideAttribute={onHideAttribute}
+          onFreezeTo={onFreezeTo}
           onColumnWidthChange={(attributeId, width) =>
             setDraftColumnWidths({ ...(draftColumnWidths ?? schema?.viewPreferences.columnWidths ?? {}), [attributeId]: width })
           }
@@ -165,6 +176,7 @@ export function Board({
             requirements={requirements.filter((r) => r.stage === s.id)}
             attributes={boardAttributes}
             columnWidths={columnWidths}
+            frozenCount={frozenCount}
             selectedRequirementId={selectedRequirementId}
             onCreate={(name) => onCreate(s.id, name)}
             onSelectRequirement={onSelectRequirement}

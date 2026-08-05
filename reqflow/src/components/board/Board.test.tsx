@@ -69,6 +69,8 @@ const noop = {
   onTransition: vi.fn(),
   onReorder: vi.fn(),
   onEditAttribute: vi.fn(),
+  onHideAttribute: vi.fn(),
+  onFreezeTo: vi.fn(),
   onColumnWidthCommit: vi.fn(async () => undefined),
   onColumnOrderCommit: vi.fn(),
 };

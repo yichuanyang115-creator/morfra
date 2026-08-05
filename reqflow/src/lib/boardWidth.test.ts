@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Attribute } from "../types/schema";
 import {
+  BOARD_COLUMN_GAP,
   BOARD_DEFAULT_WIDTH,
   BOARD_MIN_WIDTH,
   CHAT_MIN_WIDTH,
@@ -13,6 +14,7 @@ import {
   clampChatWidth,
   columnWidthFor,
   detailPanelWidthFor,
+  frozenOffsetsFor,
   gridTemplateColumnsFor,
 } from "./boardWidth";
 
@@ -147,6 +149,41 @@ describe("gridTemplateColumnsFor", () => {
     const attributes = [makeAttribute({ id: "priority", type: "singleSelect" })];
     const result = gridTemplateColumnsFor(attributes, { priority: 10 });
     expect(result).toBe("minmax(140px, 320px) 56px");
+  });
+});
+
+describe("frozenOffsetsFor", () => {
+  it("frozenCount=0 时不产生任何偏移（默认只有 Name 列冻结，left:0 硬编码在各组件）", () => {
+    const attrs = [makeAttribute({ id: "p", type: "singleSelect" }), makeAttribute({ id: "d", type: "date" })];
+    expect(frozenOffsetsFor(attrs, {}, 0)).toEqual({});
+  });
+
+  it("frozenCount=1 时第一个属性列偏移 = Name 最小宽 140 + 列间距 12", () => {
+    const attrs = [makeAttribute({ id: "p", type: "singleSelect" })];
+    expect(frozenOffsetsFor(attrs, {}, 1)).toEqual({ p: NAME_COLUMN_MIN_WIDTH + BOARD_COLUMN_GAP });
+  });
+
+  it("多列冻结时逐列累加各自的列宽和列间距", () => {
+    const attrs = [
+      makeAttribute({ id: "p", type: "singleSelect" }),
+      makeAttribute({ id: "d", type: "date" }),
+      makeAttribute({ id: "t", type: "text" }),
+    ];
+    expect(frozenOffsetsFor(attrs, {}, 2)).toEqual({ p: 152, d: 152 + 56 + 12 });
+  });
+
+  it("columnWidths 中已调宽的列用存值累加偏移", () => {
+    const attrs = [makeAttribute({ id: "p", type: "singleSelect" }), makeAttribute({ id: "d", type: "date" })];
+    expect(frozenOffsetsFor(attrs, { p: 90 }, 2)).toEqual({ p: 152, d: 152 + 90 + 12 });
+  });
+
+  it("frozenCount 超过属性列数时只给实际存在的列算偏移，不越界", () => {
+    const attrs = [makeAttribute({ id: "p", type: "singleSelect" })];
+    expect(frozenOffsetsFor(attrs, {}, 5)).toEqual({ p: 152 });
+  });
+
+  it("BOARD_COLUMN_GAP 与各看板 grid 的 columnGap 约定一致（12px）", () => {
+    expect(BOARD_COLUMN_GAP).toBe(12);
   });
 });
 

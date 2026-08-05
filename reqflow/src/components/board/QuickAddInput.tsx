@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Attribute } from "../../types/schema";
-import { gridTemplateColumnsFor } from "../../lib/boardWidth";
+import { BOARD_COLUMN_GAP, gridTemplateColumnsFor } from "../../lib/boardWidth";
 
 interface QuickAddInputProps {
   placeholder: string;
@@ -17,8 +17,8 @@ export function QuickAddInput({ placeholder, attributes, columnWidths, onSubmit,
 
   return (
     <div
-      className="grid w-fit min-w-full items-center gap-3 border-b border-(--border) bg-(--accent-soft) px-2 py-2"
-      style={{ gridTemplateColumns: gridTemplateColumnsFor(attributes, columnWidths) }}
+      className="grid w-fit min-w-full items-center border-b border-(--border) bg-(--accent-soft) px-2 py-2"
+      style={{ gridTemplateColumns: gridTemplateColumnsFor(attributes, columnWidths), columnGap: BOARD_COLUMN_GAP }}
     >
       <input
         type="text"

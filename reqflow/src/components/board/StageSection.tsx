@@ -34,6 +34,8 @@ interface StageSectionProps {
   attributes: Attribute[];
   /** 用户拖拽调整过的列宽，需要跟表头用同一份值才能保持列对齐（见 BoardHeader.tsx）。 */
   columnWidths: Record<string, number>;
+  /** 冻结的属性列数，下传给每一行的 RequirementRow（见 REQ-001 MUST"从左向右连续扩展"）。 */
+  frozenCount: number;
   selectedRequirementId: string | null;
   onCreate: (name: string) => void;
   onSelectRequirement: (id: string) => void;
@@ -45,6 +47,7 @@ export function StageSection({
   requirements,
   attributes,
   columnWidths,
+  frozenCount,
   selectedRequirementId,
   onCreate,
   onSelectRequirement,
@@ -154,6 +157,7 @@ export function StageSection({
                   requirement={r}
                   attributes={attributes}
                   columnWidths={columnWidths}
+                  frozenCount={frozenCount}
                   selected={r.id === selectedRequirementId}
                   isTerminal={isTerminal}
                   onSelect={() => onSelectRequirement(r.id)}

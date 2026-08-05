@@ -5,9 +5,19 @@ export const NAME_COLUMN_MIN_WIDTH = 140;
 const NAME_COLUMN_TEMPLATE = "minmax(140px, 320px)";
 
 /**
+ * 看板列间距（px），同时用于 sticky 冻结列偏移的累加计算。三个看板 grid
+ * （BoardHeader / RequirementRow / QuickAddInput）的 columnGap 都内联引用
+ * 这个常量，保证 JS 侧偏移与 CSS 侧间距单一来源，改动任何一处都不会对不上。
+ */
+export const BOARD_COLUMN_GAP = 12;
+
+/**
  * 冻结列之外至少留出的最小滚动区宽度，保证面板拖到最窄时除了 Name 列还能看见
- * 一部分属性列，不是"只剩名称、其余全部裁没"。本 Phase 只有 Name 列冻结，
- * Phase 19 支持多列冻结后 BOARD_MIN_WIDTH 的冻结列宽总和部分需跟着累加。
+ * 一部分属性列，不是"只剩名称、其余全部裁没"。Phase 19 起支持多列冻结，但
+ * BOARD_MIN_WIDTH 仍只按 Name 列最小宽累加，冻结列宽总和暂未计入——用户冻结
+ * 多列后把面板拖到最窄，滚动区会被冻结列压缩（可用但变窄）。是否把冻结列宽
+ * 总和纳入 BOARD_MIN_WIDTH（需把冻结宽下传进 clampBoardWidth 等宽度函数）是
+ * 已知 follow-up，本 Task 按 spec-tight 未做。
  */
 const MIN_SCROLL_AREA_WIDTH = 200;
 
@@ -149,4 +159,31 @@ export function columnWidthFor(attribute: Attribute, columnWidths: Record<string
 export function gridTemplateColumnsFor(attributes: Attribute[], columnWidths: Record<string, number> = {}): string {
   const columns = attributes.map((a) => `${columnWidthFor(a, columnWidths)}px`);
   return [NAME_COLUMN_TEMPLATE, ...columns].join(" ");
+}
+
+/**
+ * 冻结列的 sticky 偏移量（px），键为属性 id，值为该列在横向滚动时钉住的 left。
+ * 只含前 frozenCount 个属性列（Name 列恒为 sticky left:0，不在此列，见各组件）。
+ *
+ * 为什么 Name 列宽度（minmax(140px, 320px)）浮动，偏移却能用固定数字：
+ * minmax 轨道只有在 grid 有剩余空间时才会长过最小值；而 grid 进入横向滚动的前提
+ * 正是内容总宽超过面板（w-fit min-w-full 下 max-content > 面板宽），此时轨道按
+ * 最小值解析，Name 列精确等于 NAME_COLUMN_MIN_WIDTH。sticky 偏移只在滚动场景下
+ * 才起作用（不滚动时 sticky 永不触发，left 取任何值都不影响布局），所以计算偏移
+ * 时 Name 列直接取最小宽度即可，无需 DOM 测量实际渲染宽度（与 DetailPanel 反对
+ * ResizeObserver 反推布局的取舍一致）。
+ */
+export function frozenOffsetsFor(
+  attributes: Attribute[],
+  columnWidths: Record<string, number>,
+  frozenCount: number,
+): Record<string, number> {
+  const offsets: Record<string, number> = {};
+  let left = NAME_COLUMN_MIN_WIDTH + BOARD_COLUMN_GAP;
+  const count = Math.min(frozenCount, attributes.length);
+  for (let i = 0; i < count; i++) {
+    offsets[attributes[i].id] = left;
+    left += columnWidthFor(attributes[i], columnWidths) + BOARD_COLUMN_GAP;
+  }
+  return offsets;
 }

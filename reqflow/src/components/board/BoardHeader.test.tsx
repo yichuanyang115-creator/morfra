@@ -24,7 +24,10 @@ function makeAttribute(overrides: Partial<Attribute>): Attribute {
 }
 
 const noop = {
+  frozenCount: 0,
   onEditAttribute: vi.fn(),
+  onHideAttribute: vi.fn(),
+  onFreezeTo: vi.fn(),
   onColumnWidthChange: vi.fn(),
   onColumnWidthCommit: vi.fn(),
   onReorder: vi.fn(),
@@ -237,6 +240,75 @@ describe("BoardHeader", () => {
       } as unknown as DragEndEvent);
 
       expect(onReorder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("右键表头菜单（REQ-001 MUST：隐藏此属性 / 冻结至此列 / 编辑此属性）", () => {
+    it("右键任意列弹出「隐藏此属性」，点击后带该属性 id 触发 onHideAttribute", async () => {
+      const onHideAttribute = vi.fn();
+      render(
+        <BoardHeader
+          attributes={[makeAttribute({ id: "priority", name: "优先级" }), makeAttribute({ id: "assignee", name: "负责人" })]}
+          columnWidths={{}}
+          {...noop}
+          onHideAttribute={onHideAttribute}
+        />,
+      );
+
+      await userEvent.pointer({ keys: "[MouseRight]", target: screen.getByText("负责人") });
+      const hideItem = await screen.findByText("隐藏此属性");
+      await userEvent.click(hideItem);
+
+      expect(onHideAttribute).toHaveBeenCalledWith("assignee");
+    });
+
+    it("冻结边界列（frozenCount === 列索引）显示「冻结至此列」，点击后带 索引+1 触发 onFreezeTo", async () => {
+      const onFreezeTo = vi.fn();
+      render(
+        <BoardHeader
+          attributes={[makeAttribute({ id: "priority", name: "优先级" }), makeAttribute({ id: "assignee", name: "负责人" })]}
+          columnWidths={{}}
+          {...noop}
+          frozenCount={1}
+          onFreezeTo={onFreezeTo}
+        />,
+      );
+
+      // 索引 1（负责人）是下一个待冻结列：frozenCount(1) === 索引(1) → 显示
+      await userEvent.pointer({ keys: "[MouseRight]", target: screen.getByText("负责人") });
+      const freezeItem = await screen.findByText("冻结至此列");
+      await userEvent.click(freezeItem);
+
+      expect(onFreezeTo).toHaveBeenCalledWith(2);
+    });
+
+    it("已冻结列（索引 < frozenCount）右键不显示「冻结至此列」，其余项正常", async () => {
+      render(
+        <BoardHeader
+          attributes={[makeAttribute({ id: "priority", name: "优先级" }), makeAttribute({ id: "assignee", name: "负责人" })]}
+          columnWidths={{}}
+          {...noop}
+          frozenCount={1}
+        />,
+      );
+
+      await userEvent.pointer({ keys: "[MouseRight]", target: screen.getByText("优先级") });
+      expect(await screen.findByText("隐藏此属性")).toBeInTheDocument();
+      expect(screen.queryByText("冻结至此列")).not.toBeInTheDocument();
+    });
+
+    it("左侧未冻结完的列（frozenCount < 索引）右键不显示「冻结至此列」", async () => {
+      render(
+        <BoardHeader
+          attributes={[makeAttribute({ id: "priority", name: "优先级" }), makeAttribute({ id: "assignee", name: "负责人" })]}
+          columnWidths={{}}
+          {...noop}
+        />,
+      );
+
+      await userEvent.pointer({ keys: "[MouseRight]", target: screen.getByText("负责人") });
+      expect(await screen.findByText("隐藏此属性")).toBeInTheDocument();
+      expect(screen.queryByText("冻结至此列")).not.toBeInTheDocument();
     });
   });
 });
