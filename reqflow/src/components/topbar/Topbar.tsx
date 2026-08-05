@@ -3,9 +3,11 @@ import { useProjectStore, currentProject } from "../../stores/projectStore";
 import { useRequirementStore } from "../../stores/requirementStore";
 import { useUiStore } from "../../stores/uiStore";
 import { useSchemaStore } from "../../stores/schemaStore";
+import { fieldAttributesFor } from "../../lib/schemaSelectors";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 import { SearchBox } from "./SearchBox";
 import { SettingsPanel } from "./SettingsPanel";
+import { FieldsPanel } from "./FieldsPanel";
 import { ChatToggle } from "./ChatToggle";
 
 function ChevDownIcon() {
@@ -79,12 +81,18 @@ function SchemaSettingsIcon() {
 export function Topbar() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [appSettingsOpen, setAppSettingsOpen] = useState(false);
+  const [fieldsOpen, setFieldsOpen] = useState(false);
   const project = useProjectStore(currentProject);
+  const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const requirements = useRequirementStore((s) => s.requirements);
   const selectRequirement = useUiStore((s) => s.selectRequirement);
   const openSettings = useUiStore((s) => s.openSettings);
   const settingsSection = useUiStore((s) => s.settingsSection);
+  const schema = useSchemaStore((s) => s.schema);
   const schemaLoaded = useSchemaStore((s) => s.schema !== null);
+  const addAttribute = useSchemaStore((s) => s.addAttribute);
+  const updateAttribute = useSchemaStore((s) => s.updateAttribute);
+  const setColumnOrder = useSchemaStore((s) => s.setColumnOrder);
 
   return (
     <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--topbar) px-2.5 border-b border-(--border)">
@@ -120,7 +128,11 @@ export function Topbar() {
         <button
           type="button"
           aria-label="字段"
-          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+          aria-haspopup="true"
+          onClick={() => setFieldsOpen((v) => !v)}
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent hover:bg-(--surface) hover:text-(--fg) ${
+            fieldsOpen ? "bg-(--surface) text-(--fg)" : "text-(--muted)"
+          }`}
         >
           <FieldsIcon />
         </button>
@@ -158,6 +170,25 @@ export function Topbar() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setAppSettingsOpen(false)} />
           <SettingsPanel onClose={() => setAppSettingsOpen(false)} />
+        </>
+      )}
+
+      {fieldsOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setFieldsOpen(false)} />
+          <FieldsPanel
+            attributes={schema ? fieldAttributesFor(schema) : []}
+            onToggleBoard={(attributeId, next) => {
+              if (currentProjectId) void updateAttribute(currentProjectId, attributeId, { showOnBoard: next });
+            }}
+            onReorder={(orderedIds) => {
+              if (currentProjectId) void setColumnOrder(currentProjectId, orderedIds);
+            }}
+            onAdd={(attribute) => {
+              if (currentProjectId) void addAttribute(currentProjectId, attribute);
+            }}
+            onClose={() => setFieldsOpen(false)}
+          />
         </>
       )}
     </header>

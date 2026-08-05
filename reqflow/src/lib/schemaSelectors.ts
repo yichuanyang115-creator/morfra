@@ -22,6 +22,18 @@ export function boardAttributesFor(schema: Schema | null): Attribute[] {
 }
 
 /**
+ * 字段管理面板显示的全部属性列表：不过滤 showOnBoard（隐藏的列也要能看见并恢复），
+ * 按 viewPreferences.columnOrder 排序，与看板列序（boardAttributesFor）共用同一份
+ * 列序。字段面板拖拽排序和表头拖拽排序写入同一个 columnOrder（REQ-002 MUST"属性列表+
+ * 眼睛图标看板显隐+拖拽排序"——字段面板是看板列序的另一入口，见 REQ-001"可调序（拖表头
+ * 或字段管理面板拖拽）"）。
+ */
+export function fieldAttributesFor(schema: Schema | null): Attribute[] {
+  if (!schema) return [];
+  return sortByColumnOrder(schema.attributes, schema.viewPreferences.columnOrder);
+}
+
+/**
  * 详情面板可见属性列表：showOnDetail 过滤，按 schema.attributes 原始定义顺序渲染
  * （REQ-004 MUST"属性区排序独立于看板列序"——不复用 columnOrder，天然与看板列序
  * 解耦。Schema 设置页尚未提供详情页专属排序配置，Phase 18 补齐后再接入独立排序）。
