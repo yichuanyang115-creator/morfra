@@ -55,11 +55,38 @@ export interface TabDefinition {
   visible: boolean;
 }
 
+/**
+ * 看板筛选运算符（REQ-026："运算符按类型区分"）。is_empty/is_not_empty 通用，UI 只对
+ * 指定类型暴露对应运算符（见 lib/filterEngine 的 operatorsFor）。
+ */
+export type FilterOperator =
+  | "eq"
+  | "neq"
+  | "is_empty"
+  | "is_not_empty"
+  | "contains"
+  | "not_contains"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "before"
+  | "after";
+
+/** 看板筛选单条条件：选属性 → 选运算符 → 选值（REQ-026）。attributeId 为空视为未完成条件，不参与筛选。 */
+export interface FilterCondition {
+  attributeId: string;
+  operator: FilterOperator;
+  value: unknown;
+}
+
 export interface ViewPreferences {
   columnOrder: string[];
   columnWidths: Record<string, number>;
   /** 从左向右连续冻结的属性列数量，不含固定冻结的 Name 列（见 REQ-001 列冻结）。 */
   frozenCount: number;
+  /** 看板筛选条件集合，多条件 AND（REQ-026），按项目落盘。 */
+  filters: FilterCondition[];
 }
 
 export interface Schema {

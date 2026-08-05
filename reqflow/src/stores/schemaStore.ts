@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type { Attribute, Schema, StageOption, TabDefinition } from "../types/schema";
+import type { Attribute, FilterCondition, Schema, StageOption, TabDefinition } from "../types/schema";
 import { writeFile } from "../lib/fs";
 import { schemaPath } from "../lib/paths";
 import { migrateIfNeeded } from "../lib/migration";
@@ -29,6 +29,8 @@ interface SchemaState {
   setColumnOrder: (projectId: string, orderedIds: string[]) => Promise<void>;
   setColumnWidth: (projectId: string, attributeId: string, width: number) => Promise<void>;
   setFrozenCount: (projectId: string, count: number) => Promise<void>;
+  /** 整体替换看板筛选条件集合（REQ-026 多条件 AND，按项目落盘）。空数组 = 清除筛选。 */
+  setFilters: (projectId: string, filters: FilterCondition[]) => Promise<void>;
 }
 
 type Get = () => SchemaState;
@@ -166,6 +168,12 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
     mutateSchema(get, set, projectId, (schema) => ({
       ...schema,
       viewPreferences: { ...schema.viewPreferences, frozenCount: count },
+    })),
+
+  setFilters: (projectId, filters) =>
+    mutateSchema(get, set, projectId, (schema) => ({
+      ...schema,
+      viewPreferences: { ...schema.viewPreferences, filters },
     })),
 }));
 

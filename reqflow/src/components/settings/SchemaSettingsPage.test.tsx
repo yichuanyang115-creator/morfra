@@ -10,7 +10,7 @@ function makeSchema(): Schema {
     stageOptions: [{ id: "collect", label: "收集", color: "hsl(0,0%,90%)", isTerminal: false }],
     attributes: [{ id: "priority", name: "优先级", type: "singleSelect", showOnBoard: true, showOnDetail: true }],
     tabs: [{ id: "tasks", name: "任务", renderer: "tasks", visible: true }],
-    viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0 },
+    viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0, filters: [] },
   };
 }
 

@@ -8,6 +8,7 @@ import { ProjectSwitcher } from "./ProjectSwitcher";
 import { SearchBox } from "./SearchBox";
 import { SettingsPanel } from "./SettingsPanel";
 import { FieldsPanel } from "./FieldsPanel";
+import { FilterPanel } from "./FilterPanel";
 import { ChatToggle } from "./ChatToggle";
 
 function ChevDownIcon() {
@@ -82,6 +83,7 @@ export function Topbar() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const [fieldsOpen, setFieldsOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const project = useProjectStore(currentProject);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const requirements = useRequirementStore((s) => s.requirements);
@@ -90,9 +92,11 @@ export function Topbar() {
   const settingsSection = useUiStore((s) => s.settingsSection);
   const schema = useSchemaStore((s) => s.schema);
   const schemaLoaded = useSchemaStore((s) => s.schema !== null);
+  const filters = schema?.viewPreferences.filters ?? [];
   const addAttribute = useSchemaStore((s) => s.addAttribute);
   const updateAttribute = useSchemaStore((s) => s.updateAttribute);
   const setColumnOrder = useSchemaStore((s) => s.setColumnOrder);
+  const setFilters = useSchemaStore((s) => s.setFilters);
 
   return (
     <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--topbar) px-2.5 border-b border-(--border)">
@@ -114,10 +118,29 @@ export function Topbar() {
         <button
           type="button"
           aria-label="筛选"
-          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+          aria-haspopup="true"
+          onClick={() => setFilterOpen((v) => !v)}
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent hover:bg-(--surface) hover:text-(--fg) ${
+            filterOpen || filters.length > 0 ? "bg-(--accent-soft) text-(--accent-text)" : "text-(--muted)"
+          }`}
         >
           <FilterIcon />
         </button>
+        {filters.length > 0 && (
+          <span className="flex flex-none items-center gap-1 rounded-(--r-full) bg-(--accent-soft) px-1.5 py-0.5 font-(family-name:--font-mono) text-[11px] font-[590] leading-none text-(--accent-text)">
+            <span className="tabular-nums">{filters.length}</span>
+            <button
+              type="button"
+              aria-label="清除全部筛选"
+              onClick={() => {
+                if (currentProjectId) void setFilters(currentProjectId, []);
+              }}
+              className="grid size-3.5 place-items-center rounded-full border-none bg-transparent text-[11px] leading-none text-(--accent-text) hover:bg-(--accent-soft-strong)"
+            >
+              ×
+            </button>
+          </span>
+        )}
         <button
           type="button"
           aria-label="排序"
@@ -188,6 +211,20 @@ export function Topbar() {
               if (currentProjectId) void addAttribute(currentProjectId, attribute);
             }}
             onClose={() => setFieldsOpen(false)}
+          />
+        </>
+      )}
+
+      {filterOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
+          <FilterPanel
+            attributes={schema?.attributes ?? []}
+            filters={filters}
+            onChange={(next) => {
+              if (currentProjectId) void setFilters(currentProjectId, next);
+            }}
+            onClose={() => setFilterOpen(false)}
           />
         </>
       )}

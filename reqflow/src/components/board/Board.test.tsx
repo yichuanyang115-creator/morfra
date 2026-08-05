@@ -403,7 +403,7 @@ describe("Board", () => {
       useSchemaStore.setState({
         schema: {
           ...legacyEquivalentSchema([]),
-          viewPreferences: { columnOrder: [], columnWidths: { priority: 200 }, frozenCount: 0 },
+          viewPreferences: { columnOrder: [], columnWidths: { priority: 200 }, frozenCount: 0, filters: [] },
         },
         loadedProjectId: "p-1",
         justMigrated: false,

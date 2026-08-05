@@ -129,7 +129,7 @@ export function legacyEquivalentSchema(sources: string[]): Schema {
     stageOptions: legacyStageOptions(),
     attributes: legacyAttributes(sources),
     tabs: PRECAST_TABS,
-    viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0 },
+    viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0, filters: [] },
   };
 }
 
@@ -140,6 +140,6 @@ export function blankSchema(): Schema {
     stageOptions: [{ id: "default", label: "默认", color: paletteColorAt(0), isTerminal: false }],
     attributes: [],
     tabs: [],
-    viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0 },
+    viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0, filters: [] },
   };
 }

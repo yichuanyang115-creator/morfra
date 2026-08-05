@@ -79,6 +79,7 @@ describe("migrateIfNeeded", () => {
 
     expect(migrated).toBe(false);
     expect(schema.viewPreferences.frozenCount).toBe(0);
+    expect(schema.viewPreferences.filters).toEqual([]);
     expect(schema.viewPreferences.columnOrder).toEqual(["priority"]);
     expect(schema.viewPreferences.columnWidths).toEqual({ priority: 80 });
   });

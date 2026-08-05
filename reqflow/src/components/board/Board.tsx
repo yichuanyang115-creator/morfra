@@ -11,6 +11,7 @@ import { useUiStore } from "../../stores/uiStore";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { sortRequirementsForStage, reorderManualOrder, type StageSort } from "../../lib/requirementSort";
 import { boardAttributesFor } from "../../lib/schemaSelectors";
+import { requirementMatchesFilters } from "../../lib/filterEngine";
 
 function findStageOption(stageOptions: StageOption[], id: string | number): StageOption | undefined {
   return typeof id === "string" ? stageOptions.find((s) => s.id === id) : undefined;
@@ -105,6 +106,10 @@ export function Board({
   const boardAttributes = boardAttributesFor(schema);
   // 冻结列数来自 viewPreferences.frozenCount（默认 0 = 只冻结 Name 列，见 REQ-001 MUST）。
   const frozenCount = schema?.viewPreferences.frozenCount ?? 0;
+  // 筛选作用范围：仅看板（REQ-026），过滤哪些实体可见；空阶段仍显示分组标题。
+  const filters = schema?.viewPreferences.filters ?? [];
+  const allAttributes = schema?.attributes ?? [];
+  const visibleRequirements = requirements.filter((r) => requirementMatchesFilters(r, allAttributes, filters));
   // 拖拽过程中的实时列宽只存在这里，不逐帧写 schemaStore（那样每次 pointermove 都会
   // 触发一次文件写入）。松手（onColumnWidthCommit）时才真正持久化，见 App.tsx。
   const [draftColumnWidths, setDraftColumnWidths] = useState<Record<string, number> | null>(null);
@@ -146,8 +151,14 @@ export function Board({
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="overflow-x-auto px-5.5 pb-6">
-        {requirements.length === 0 && (
-          <EmptyState text="还没有需求，点收集阶段的新建按钮记录你的第一个想法" />
+        {visibleRequirements.length === 0 && (
+          <EmptyState
+            text={
+              filters.length > 0
+                ? "没有匹配筛选条件的需求"
+                : "还没有需求，点收集阶段的新建按钮记录你的第一个想法"
+            }
+          />
         )}
         <BoardHeader
           attributes={boardAttributes}
@@ -173,7 +184,7 @@ export function Board({
           <StageSection
             key={s.id}
             stageOption={s}
-            requirements={requirements.filter((r) => r.stage === s.id)}
+            requirements={visibleRequirements.filter((r) => r.stage === s.id)}
             attributes={boardAttributes}
             allAttributes={schema?.attributes ?? []}
             columnWidths={columnWidths}

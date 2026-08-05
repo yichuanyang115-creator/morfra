@@ -201,4 +201,23 @@ describe("schemaStore 属性/阶段/Tab CRUD", () => {
     const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
     expect(JSON.parse(raw).viewPreferences.frozenCount).toBe(2);
   });
+
+  it("setFilters 整体替换筛选条件集合并落盘（REQ-026 按项目持久化）", async () => {
+    const { setFilters } = useSchemaStore.getState();
+    const filters = [
+      { attributeId: "priority", operator: "eq" as const, value: "P1" },
+      { attributeId: "progress", operator: "gte" as const, value: 80 },
+    ];
+    await setFilters("proj-1", filters);
+
+    expect(useSchemaStore.getState().schema?.viewPreferences.filters).toEqual(filters);
+    const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
+    expect(JSON.parse(raw).viewPreferences.filters).toEqual(filters);
+  });
+
+  it("setFilters 传空数组清除筛选", async () => {
+    const { setFilters } = useSchemaStore.getState();
+    await setFilters("proj-1", []);
+    expect(useSchemaStore.getState().schema?.viewPreferences.filters).toEqual([]);
+  });
 });
