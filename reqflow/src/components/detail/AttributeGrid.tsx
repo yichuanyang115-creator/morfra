@@ -3,6 +3,7 @@ import type { Attribute } from "../../types/schema";
 import { StageTransitionDropdown } from "./StageTransitionDropdown";
 import { AttributeField, selectClass, selectStyle } from "./AttributeField";
 import { resultOf } from "../../lib/requirementFields";
+import { dependencySatisfied } from "../../lib/dependencyEngine";
 
 interface AttributeGridProps {
   requirement: Requirement;
@@ -28,6 +29,9 @@ function AttrRow({ label, children }: { label: string; children: React.ReactNode
 
 export function AttributeGrid({ requirement, attributes, compact, isTerminal, onAttributeChange, onTransition }: AttributeGridProps) {
   const result = resultOf(requirement);
+  // 属性依赖（REQ-025 / 讨论稿 §4.1）：详情面板与看板表现不同——看板按行空白（列保留），
+  // 详情面板是"不满足的属性不显示"（整条过滤，不占位）。
+  const visibleAttributes = attributes.filter((a) => dependencySatisfied(a, requirement.attributeValues));
 
   return (
     <div
@@ -44,7 +48,7 @@ export function AttributeGrid({ requirement, attributes, compact, isTerminal, on
         />
       </AttrRow>
 
-      {attributes.map((attribute) => (
+      {visibleAttributes.map((attribute) => (
         <AttrRow key={attribute.id} label={attribute.name}>
           <AttributeField
             attribute={attribute}

@@ -3,6 +3,7 @@ import type { Attribute, AttributeType, SelectOption } from "../../types/schema"
 import { ATTRIBUTE_TYPE_LABEL, USER_ASSIGNABLE_TYPES } from "../../lib/attributeTypeLabels";
 import { paletteColorAt } from "../../lib/stagePalette";
 import { newSelectOptionId } from "../../stores/schemaStore";
+import { DependencyValueControl } from "./DependencyValueControl";
 
 interface AttributeEditorProps {
   attribute: Attribute;
@@ -116,7 +117,6 @@ export function AttributeEditor({ attribute, availableAttributes, typeChangeLock
   }
 
   const dependencySource = availableAttributes.find((a) => a.id === attribute.dependsOn?.attributeId);
-  const dependencySourceOptions = dependencySource?.options ?? [];
 
   return (
     <div className="flex flex-col gap-3 rounded-(--r-md) bg-(--surface-2) p-3">
@@ -204,37 +204,15 @@ export function AttributeEditor({ attribute, availableAttributes, typeChangeLock
             ))}
           </select>
           <span className="flex-none text-(--muted-2)">=</span>
-          {dependencySourceOptions.length > 0 ? (
-            <select
-              value={typeof attribute.dependsOn?.value === "string" ? attribute.dependsOn.value : ""}
-              aria-label="依赖取值"
-              disabled={!attribute.dependsOn}
-              onChange={(e) => {
-                if (!attribute.dependsOn) return;
-                onUpdate({ dependsOn: { ...attribute.dependsOn, value: e.target.value } });
-              }}
-              className={`${selectClass} disabled:cursor-not-allowed disabled:opacity-40`}
-            >
-              <option value="">选择取值</option>
-              {dependencySourceOptions.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type="text"
-              aria-label="依赖取值"
-              disabled={!attribute.dependsOn}
-              defaultValue={typeof attribute.dependsOn?.value === "string" ? attribute.dependsOn.value : ""}
-              onBlur={(e) => {
-                if (!attribute.dependsOn) return;
-                onUpdate({ dependsOn: { ...attribute.dependsOn, value: e.target.value } });
-              }}
-              className={`${textInputClass} flex-1 disabled:cursor-not-allowed disabled:opacity-40`}
-            />
-          )}
+          <DependencyValueControl
+            key={attribute.dependsOn?.attributeId ?? "none"}
+            source={dependencySource}
+            value={attribute.dependsOn?.value}
+            onChange={(value) => {
+              if (!attribute.dependsOn) return;
+              onUpdate({ dependsOn: { ...attribute.dependsOn, value } });
+            }}
+          />
         </div>
       </div>
 

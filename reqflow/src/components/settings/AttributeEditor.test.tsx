@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, type Mock } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Attribute, AttributeType } from "../../types/schema";
 import { AttributeEditor } from "./AttributeEditor";
@@ -193,5 +193,55 @@ describe("AttributeEditor", () => {
 
     await userEvent.click(screen.getByLabelText("详情页显示"));
     expect(onUpdate).toHaveBeenCalledWith({ showOnDetail: false });
+  });
+
+  describe("依赖取值控件按依赖源类型渲染（值与属性值类型一致，依赖引擎才能求值）", () => {
+    const NUMBER_SOURCE: Attribute = { id: "progress", name: "进度", type: "number", showOnBoard: true, showOnDetail: true };
+    const CHECKBOX_SOURCE: Attribute = { id: "flag", name: "标记", type: "checkbox", showOnBoard: true, showOnDetail: true };
+    const DATE_SOURCE: Attribute = { id: "deadline", name: "截止日期", type: "date", showOnBoard: true, showOnDetail: true };
+
+    it("数字依赖源渲染数字输入，失焦写入 number", async () => {
+      const dependent: Attribute = { ...TEXT_ATTRIBUTE, dependsOn: { attributeId: "progress", value: "" } };
+      const { onUpdate } = renderEditor(dependent, { availableAttributes: [NUMBER_SOURCE] });
+
+      const input = screen.getByLabelText("依赖取值");
+      await userEvent.type(input, "80");
+      await userEvent.tab();
+
+      expect(onUpdate).toHaveBeenCalledWith({ dependsOn: { attributeId: "progress", value: 80 } });
+    });
+
+    it("数字依赖源清空输入不下发（保留原值，避免写入永假条件）", async () => {
+      const dependent: Attribute = { ...TEXT_ATTRIBUTE, dependsOn: { attributeId: "progress", value: 50 } };
+      const { onUpdate } = renderEditor(dependent, { availableAttributes: [NUMBER_SOURCE] });
+
+      const input = screen.getByLabelText("依赖取值");
+      await userEvent.clear(input);
+      await userEvent.tab();
+
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it("勾选依赖源渲染 checkbox，点击切换写入 boolean", async () => {
+      const dependent: Attribute = { ...TEXT_ATTRIBUTE, dependsOn: { attributeId: "flag", value: false } };
+      const { onUpdate } = renderEditor(dependent, { availableAttributes: [CHECKBOX_SOURCE] });
+
+      const checkbox = screen.getByLabelText("依赖取值") as HTMLInputElement;
+      expect(checkbox.type).toBe("checkbox");
+      await userEvent.click(checkbox);
+
+      expect(onUpdate).toHaveBeenCalledWith({ dependsOn: { attributeId: "flag", value: true } });
+    });
+
+    it("日期依赖源渲染 date 输入，选择日期写入字符串", () => {
+      const dependent: Attribute = { ...TEXT_ATTRIBUTE, dependsOn: { attributeId: "deadline", value: "" } };
+      const { onUpdate } = renderEditor(dependent, { availableAttributes: [DATE_SOURCE] });
+
+      const input = screen.getByLabelText("依赖取值") as HTMLInputElement;
+      expect(input.type).toBe("date");
+      fireEvent.change(input, { target: { value: "2026-08-01" } });
+
+      expect(onUpdate).toHaveBeenCalledWith({ dependsOn: { attributeId: "deadline", value: "2026-08-01" } });
+    });
   });
 });

@@ -150,4 +150,58 @@ describe("AttributeGrid（REQ-004：属性区从 schema 动态渲染）", () => 
 
     expect(onAttributeChange).toHaveBeenCalledWith("assignee", "李四");
   });
+
+  describe("属性依赖（REQ-025 / 讨论稿 §4.1：详情面板不满足的属性不显示）", () => {
+    const dependentAttr = makeAttribute({
+      id: "progress",
+      name: "进度",
+      type: "singleSelect",
+      options: [{ id: "done", label: "完成" }],
+      dependsOn: { attributeId: "priority", value: "P1" },
+    });
+
+    it("依赖条件满足时属性照常显示", () => {
+      render(
+        <AttributeGrid
+          requirement={makeRequirement({}, { priority: "P1", progress: "done" })}
+          attributes={[makeAttribute({ id: "priority", name: "优先级" }), dependentAttr]}
+          compact={false}
+          isTerminal={false}
+          {...noopHandlers}
+        />,
+      );
+
+      expect(screen.getByText("优先级")).toBeInTheDocument();
+      expect(screen.getByText("进度")).toBeInTheDocument();
+    });
+
+    it("依赖条件不满足时该属性不显示，其他属性不受影响", () => {
+      render(
+        <AttributeGrid
+          requirement={makeRequirement({}, { priority: "P2", progress: "done" })}
+          attributes={[makeAttribute({ id: "priority", name: "优先级" }), dependentAttr]}
+          compact={false}
+          isTerminal={false}
+          {...noopHandlers}
+        />,
+      );
+
+      expect(screen.getByText("优先级")).toBeInTheDocument();
+      expect(screen.queryByText("进度")).not.toBeInTheDocument();
+    });
+
+    it("依赖源未设置时条件不满足，属性不显示", () => {
+      render(
+        <AttributeGrid
+          requirement={makeRequirement({}, { progress: "done" })}
+          attributes={[dependentAttr]}
+          compact={false}
+          isTerminal={false}
+          {...noopHandlers}
+        />,
+      );
+
+      expect(screen.queryByText("进度")).not.toBeInTheDocument();
+    });
+  });
 });

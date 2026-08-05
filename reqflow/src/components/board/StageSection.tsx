@@ -30,8 +30,10 @@ function PlusIcon() {
 interface StageSectionProps {
   stageOption: StageOption;
   requirements: Requirement[];
-  /** 已按 schema 可见属性顺序排好的属性列表，直接传给每一行的 RequirementRow。 */
+  /** 已按 schema 可见属性顺序排好的属性列表，直接传给每一行的 RequirementRow（原始列位）。 */
   attributes: Attribute[];
+  /** 全部属性（schema.attributes），供阶段覆盖解析被替换的 to 属性（可能不在可见列里）。缺省回退到可见列位。 */
+  allAttributes?: Attribute[];
   /** 用户拖拽调整过的列宽，需要跟表头用同一份值才能保持列对齐（见 BoardHeader.tsx）。 */
   columnWidths: Record<string, number>;
   /** 冻结的属性列数，下传给每一行的 RequirementRow（见 REQ-001 MUST"从左向右连续扩展"）。 */
@@ -46,6 +48,7 @@ export function StageSection({
   stageOption,
   requirements,
   attributes,
+  allAttributes,
   columnWidths,
   frozenCount,
   selectedRequirementId,
@@ -156,6 +159,8 @@ export function StageSection({
                   key={r.id}
                   requirement={r}
                   attributes={attributes}
+                  allAttributes={allAttributes ?? attributes}
+                  overrides={stageOption.attributeOverrides}
                   columnWidths={columnWidths}
                   frozenCount={frozenCount}
                   selected={r.id === selectedRequirementId}

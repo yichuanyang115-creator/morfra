@@ -175,6 +175,7 @@ export function Board({
             stageOption={s}
             requirements={requirements.filter((r) => r.stage === s.id)}
             attributes={boardAttributes}
+            allAttributes={schema?.attributes ?? []}
             columnWidths={columnWidths}
             frozenCount={frozenCount}
             selectedRequirementId={selectedRequirementId}

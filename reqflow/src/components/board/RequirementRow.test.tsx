@@ -244,4 +244,67 @@ describe("RequirementRow", () => {
       spy.mockRestore();
     });
   });
+
+  describe("属性依赖（REQ-025：看板按行空白，列始终存在）", () => {
+    const DEP_ATTR: Attribute = {
+      id: "progress",
+      name: "进度",
+      type: "singleSelect",
+      options: [{ id: "done", label: "完成" }],
+      showOnBoard: true,
+      showOnDetail: true,
+      dependsOn: { attributeId: "priority", value: "P1" },
+    };
+
+    it("依赖条件满足时正常渲染 FieldCell", () => {
+      renderRow({ attributes: [DEP_ATTR], requirement: makeRequirement({ attributeValues: { priority: "P1" } }) });
+      expect(screen.getByLabelText("进度")).toBeInTheDocument();
+    });
+
+    it("依赖条件不满足时该格为空占位：不渲染交互控件，但列位保留", () => {
+      const { container } = renderRow({ attributes: [DEP_ATTR], requirement: makeRequirement({ attributeValues: { priority: "P2" } }) });
+      expect(screen.queryByLabelText("进度")).not.toBeInTheDocument();
+      // 列位仍占着：渲染出的属性列数不变（空占位 div 替换了 FieldCell）
+      const gridChildren = container.firstChild ? container.firstChild.childNodes.length : 0;
+      expect(gridChildren).toBe(2); // Name 列 + 该属性列
+    });
+  });
+
+  describe("阶段覆盖（REQ-025：某阶段下属性列位被替换，覆盖优先于依赖）", () => {
+    const TEXT_ATTR: Attribute = { id: "note", name: "备注", type: "text", showOnBoard: true, showOnDetail: true };
+    const OVERRIDES = [{ fromAttributeId: "priority", toAttributeId: "note" }];
+
+    it("被覆盖的列位渲染替换属性，原属性不再渲染", () => {
+      renderRow({ attributes: [PRIORITY_ATTR], allAttributes: [PRIORITY_ATTR, TEXT_ATTR], overrides: OVERRIDES });
+      expect(screen.queryByLabelText("优先级")).not.toBeInTheDocument();
+      expect(screen.getByPlaceholderText("—")).toBeInTheDocument(); // text cell 输入框
+    });
+
+    it("原属性的依赖条件在被覆盖的阶段不生效（覆盖决定占位，原属性依赖被跳过）", () => {
+      const DEP_PRIORITY: Attribute = {
+        ...PRIORITY_ATTR,
+        dependsOn: { attributeId: "source", value: "x" },
+      };
+      renderRow({
+        attributes: [DEP_PRIORITY],
+        allAttributes: [DEP_PRIORITY, TEXT_ATTR],
+        overrides: OVERRIDES,
+        requirement: makeRequirement({ attributeValues: { source: "y" } }),
+      });
+      // 原属性 priority 的依赖（source=x）本不满足，但被覆盖后不生效，text 属性照常渲染
+      expect(screen.getByPlaceholderText("—")).toBeInTheDocument();
+    });
+
+    it("被覆盖后占位的属性自身的依赖条件生效", () => {
+      const DEP_TEXT: Attribute = { ...TEXT_ATTR, dependsOn: { attributeId: "source", value: "x" } };
+      renderRow({
+        attributes: [PRIORITY_ATTR],
+        allAttributes: [PRIORITY_ATTR, DEP_TEXT],
+        overrides: OVERRIDES,
+        requirement: makeRequirement({ attributeValues: { source: "y" } }),
+      });
+      // to 属性 note 的依赖（source=x）不满足 → 该格为空，不渲染输入框
+      expect(screen.queryByPlaceholderText("—")).not.toBeInTheDocument();
+    });
+  });
 });
