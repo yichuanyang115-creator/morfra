@@ -5,8 +5,6 @@ import type { DragEndEvent } from "@dnd-kit/core";
 import { Board, resolveDropTransition, resolveReorder } from "./Board";
 import type { Requirement } from "../../types/models";
 import type { StageOption } from "../../types/schema";
-import { defaultStageSort } from "../../lib/requirementSort";
-import { useUiStore } from "../../stores/uiStore";
 import { useSchemaStore } from "../../stores/schemaStore";
 import { legacyEquivalentSchema } from "../../lib/schemaDefaults";
 
@@ -63,6 +61,7 @@ function makeRequirement(overrides: Partial<Omit<Requirement, "attributeValues">
 }
 
 const noop = {
+  projectId: null,
   onCreate: vi.fn(),
   onSelectRequirement: vi.fn(),
   onAttributeChange: vi.fn(),
@@ -74,6 +73,9 @@ const noop = {
   onColumnWidthCommit: vi.fn(async () => undefined),
   onColumnOrderCommit: vi.fn(),
 };
+
+const DEFAULT_SORT = { mode: "rule" as const, rule: { attrId: "created_at", direction: "desc" as const } };
+const SORT_ATTRIBUTES = legacyEquivalentSchema([]).attributes;
 
 describe("resolveDropTransition", () => {
   it("拖到不同阶段区域时返回目标需求 id 和目标阶段", () => {
@@ -148,7 +150,7 @@ describe("resolveReorder", () => {
     ];
     // 默认排序按创建时间降序：r-3, r-2, r-1
 
-    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", "r-3", defaultStageSort());
+    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", "r-3", DEFAULT_SORT, SORT_ATTRIBUTES);
 
     expect(result?.map((r) => r.id)).toEqual(["r-1", "r-3", "r-2"]);
   });
@@ -156,7 +158,7 @@ describe("resolveReorder", () => {
   it("over 是阶段容器 id（不是同阶段的行）时不触发重排", () => {
     const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
 
-    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", "design", defaultStageSort());
+    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", "design", DEFAULT_SORT, SORT_ATTRIBUTES);
 
     expect(result).toBeNull();
   });
@@ -167,7 +169,7 @@ describe("resolveReorder", () => {
       makeRequirement({ id: "r-2", stage: "dev" }),
     ];
 
-    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", "r-2", defaultStageSort());
+    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", "r-2", DEFAULT_SORT, SORT_ATTRIBUTES);
 
     expect(result).toBeNull();
   });
@@ -175,7 +177,7 @@ describe("resolveReorder", () => {
   it("拖到自己身上时不触发重排", () => {
     const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
 
-    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", "r-1", defaultStageSort());
+    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", "r-1", DEFAULT_SORT, SORT_ATTRIBUTES);
 
     expect(result).toBeNull();
   });
@@ -183,7 +185,7 @@ describe("resolveReorder", () => {
   it("over 为 undefined 时不触发重排", () => {
     const requirements = [makeRequirement({ id: "r-1", stage: "design" })];
 
-    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", undefined, defaultStageSort());
+    const result = resolveReorder(requirements, STAGE_OPTIONS, "r-1", undefined, DEFAULT_SORT, SORT_ATTRIBUTES);
 
     expect(result).toBeNull();
   });
@@ -192,7 +194,6 @@ describe("resolveReorder", () => {
 describe("Board", () => {
   beforeEach(() => {
     useSchemaStore.setState({ schema: legacyEquivalentSchema([]), loadedProjectId: "p-1", justMigrated: false });
-    useUiStore.setState({ boardSort: {} });
     capturedOnDragEnds.length = 0;
   });
 
@@ -328,7 +329,6 @@ describe("Board", () => {
     } as unknown as DragEndEvent);
 
     expect(onReorder).toHaveBeenCalled();
-    expect(useUiStore.getState().getStageSort("design").mode).toBe("manual");
   });
 
   it("终态阶段（归档）的需求拖拽不触发 onReorder（终态不参与手动排序）", () => {

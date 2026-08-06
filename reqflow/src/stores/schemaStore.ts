@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type { Attribute, FilterCondition, Schema, StageOption, TabDefinition } from "../types/schema";
+import type { Attribute, FilterCondition, Schema, SortRule, StageOption, StageSortPreference, TabDefinition } from "../types/schema";
 import { writeFile } from "../lib/fs";
 import { schemaPath } from "../lib/paths";
 import { migrateIfNeeded } from "../lib/migration";
@@ -31,6 +31,10 @@ interface SchemaState {
   setFrozenCount: (projectId: string, count: number) => Promise<void>;
   /** 整体替换看板筛选条件集合（REQ-026 多条件 AND，按项目落盘）。空数组 = 清除筛选。 */
   setFilters: (projectId: string, filters: FilterCondition[]) => Promise<void>;
+  setGlobalSort: (projectId: string, sort: SortRule | null) => Promise<void>;
+  setStageSort: (projectId: string, stageId: string, sort: SortRule) => Promise<void>;
+  setStageSortManual: (projectId: string, stageId: string) => Promise<void>;
+  clearStageSort: (projectId: string, stageId: string) => Promise<void>;
 }
 
 type Get = () => SchemaState;
@@ -82,10 +86,17 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
     })),
 
   removeAttribute: (projectId, attributeId) =>
-    mutateSchema(get, set, projectId, (schema) => ({
-      ...schema,
-      attributes: schema.attributes.filter((a) => a.id !== attributeId),
-    })),
+    mutateSchema(get, set, projectId, (schema) => {
+      const globalSort = schema.viewPreferences.globalSort?.attrId === attributeId ? null : schema.viewPreferences.globalSort;
+      const stageSorts = Object.fromEntries(
+        Object.entries(schema.viewPreferences.stageSorts ?? {}).filter(([, sort]) => !("attrId" in sort && sort.attrId === attributeId)),
+      );
+      return {
+        ...schema,
+        attributes: schema.attributes.filter((a) => a.id !== attributeId),
+        viewPreferences: { ...schema.viewPreferences, globalSort, stageSorts },
+      };
+    }),
 
   reorderAttributes: (projectId, orderedIds) =>
     mutateSchema(get, set, projectId, (schema) => {
@@ -175,6 +186,37 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
       ...schema,
       viewPreferences: { ...schema.viewPreferences, filters },
     })),
+
+  setGlobalSort: (projectId, sort) =>
+    mutateSchema(get, set, projectId, (schema) => ({
+      ...schema,
+      viewPreferences: { ...schema.viewPreferences, globalSort: sort },
+    })),
+
+  setStageSort: (projectId, stageId, sort) =>
+    mutateSchema(get, set, projectId, (schema) => ({
+      ...schema,
+      viewPreferences: {
+        ...schema.viewPreferences,
+        stageSorts: { ...schema.viewPreferences.stageSorts, [stageId]: sort },
+      },
+    })),
+
+  setStageSortManual: (projectId, stageId) =>
+    mutateSchema(get, set, projectId, (schema) => {
+      const stageSorts: Record<string, StageSortPreference> = {
+        ...schema.viewPreferences.stageSorts,
+        [stageId]: { mode: "manual" },
+      };
+      return { ...schema, viewPreferences: { ...schema.viewPreferences, stageSorts } };
+    }),
+
+  clearStageSort: (projectId, stageId) =>
+    mutateSchema(get, set, projectId, (schema) => {
+      const stageSorts = { ...schema.viewPreferences.stageSorts };
+      delete stageSorts[stageId];
+      return { ...schema, viewPreferences: { ...schema.viewPreferences, stageSorts } };
+    }),
 }));
 
 /** 生成一个新属性 id（Schema 讨论稿拍板：复用 nanoid）。 */

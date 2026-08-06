@@ -1,95 +1,107 @@
-import type { Priority, Requirement } from "../types/models";
+import type { Attribute, SortDirection, SortRule, StageSortPreference } from "../types/schema";
+import type { Requirement } from "../types/models";
 import { diffDaysFromToday } from "./dates";
 import { lastTransitionTimestamp } from "./requirementMetrics";
-import { deadlineOf, priorityOf } from "./requirementFields";
 
-export type SortField = "priority" | "deadline" | "stayDays" | "totalDays" | "createdAt";
-export type SortDir = "asc" | "desc";
+export type SortDir = SortDirection;
 
-export const SORT_FIELDS: { key: SortField; label: string }[] = [
-  { key: "priority", label: "优先级" },
-  { key: "deadline", label: "截止日期" },
-  { key: "stayDays", label: "停留天数" },
-  { key: "totalDays", label: "总耗时" },
-  { key: "createdAt", label: "创建时间" },
-];
-
-export interface StageSort {
+export interface EffectiveStageSort {
   mode: "rule" | "manual";
-  primary: SortField;
-  primaryDir: SortDir;
-  secondary: SortField | null;
-  secondaryDir: SortDir;
+  rule: SortRule | null;
 }
 
-/**
- * 默认按创建时间新的在前，跟没有排序功能之前的体感一致（Product-Spec REQ-001 §426）。
- * 用同一个对象引用返回：uiStore.getStageSort 对未配置过的阶段会反复调用这个函数，
- * 若每次都 new 一个对象，Zustand selector 的引用比较会认为状态每次都变了，
- * 触发 React 18+ 的 "Maximum update depth exceeded" 无限渲染循环。
- */
-const DEFAULT_STAGE_SORT: StageSort = { mode: "rule", primary: "createdAt", primaryDir: "desc", secondary: null, secondaryDir: "desc" };
+const EXCLUDED_SORT_TYPES = new Set<Attribute["type"]>(["text", "checkbox", "attachment"]);
 
-export function defaultStageSort(): StageSort {
-  return DEFAULT_STAGE_SORT;
+export function sortableAttributes(attributes: Attribute[]): Attribute[] {
+  return attributes.filter((attribute) => !EXCLUDED_SORT_TYPES.has(attribute.type));
 }
 
-/** 高亮只代表"用了非默认字段规则"；手动模式（拖拽产生）不算需要提醒的"改过设置"状态。 */
-export function isStageSortCustomized(sort: StageSort): boolean {
-  return sort.mode === "rule" && (sort.primary !== "createdAt" || sort.primaryDir !== "desc" || !!sort.secondary);
+export function defaultSortRule(attributes: Attribute[]): SortRule | null {
+  const preferred = attributes.find((attribute) => attribute.id === "created_at" && !EXCLUDED_SORT_TYPES.has(attribute.type));
+  return preferred ? { attrId: preferred.id, direction: "desc" } : null;
 }
 
-const PRIORITY_RANK: Record<Priority, number> = { P0: 0, P1: 1, P2: 2 };
+export function effectiveStageSort(
+  stageId: string,
+  globalSort: SortRule | null | undefined,
+  stageSorts: Record<string, StageSortPreference> | undefined,
+  attributes: Attribute[] = [],
+): EffectiveStageSort {
+  const local = stageSorts?.[stageId];
+  if (local && "mode" in local && local.mode === "manual") return { mode: "manual", rule: null };
+  if (local && "attrId" in local) return { mode: "rule", rule: local };
+  return { mode: "rule", rule: globalSort ?? defaultSortRule(attributes) };
+}
 
-function sortFieldValue(requirement: Requirement, field: SortField): number | string {
-  switch (field) {
-    case "priority":
-      return PRIORITY_RANK[priorityOf(requirement)];
-    case "deadline":
-      return deadlineOf(requirement) || "9999-99-99";
-    case "stayDays": {
-      const d = diffDaysFromToday(lastTransitionTimestamp(requirement));
-      return d ?? -1;
+export function isSortRuleActive(rule: SortRule | null | undefined): boolean {
+  return Boolean(rule?.attrId);
+}
+
+interface SortValue {
+  value: string | number;
+  empty: boolean;
+}
+
+function comparePrimitive(a: string | number, b: string | number): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function valueForAttribute(requirement: Requirement, attribute: Attribute): SortValue {
+  if (attribute.type === "computed") {
+    switch (attribute.computedKind) {
+      case "createdAt":
+        return { value: requirement.createdAt || "", empty: !requirement.createdAt };
+      case "stayDays":
+        return { value: diffDaysFromToday(lastTransitionTimestamp(requirement)) ?? -1, empty: !lastTransitionTimestamp(requirement) };
+      case "totalDays":
+        return { value: diffDaysFromToday(requirement.createdAt) ?? -1, empty: !requirement.createdAt };
+      default:
+        return { value: "", empty: true };
     }
-    case "totalDays": {
-      const d = diffDaysFromToday(requirement.createdAt);
-      return d ?? -1;
-    }
-    case "createdAt":
-      return requirement.createdAt || "";
   }
+
+  const value = requirement.attributeValues[attribute.id];
+  if (typeof value === "number") return { value, empty: false };
+  if (typeof value === "string") {
+    if (attribute.type === "singleSelect") {
+      const index = attribute.options?.findIndex((option) => option.id === value) ?? -1;
+      return { value: index < 0 ? 0 : index, empty: index < 0 };
+    }
+    return { value, empty: !value };
+  }
+  if (Array.isArray(value)) {
+    const joined = value.join("\u0000");
+    return { value: joined, empty: !joined };
+  }
+  return { value: "", empty: true };
 }
 
-function compareByField(a: Requirement, b: Requirement, field: SortField, dir: SortDir): number {
-  const va = sortFieldValue(a, field);
-  const vb = sortFieldValue(b, field);
-  const result = va < vb ? -1 : va > vb ? 1 : 0;
-  return dir === "desc" ? -result : result;
+function compareByRule(a: Requirement, b: Requirement, rule: SortRule, attributesById: Map<string, Attribute>): number {
+  const attribute = attributesById.get(rule.attrId);
+  if (!attribute) return 0;
+  const left = valueForAttribute(a, attribute);
+  const right = valueForAttribute(b, attribute);
+  if (left.empty !== right.empty) return left.empty ? 1 : -1;
+  const result = comparePrimitive(left.value, right.value);
+  return rule.direction === "desc" ? -result : result;
 }
 
-function sortByRule(requirements: Requirement[], sort: StageSort): Requirement[] {
-  return requirements.slice().sort((a, b) => {
-    const primary = compareByField(a, b, sort.primary, sort.primaryDir);
-    if (primary !== 0 || !sort.secondary) return primary;
-    return compareByField(a, b, sort.secondary, sort.secondaryDir);
-  });
-}
-
-/** 手动模式：按 manualOrder 升序排列（越小越靠前），缺失时兜底为 0（Product-Spec 无强制要求，沿用原型体感）。 */
 function sortByManualOrder(requirements: Requirement[]): Requirement[] {
-  return requirements.slice().sort((a, b) => (a.manualOrder ?? 0) - (b.manualOrder ?? 0));
+  return requirements.slice().sort((a, b) => a.manualOrder - b.manualOrder);
 }
 
-export function sortRequirementsForStage(requirements: Requirement[], sort: StageSort): Requirement[] {
-  return sort.mode === "manual" ? sortByManualOrder(requirements) : sortByRule(requirements, sort);
+export function sortRequirementsForStage(
+  requirements: Requirement[],
+  sort: EffectiveStageSort,
+  attributes: Attribute[],
+): Requirement[] {
+  if (sort.mode === "manual") return sortByManualOrder(requirements);
+  if (!sort.rule) return requirements.slice();
+  const attributesById = new Map(attributes.map((attribute) => [attribute.id, attribute]));
+  return requirements.slice().sort((a, b) => compareByRule(a, b, sort.rule!, attributesById));
 }
 
-/**
- * 拖拽调顺序后重新计算目标阶段全部需求的 manualOrder（0..n-1，按拖拽后的新顺序赋值）。
- * 返回需要落盘更新的 { requirementId, manualOrder } 列表。
- */
-export function reorderManualOrder(
-  orderedRequirements: Requirement[],
-): { requirementId: string; manualOrder: number }[] {
-  return orderedRequirements.map((r, idx) => ({ requirementId: r.id, manualOrder: idx }));
+/** 拖拽后仅重写目标阶段实体的 manualOrder，其他阶段不受影响。 */
+export function reorderManualOrder(orderedRequirements: Requirement[]): { requirementId: string; manualOrder: number }[] {
+  return orderedRequirements.map((requirement, index) => ({ requirementId: requirement.id, manualOrder: index }));
 }

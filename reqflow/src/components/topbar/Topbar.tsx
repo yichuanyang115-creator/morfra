@@ -9,6 +9,7 @@ import { SearchBox } from "./SearchBox";
 import { SettingsPanel } from "./SettingsPanel";
 import { FieldsPanel } from "./FieldsPanel";
 import { FilterPanel } from "./FilterPanel";
+import { GlobalSortPanel } from "./GlobalSortPanel";
 import { ChatToggle } from "./ChatToggle";
 
 function ChevDownIcon() {
@@ -84,6 +85,7 @@ export function Topbar() {
   const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const [fieldsOpen, setFieldsOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const project = useProjectStore(currentProject);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const requirements = useRequirementStore((s) => s.requirements);
@@ -97,6 +99,8 @@ export function Topbar() {
   const updateAttribute = useSchemaStore((s) => s.updateAttribute);
   const setColumnOrder = useSchemaStore((s) => s.setColumnOrder);
   const setFilters = useSchemaStore((s) => s.setFilters);
+  const setGlobalSort = useSchemaStore((s) => s.setGlobalSort);
+  const globalSort = schema?.viewPreferences.globalSort ?? null;
 
   return (
     <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--topbar) px-2.5 border-b border-(--border)">
@@ -144,7 +148,9 @@ export function Topbar() {
         <button
           type="button"
           aria-label="排序"
-          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+          aria-haspopup="true"
+          onClick={() => setSortOpen((v) => !v)}
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent hover:bg-(--surface) hover:text-(--fg) ${sortOpen || globalSort ? "bg-(--accent-soft) text-(--accent-text)" : "text-(--muted)"}`}
         >
           <SortIcon />
         </button>
@@ -227,6 +233,15 @@ export function Topbar() {
             onClose={() => setFilterOpen(false)}
           />
         </>
+      )}
+
+      {sortOpen && (
+        <GlobalSortPanel
+          attributes={schema?.attributes ?? []}
+          sort={globalSort}
+          onChange={(next) => { if (currentProjectId) void setGlobalSort(currentProjectId, next); }}
+          onClose={() => setSortOpen(false)}
+        />
       )}
     </header>
   );

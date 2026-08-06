@@ -80,6 +80,15 @@ export interface FilterCondition {
   value: unknown;
 }
 
+export type SortDirection = "asc" | "desc";
+
+export interface SortRule {
+  attrId: string;
+  direction: SortDirection;
+}
+
+export type StageSortPreference = SortRule | { mode: "manual" };
+
 export interface ViewPreferences {
   columnOrder: string[];
   columnWidths: Record<string, number>;
@@ -87,6 +96,10 @@ export interface ViewPreferences {
   frozenCount: number;
   /** 看板筛选条件集合，多条件 AND（REQ-026），按项目落盘。 */
   filters: FilterCondition[];
+  /** 全局排序规则，未设置时各阶段保持当前顺序。 */
+  globalSort?: SortRule | null;
+  /** 阶段局部排序规则；mode=manual 表示该阶段被手动拖拽覆盖。 */
+  stageSorts?: Record<string, StageSortPreference>;
 }
 
 export interface Schema {

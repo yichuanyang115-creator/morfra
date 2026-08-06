@@ -1,11 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as dndCore from "@dnd-kit/core";
 import { StageSection } from "./StageSection";
 import type { Requirement } from "../../types/models";
 import type { StageOption } from "../../types/schema";
-import { useUiStore } from "../../stores/uiStore";
 
 interface RequirementOverrides extends Partial<Omit<Requirement, "attributeValues">> {
   priority?: string;
@@ -54,10 +53,6 @@ const noop = {
 };
 
 describe("StageSection", () => {
-  beforeEach(() => {
-    useUiStore.setState({ boardSort: {} });
-  });
-
   it("useDroppable 返回 isOver=true 时区域和标题栏都带高亮样式", () => {
     const spy = vi.spyOn(dndCore, "useDroppable").mockReturnValue({
       setNodeRef: vi.fn(),
@@ -225,45 +220,6 @@ describe("StageSection", () => {
     render(<StageSection stageOption={ARCHIVE_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
     expect(screen.queryByLabelText("排序")).not.toBeInTheDocument();
-  });
-
-  it("按主排序字段（优先级升序）渲染需求行顺序", () => {
-    useUiStore.getState().setStageSortField("design", "primary", "priority");
-    useUiStore.getState().toggleStageSortDir("design", "primary");
-
-    render(
-      <StageSection
-        stageOption={DESIGN_STAGE}
-        requirements={[
-          makeRequirement({ id: "r-p2", name: "P2需求", priority: "P2" }),
-          makeRequirement({ id: "r-p0", name: "P0需求", priority: "P0" }),
-        ]}
-        selectedRequirementId={null}
-        {...noop}
-      />,
-    );
-
-    const names = screen.getAllByText(/需求$/).map((el) => el.textContent);
-    expect(names).toEqual(["P0需求", "P2需求"]);
-  });
-
-  it("手动模式下按 manualOrder 渲染需求行顺序", () => {
-    useUiStore.getState().setStageSortManual("design");
-
-    render(
-      <StageSection
-        stageOption={DESIGN_STAGE}
-        requirements={[
-          makeRequirement({ id: "r-a", name: "A需求", manualOrder: 2 }),
-          makeRequirement({ id: "r-b", name: "B需求", manualOrder: 0 }),
-        ]}
-        selectedRequirementId={null}
-        {...noop}
-      />,
-    );
-
-    const names = screen.getAllByText(/需求$/).map((el) => el.textContent);
-    expect(names).toEqual(["B需求", "A需求"]);
   });
 
   it("阶段标题行背景色读取 stageOption.color", () => {

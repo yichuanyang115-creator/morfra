@@ -2,14 +2,14 @@ import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Requirement } from "../../types/models";
-import type { Attribute, StageOption } from "../../types/schema";
+import type { Attribute, SortRule, StageOption } from "../../types/schema";
 import { RequirementRow } from "./RequirementRow";
 import { QuickAddInput } from "./QuickAddInput";
 import { ArchiveSearch } from "./ArchiveSearch";
 import { SortControl } from "./SortControl";
 import { lastTransitionTimestamp } from "../../lib/requirementMetrics";
-import { sortRequirementsForStage } from "../../lib/requirementSort";
-import { useUiStore } from "../../stores/uiStore";
+import { effectiveStageSort, sortRequirementsForStage } from "../../lib/requirementSort";
+import { useSchemaStore } from "../../stores/schemaStore";
 
 function ChevronIcon() {
   return (
@@ -28,6 +28,7 @@ function PlusIcon() {
 }
 
 interface StageSectionProps {
+  projectId?: string | null;
   stageOption: StageOption;
   requirements: Requirement[];
   /** 已按 schema 可见属性顺序排好的属性列表，直接传给每一行的 RequirementRow（原始列位）。 */
@@ -45,6 +46,7 @@ interface StageSectionProps {
 }
 
 export function StageSection({
+  projectId,
   stageOption,
   requirements,
   attributes,
@@ -61,11 +63,13 @@ export function StageSection({
   const [terminalSearch, setTerminalSearch] = useState("");
   const { setNodeRef, isOver } = useDroppable({ id: stageOption.id });
 
-  const sort = useUiStore((s) => s.getStageSort(stageOption.id));
-  const setStageSortField = useUiStore((s) => s.setStageSortField);
-  const setStageSortSecondaryField = useUiStore((s) => s.setStageSortSecondaryField);
-  const toggleStageSortDir = useUiStore((s) => s.toggleStageSortDir);
-  const restoreStageSort = useUiStore((s) => s.restoreStageSort);
+  const schema = useSchemaStore((s) => s.schema);
+  const setStageSort = useSchemaStore((s) => s.setStageSort);
+  const clearStageSort = useSchemaStore((s) => s.clearStageSort);
+  const sortAttributes = allAttributes ?? attributes;
+  const sort = effectiveStageSort(stageOption.id, schema?.viewPreferences.globalSort, schema?.viewPreferences.stageSorts, sortAttributes);
+  const localPreference = schema?.viewPreferences.stageSorts?.[stageOption.id];
+  const hasLocalRule = Boolean(localPreference && "attrId" in localPreference);
 
   const isTerminal = stageOption.isTerminal;
 
@@ -73,7 +77,7 @@ export function StageSection({
     ? requirements
         .filter((r) => r.name.toLowerCase().includes(terminalSearch.trim().toLowerCase()))
         .sort((a, b) => lastTransitionTimestamp(b).localeCompare(lastTransitionTimestamp(a)))
-    : sortRequirementsForStage(requirements, sort);
+    : sortRequirementsForStage(requirements, sort, sortAttributes);
 
   const emptyText = isTerminal
     ? terminalSearch.trim()
@@ -110,11 +114,20 @@ export function StageSection({
         ) : (
           <>
             <SortControl
-              sort={sort}
-              onSetPrimaryField={(field) => setStageSortField(stageOption.id, "primary", field)}
-              onSetSecondaryField={(field) => setStageSortSecondaryField(stageOption.id, field)}
-              onToggleDir={(slot) => toggleStageSortDir(stageOption.id, slot)}
-              onRestore={() => restoreStageSort(stageOption.id)}
+              rule={sort.rule}
+              attributes={sortAttributes}
+              manual={sort.mode === "manual"}
+              hasLocalRule={hasLocalRule}
+              onChange={(rule: SortRule | null) => {
+                if (!projectId) return;
+                if (rule) void setStageSort(projectId, stageOption.id, rule);
+                else void clearStageSort(projectId, stageOption.id);
+              }}
+              onToggleDirection={() => {
+                if (!projectId || !sort.rule) return;
+                void setStageSort(projectId, stageOption.id, { ...sort.rule, direction: sort.rule.direction === "desc" ? "asc" : "desc" });
+              }}
+              onRestore={() => { if (projectId) void clearStageSort(projectId, stageOption.id); }}
             />
             <button
               type="button"

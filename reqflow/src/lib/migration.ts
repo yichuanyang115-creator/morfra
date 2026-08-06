@@ -10,16 +10,22 @@ export interface MigrationResult {
 
 /**
  * Phase 19 之前写入的 schema.json 没有 viewPreferences.frozenCount 字段、Phase 21 前
- * 没有 filters 字段，读回时按字段逐个补默认值（未冻结任何列 / 无筛选），不重写文件——
+ * 没有 filters 字段、Phase 22 前没有排序字段，读回时按字段逐个补默认值——
  * 本次修改的属性/阶段/Tab/筛选会在下次 mutateSchema 时把补齐后的完整 viewPreferences
  * 一并落盘。
  */
 function backfillViewPreferences(schema: Schema): Schema {
   const vp = schema.viewPreferences;
-  if (vp.frozenCount !== undefined && vp.filters !== undefined) return schema;
+  if (vp.frozenCount !== undefined && vp.filters !== undefined && vp.globalSort !== undefined && vp.stageSorts !== undefined) return schema;
   return {
     ...schema,
-    viewPreferences: { ...vp, frozenCount: vp.frozenCount ?? 0, filters: vp.filters ?? [] },
+    viewPreferences: {
+      ...vp,
+      frozenCount: vp.frozenCount ?? 0,
+      filters: vp.filters ?? [],
+      globalSort: vp.globalSort ?? null,
+      stageSorts: vp.stageSorts ?? {},
+    },
   };
 }
 

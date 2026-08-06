@@ -7,9 +7,8 @@ import { StageSection } from "./StageSection";
 import { BoardHeader } from "./BoardHeader";
 import { EmptyState } from "../shared/EmptyState";
 import { Skeleton } from "../shared/Skeleton";
-import { useUiStore } from "../../stores/uiStore";
 import { useSchemaStore } from "../../stores/schemaStore";
-import { sortRequirementsForStage, reorderManualOrder, type StageSort } from "../../lib/requirementSort";
+import { effectiveStageSort, sortRequirementsForStage, reorderManualOrder, type EffectiveStageSort } from "../../lib/requirementSort";
 import { boardAttributesFor } from "../../lib/schemaSelectors";
 import { requirementMatchesFilters } from "../../lib/filterEngine";
 
@@ -47,7 +46,8 @@ export function resolveReorder(
   stageOptions: StageOption[],
   activeId: string | number,
   overId: string | number | undefined,
-  sort: StageSort,
+  sort: EffectiveStageSort,
+  attributes: import("../../types/schema").Attribute[] = [],
 ): Requirement[] | null {
   if (overId == null || activeId === overId || findStageOption(stageOptions, overId)) return null;
   const active = requirements.find((r) => r.id === activeId);
@@ -55,7 +55,7 @@ export function resolveReorder(
   if (!active || !over || active.stage !== over.stage) return null;
 
   const stageRequirements = requirements.filter((r) => r.stage === active.stage);
-  const sorted = sortRequirementsForStage(stageRequirements, sort);
+  const sorted = sortRequirementsForStage(stageRequirements, sort, attributes);
   const oldIndex = sorted.findIndex((r) => r.id === activeId);
   const newIndex = sorted.findIndex((r) => r.id === overId);
   if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return null;
@@ -63,6 +63,7 @@ export function resolveReorder(
 }
 
 interface BoardProps {
+  projectId?: string | null;
   requirements: Requirement[];
   loading: boolean;
   error: boolean;
@@ -85,6 +86,7 @@ interface BoardProps {
 }
 
 export function Board({
+  projectId,
   requirements,
   loading,
   error,
@@ -102,6 +104,7 @@ export function Board({
 }: BoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const schema = useSchemaStore((s) => s.schema);
+  const setStageSortManual = useSchemaStore((s) => s.setStageSortManual);
   const stageOptions = schema?.stageOptions ?? [];
   const boardAttributes = boardAttributesFor(schema);
   // 冻结列数来自 viewPreferences.frozenCount（默认 0 = 只冻结 Name 列，见 REQ-001 MUST）。
@@ -140,11 +143,11 @@ export function Board({
     const activeRequirement = requirements.find((r) => r.id === activeId);
     const activeStageOption = activeRequirement && findStageOption(stageOptions, activeRequirement.stage);
     if (!activeRequirement || activeStageOption?.isTerminal) return;
-    const sort = useUiStore.getState().getStageSort(activeRequirement.stage);
-    const reordered = resolveReorder(requirements, stageOptions, activeId, overId, sort);
+    const sort = effectiveStageSort(activeRequirement.stage, schema?.viewPreferences.globalSort, schema?.viewPreferences.stageSorts, allAttributes);
+    const reordered = resolveReorder(requirements, stageOptions, activeId, overId, sort, allAttributes);
     if (reordered) {
       onReorder(reorderManualOrder(reordered));
-      useUiStore.getState().setStageSortManual(activeRequirement.stage);
+      if (projectId) void setStageSortManual(projectId, activeRequirement.stage);
     }
   }
 
@@ -183,6 +186,7 @@ export function Board({
         {stageOptions.map((s) => (
           <StageSection
             key={s.id}
+            projectId={projectId}
             stageOption={s}
             requirements={visibleRequirements.filter((r) => r.stage === s.id)}
             attributes={boardAttributes}

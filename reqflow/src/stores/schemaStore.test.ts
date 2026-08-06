@@ -220,4 +220,36 @@ describe("schemaStore 属性/阶段/Tab CRUD", () => {
     await setFilters("proj-1", []);
     expect(useSchemaStore.getState().schema?.viewPreferences.filters).toEqual([]);
   });
+
+  it("排序规则按项目写入 viewPreferences，并支持阶段局部规则与手动覆盖", async () => {
+    const { setGlobalSort, setStageSort, setStageSortManual } = useSchemaStore.getState();
+    await setGlobalSort("proj-1", { attrId: "priority", direction: "asc" });
+    await setStageSort("proj-1", "design", { attrId: "deadline", direction: "desc" });
+    await setStageSortManual("proj-1", "dev");
+
+    expect(useSchemaStore.getState().schema?.viewPreferences.globalSort).toEqual({ attrId: "priority", direction: "asc" });
+    expect(useSchemaStore.getState().schema?.viewPreferences.stageSorts).toEqual({
+      design: { attrId: "deadline", direction: "desc" },
+      dev: { mode: "manual" },
+    });
+    const raw = files.get("/app-local-data/projects/proj-1/schema.json")!;
+    expect(JSON.parse(raw).viewPreferences.stageSorts.dev).toEqual({ mode: "manual" });
+  });
+
+  it("清除阶段规则后恢复继承全局规则", async () => {
+    const { setGlobalSort, setStageSort, clearStageSort } = useSchemaStore.getState();
+    await setGlobalSort("proj-1", { attrId: "priority", direction: "asc" });
+    await setStageSort("proj-1", "design", { attrId: "deadline", direction: "desc" });
+    await clearStageSort("proj-1", "design");
+    expect(useSchemaStore.getState().schema?.viewPreferences.stageSorts?.design).toBeUndefined();
+  });
+
+  it("删除排序属性时清理失效的全局和阶段规则", async () => {
+    const { setGlobalSort, setStageSort, removeAttribute } = useSchemaStore.getState();
+    await setGlobalSort("proj-1", { attrId: "priority", direction: "asc" });
+    await setStageSort("proj-1", "design", { attrId: "priority", direction: "desc" });
+    await removeAttribute("proj-1", "priority");
+    expect(useSchemaStore.getState().schema?.viewPreferences.globalSort).toBeNull();
+    expect(useSchemaStore.getState().schema?.viewPreferences.stageSorts?.design).toBeUndefined();
+  });
 });

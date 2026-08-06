@@ -220,6 +220,7 @@ function App() {
           detailMode={detailMode}
           boardContent={
             <Board
+              projectId={currentProjectId}
               requirements={requirements}
               loading={requirementsLoading || currentProjectId !== loadedProjectId}
               error={requirementsError}
