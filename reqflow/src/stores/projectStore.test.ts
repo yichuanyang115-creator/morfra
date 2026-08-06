@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { reqflowTemplateSnapshot } from "../lib/schemaDefaults";
 
 const files = new Map<string, string>();
 
@@ -8,12 +9,22 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
     return [...files.keys()].some((filePath) => filePath.startsWith(`${path}/`));
   }),
   mkdir: vi.fn(async () => undefined),
-  readDir: vi.fn(async () => []),
+  readDir: vi.fn(async (path: string) => {
+    const names = [...files.keys()]
+      .filter((filePath) => filePath.startsWith(`${path}/`))
+      .map((filePath) => filePath.slice(path.length + 1))
+      .filter((name) => !name.includes("/"));
+    return names.map((name) => ({ name, isFile: true, isDirectory: false, isSymlink: false }));
+  }),
   readTextFile: vi.fn(async (path: string) => files.get(path) ?? ""),
   writeTextFile: vi.fn(async (path: string, content: string) => {
     files.set(path, content);
   }),
-  remove: vi.fn(async () => undefined),
+  remove: vi.fn(async (path: string) => {
+    for (const filePath of [...files.keys()]) {
+      if (filePath === path || filePath.startsWith(`${path}/`)) files.delete(filePath);
+    }
+  }),
 }));
 
 vi.mock("@tauri-apps/api/path", () => ({
@@ -22,11 +33,13 @@ vi.mock("@tauri-apps/api/path", () => ({
 }));
 
 const { useProjectStore } = await import("./projectStore");
+const { useTemplateStore } = await import("./templateStore");
 
 describe("projectStore.init 错误处理", () => {
   beforeEach(() => {
     files.clear();
     useProjectStore.setState({ projects: [], currentProjectId: null, loaded: false, initializing: false, error: false });
+    useTemplateStore.setState({ templates: [], loaded: false, loading: false, error: null });
   });
 
   it("项目根目录列出失败时，error 置为 true（不停留在白屏无提示状态）", async () => {
@@ -79,6 +92,7 @@ describe("projectStore CRUD（REQ-018/FLOW-009 多项目管理）", () => {
   beforeEach(() => {
     files.clear();
     useProjectStore.setState({ projects: [], currentProjectId: null, loaded: false, initializing: false, error: false });
+    useTemplateStore.setState({ templates: [], loaded: false, loading: false, error: null });
   });
 
   it("createProject 新建项目后自动切换到该项目，且落盘 _project.md", async () => {
@@ -92,6 +106,22 @@ describe("projectStore CRUD（REQ-018/FLOW-009 多项目管理）", () => {
 
     const metaPath = `/app-local-data/projects/${state.projects[0].id}/_project.md`;
     expect(files.get(metaPath)).toContain("新项目");
+  });
+
+  it("不选模板创建空白项目，选模板时复制 Schema 结构并重置视图偏好", async () => {
+    const { createProject } = useProjectStore.getState();
+    await createProject("空白项目");
+    const blank = useProjectStore.getState().projects[0];
+    const blankSchema = JSON.parse(files.get(`/app-local-data/projects/${blank.id}/schema.json`) ?? "{}") as { stageOptions: unknown[]; attributes: unknown[]; tabs: unknown[] };
+    expect(blankSchema.stageOptions).toHaveLength(1);
+    expect(blankSchema.attributes).toHaveLength(0);
+    expect(blankSchema.tabs).toHaveLength(0);
+
+    await createProject("模板项目", { id: "reqflow", name: "reqflow", schemaSnapshot: reqflowTemplateSnapshot() });
+    const templated = useProjectStore.getState().projects[1];
+    const schema = JSON.parse(files.get(`/app-local-data/projects/${templated.id}/schema.json`) ?? "{}") as { stageOptions: unknown[]; viewPreferences: { columnWidths: Record<string, number> } };
+    expect(schema.stageOptions).toHaveLength(7);
+    expect(schema.viewPreferences.columnWidths).toEqual({});
   });
 
   it("switchProject 切换到列表中存在的项目 id", async () => {
@@ -142,6 +172,22 @@ describe("projectStore CRUD（REQ-018/FLOW-009 多项目管理）", () => {
     expect(state.projects).toHaveLength(1);
     expect(state.projects[0].id).toBe(first.id);
     expect(state.currentProjectId).toBe(first.id);
+  });
+
+  it("删除来源项目不删除应用级模板，重新加载后模板仍可使用（REQ-028）", async () => {
+    await useTemplateStore.getState().load();
+    const template = useTemplateStore.getState().templates[0];
+    const { createProject, deleteProject } = useProjectStore.getState();
+    await createProject("来源项目", template);
+    const sourceProject = useProjectStore.getState().projects[0];
+    await createProject("保留项目");
+
+    await deleteProject(sourceProject.id);
+    useTemplateStore.setState({ templates: [], loaded: false });
+    await useTemplateStore.getState().load();
+
+    expect(useTemplateStore.getState().templates.some((item) => item.id === template.id)).toBe(true);
+    expect([...files.keys()].some((path) => path.includes(`/projects/${sourceProject.id}/`))).toBe(false);
   });
 
   it("deleteProject 只有一个项目时拒绝删除（不落盘删除、不改变状态）", async () => {

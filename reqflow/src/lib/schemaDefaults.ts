@@ -1,7 +1,8 @@
-import { RELEASE_METHODS, STAGES } from "../types/models";
+import { DEFAULT_SOURCES, RELEASE_METHODS, STAGES } from "../types/models";
 import type { Attribute, Schema, StageOption, TabDefinition, TabField } from "../types/schema";
 import { paletteColorAt } from "./stagePalette";
 import { FIELD_KEYS } from "./requirementFields";
+import type { SchemaSnapshot } from "../types/templates";
 
 const SCHEMA_VERSION = 1;
 
@@ -162,4 +163,23 @@ export function blankSchema(): Schema {
     tabs: [],
     viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0, filters: [], globalSort: null, stageSorts: {} },
   };
+}
+
+/** 将项目特有的视图偏好剥离，得到可复用的模板快照。 */
+export function schemaSnapshot(schema: Schema): SchemaSnapshot {
+  const { viewPreferences: _viewPreferences, ...snapshot } = schema;
+  return structuredClone(snapshot);
+}
+
+/** 用模板快照创建一份无项目历史的新 Schema。 */
+export function schemaFromSnapshot(snapshot: SchemaSnapshot): Schema {
+  return {
+    ...structuredClone(snapshot),
+    viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0, filters: [], globalSort: null, stageSorts: {} },
+  };
+}
+
+/** 内置 reqflow 模板：完整的 7 阶段、属性与五个预制 Tab。 */
+export function reqflowTemplateSnapshot(): SchemaSnapshot {
+  return schemaSnapshot(legacyEquivalentSchema(DEFAULT_SOURCES));
 }

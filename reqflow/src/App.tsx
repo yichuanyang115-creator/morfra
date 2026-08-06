@@ -3,15 +3,13 @@ import { Topbar } from "./components/topbar/Topbar";
 import { MainLayout } from "./components/layout/MainLayout";
 import { Board } from "./components/board/Board";
 import { DetailPanel } from "./components/detail/DetailPanel";
-import { SchemaSettingsPage } from "./components/settings/SchemaSettingsPage";
+import { SchemaSettingsWorkspace } from "./components/settings/SchemaSettingsWorkspace";
 import { useProjectStore, currentProject } from "./stores/projectStore";
 import { useRequirementStore } from "./stores/requirementStore";
 import { useChatStore } from "./stores/chatStore";
 import { useUiStore } from "./stores/uiStore";
 import { useSchemaStore } from "./stores/schemaStore";
 import { detailAttributesFor } from "./lib/schemaSelectors";
-import { countValuedAttribute, typeChangeImpact } from "./lib/attributeImpact";
-import { convertAttributeValue, optionsForTypeChange } from "./lib/attributeTypeConversion";
 import { Toast } from "./components/shared/Toast";
 import { UndoToast } from "./components/shared/UndoToast";
 import { useUndoKeyboard } from "./hooks/useUndoKeyboard";
@@ -72,26 +70,12 @@ function App() {
   const justMigrated = useSchemaStore((s) => s.justMigrated);
   const acknowledgeMigration = useSchemaStore((s) => s.acknowledgeMigration);
 
-  const settingsSection = useUiStore((s) => s.settingsSection);
-  const setSettingsSection = useUiStore((s) => s.setSettingsSection);
-  const closeSettings = useUiStore((s) => s.closeSettings);
+  const settingsOpen = useUiStore((s) => s.settingsSection !== null);
   const openSettings = useUiStore((s) => s.openSettings);
-  const addStageOption = useSchemaStore((s) => s.addStageOption);
-  const updateStageOption = useSchemaStore((s) => s.updateStageOption);
-  const removeStageOption = useSchemaStore((s) => s.removeStageOption);
-  const reorderStageOptions = useSchemaStore((s) => s.reorderStageOptions);
-  const addAttribute = useSchemaStore((s) => s.addAttribute);
   const updateAttribute = useSchemaStore((s) => s.updateAttribute);
-  const removeAttribute = useSchemaStore((s) => s.removeAttribute);
-  const reorderAttributes = useSchemaStore((s) => s.reorderAttributes);
   const setColumnWidth = useSchemaStore((s) => s.setColumnWidth);
   const setColumnOrder = useSchemaStore((s) => s.setColumnOrder);
   const setFrozenCount = useSchemaStore((s) => s.setFrozenCount);
-  const cascadeAttributeChange = useRequirementStore((s) => s.cascadeAttributeChange);
-  const addTab = useSchemaStore((s) => s.addTab);
-  const updateTab = useSchemaStore((s) => s.updateTab);
-  const removeTab = useSchemaStore((s) => s.removeTab);
-  const reorderTabs = useSchemaStore((s) => s.reorderTabs);
   const setStageSortManual = useSchemaStore((s) => s.setStageSortManual);
   const setStageSort = useSchemaStore((s) => s.setStageSort);
   const clearStageSort = useSchemaStore((s) => s.clearStageSort);
@@ -152,77 +136,11 @@ function App() {
   const selectedStageOption = selectedRequirement
     ? schema?.stageOptions.find((s) => s.id === selectedRequirement.stage)
     : undefined;
-  const entityCountByStage = requirements.reduce<Record<string, number>>((acc, r) => {
-    acc[r.stage] = (acc[r.stage] ?? 0) + 1;
-    return acc;
-  }, {});
-
   return (
     <div className="flex h-screen w-screen flex-col">
       <Topbar />
-      {settingsSection && schema ? (
-        <SchemaSettingsPage
-          schema={schema}
-          section={settingsSection}
-          entityCountByStage={entityCountByStage}
-          onSelectSection={setSettingsSection}
-          onClose={closeSettings}
-          onReorderStages={(orderedIds) => {
-            if (currentProjectId) void reorderStageOptions(currentProjectId, orderedIds);
-          }}
-          onAddStage={(stageOption) => {
-            if (currentProjectId) void addStageOption(currentProjectId, stageOption);
-          }}
-          onUpdateStage={(stageOptionId, patch) => {
-            if (currentProjectId) void updateStageOption(currentProjectId, stageOptionId, patch);
-          }}
-          onRemoveStage={(stageOptionId) => {
-            if (currentProjectId) void removeStageOption(currentProjectId, stageOptionId);
-          }}
-          onReorderAttributes={(orderedIds) => {
-            if (currentProjectId) void reorderAttributes(currentProjectId, orderedIds);
-          }}
-          onAddAttribute={(attribute) => {
-            if (currentProjectId) void addAttribute(currentProjectId, attribute);
-          }}
-          onUpdateAttribute={(attributeId, patch) => {
-            if (currentProjectId) void updateAttribute(currentProjectId, attributeId, patch);
-          }}
-          onRemoveAttribute={(attributeId) => {
-            if (currentProjectId) {
-              void removeAttribute(currentProjectId, attributeId);
-              void cascadeAttributeChange(currentProjectId, attributeId, () => undefined);
-            }
-          }}
-          countValuedAttribute={(attributeId) => countValuedAttribute(requirements, attributeId)}
-          getTypeChangeImpact={(attributeId, toType) => {
-            const attribute = schema.attributes.find((a) => a.id === attributeId);
-            if (!attribute) return { totalCount: requirements.length, lostCount: 0 };
-            return typeChangeImpact(requirements, attribute, toType);
-          }}
-          onConfirmTypeChange={(attributeId, toType) => {
-            if (!currentProjectId) return;
-            const attribute = schema.attributes.find((a) => a.id === attributeId);
-            if (!attribute) return;
-            const toOptions = optionsForTypeChange(attribute, toType);
-            void updateAttribute(currentProjectId, attributeId, { type: toType, options: toOptions });
-            void cascadeAttributeChange(currentProjectId, attributeId, (value) =>
-              convertAttributeValue(value, attribute, toType, toOptions).value,
-            );
-          }}
-          onReorderTabs={(orderedIds) => {
-            if (currentProjectId) void reorderTabs(currentProjectId, orderedIds);
-          }}
-          onAddTab={(tab) => {
-            if (currentProjectId) void addTab(currentProjectId, tab);
-          }}
-          onUpdateTab={(tabId, patch) => {
-            if (currentProjectId) void updateTab(currentProjectId, tabId, patch);
-          }}
-          onRemoveTab={(tabId) => {
-            if (currentProjectId) void removeTab(currentProjectId, tabId);
-          }}
-        />
+      {settingsOpen && schema ? (
+        <SchemaSettingsWorkspace />
       ) : (
         <MainLayout
           detailMode={detailMode}

@@ -1,9 +1,11 @@
+import { useState } from "react";
 import type { Attribute, AttributeType, StageOption, TabDefinition, Schema } from "../../types/schema";
 import type { SettingsSection } from "../../stores/uiStore";
 import { SettingsNav } from "./SettingsNav";
 import { StageManager } from "./StageManager";
 import { AttributeManager } from "./AttributeManager";
 import { TabManager } from "./TabManager";
+import { SaveTemplateDialog } from "./SaveTemplateDialog";
 
 function CloseIcon() {
   return (
@@ -34,6 +36,7 @@ interface SchemaSettingsPageProps {
   onAddTab: (tab: TabDefinition) => void;
   onUpdateTab: (tabId: string, patch: Partial<TabDefinition>) => void;
   onRemoveTab: (tabId: string) => void;
+  onSaveTemplate?: (name: string) => Promise<void>;
 }
 
 function SectionContent({
@@ -119,7 +122,9 @@ export function SchemaSettingsPage({
   onAddTab,
   onUpdateTab,
   onRemoveTab,
+  onSaveTemplate,
 }: SchemaSettingsPageProps) {
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-none items-center justify-between border-b border-(--border) px-4.5 py-3">
@@ -127,9 +132,8 @@ export function SchemaSettingsPage({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            disabled
-            title="Phase 25 接功能"
-            className="rounded-(--r-sm) border border-(--border-strong) bg-(--surface) px-3 py-1.5 text-[12.5px] text-(--muted-2) disabled:cursor-not-allowed"
+            onClick={() => setSaveTemplateOpen(true)}
+            className="rounded-(--r-sm) border border-(--border-strong) bg-(--surface) px-3 py-1.5 text-[12.5px] text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
           >
             保存为模板
           </button>
@@ -169,6 +173,15 @@ export function SchemaSettingsPage({
           />
         </div>
       </div>
+      {saveTemplateOpen && onSaveTemplate && (
+        <SaveTemplateDialog
+          onCancel={() => setSaveTemplateOpen(false)}
+          onSave={async (name) => {
+            await onSaveTemplate(name);
+            setSaveTemplateOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

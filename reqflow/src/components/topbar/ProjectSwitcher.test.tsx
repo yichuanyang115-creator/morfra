@@ -28,12 +28,14 @@ vi.mock("@tauri-apps/api/path", () => ({
 }));
 
 const { useProjectStore } = await import("../../stores/projectStore");
+const { useTemplateStore } = await import("../../stores/templateStore");
 const { ProjectSwitcher } = await import("./ProjectSwitcher");
 
 describe("ProjectSwitcher（REQ-018/FLOW-009 多项目管理）", () => {
   beforeEach(() => {
     files.clear();
     useProjectStore.setState({ projects: [], currentProjectId: null, loaded: false, initializing: false, error: false });
+    useTemplateStore.setState({ templates: [], loaded: true, loading: false, error: null });
   });
 
   it("点击列表中的项目触发切换并关闭弹层", async () => {
@@ -132,5 +134,20 @@ describe("ProjectSwitcher（REQ-018/FLOW-009 多项目管理）", () => {
     await userEvent.click(screen.getByLabelText("创建"));
 
     expect(useProjectStore.getState().projects).toHaveLength(0);
+  });
+
+  it("新建项目选择 reqflow 模板后写入完整的模板 Schema", async () => {
+    useTemplateStore.setState({
+      templates: [{ id: "reqflow", name: "reqflow", schemaSnapshot: (await import("../../lib/schemaDefaults")).reqflowTemplateSnapshot() }],
+    });
+    render(<ProjectSwitcher onClose={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole("radio", { name: "reqflow" }));
+    await userEvent.type(screen.getByPlaceholderText("新建项目名称"), "模板项目");
+    await userEvent.click(screen.getByLabelText("创建"));
+
+    const project = useProjectStore.getState().projects[0];
+    const schema = JSON.parse(files.get(`/app-local-data/projects/${project.id}/schema.json`) ?? "{}") as { stageOptions: unknown[] };
+    expect(schema.stageOptions).toHaveLength(7);
   });
 });

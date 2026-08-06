@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useProjectStore } from "../../stores/projectStore";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
+import { CreateProjectForm } from "./CreateProjectForm";
 
 function RenameIcon() {
   return (
@@ -24,14 +25,6 @@ function DeleteIcon() {
   );
 }
 
-function PlusIcon() {
-  return (
-    <svg className="icon icon-sm" viewBox="0 0 20 20" fill="none">
-      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 interface ProjectSwitcherProps {
   onClose: () => void;
 }
@@ -40,13 +33,11 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
   const projects = useProjectStore((s) => s.projects);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
   const switchProject = useProjectStore((s) => s.switchProject);
-  const createProject = useProjectStore((s) => s.createProject);
   const renameProject = useProjectStore((s) => s.renameProject);
   const deleteProject = useProjectStore((s) => s.deleteProject);
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [newProjectName, setNewProjectName] = useState("");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   function startRename(id: string, currentName: string) {
@@ -69,20 +60,11 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
     onClose();
   }
 
-  async function handleCreateSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = newProjectName.trim();
-    if (!trimmed) return;
-    await createProject(trimmed);
-    setNewProjectName("");
-    onClose();
-  }
-
   const deleteTarget = projects.find((p) => p.id === deleteTargetId) ?? null;
 
   return (
     <>
-      <div className="fixed left-3 z-50 w-60 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-1.5 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]"
+      <div className="fixed left-3 z-50 w-80 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-1.5 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]"
         style={{ top: "calc(var(--topbar-h) + 6px)" }}
       >
         {projects.map((project) => {
@@ -152,22 +134,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
 
         <div className="my-1.25 mx-1 h-px bg-(--border)" />
 
-        <form onSubmit={handleCreateSubmit} className="flex gap-1.25 p-1">
-          <input
-            type="text"
-            placeholder="新建项目名称"
-            value={newProjectName}
-            onChange={(e) => setNewProjectName(e.target.value)}
-            className="min-w-0 flex-1 rounded-(--r-sm) border border-(--border) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] outline-none focus:border-(--accent)"
-          />
-          <button
-            type="submit"
-            aria-label="创建"
-            className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-(--fg) text-(--surface)"
-          >
-            <PlusIcon />
-          </button>
-        </form>
+        <CreateProjectForm onCreated={onClose} />
       </div>
 
       {deleteTarget && (

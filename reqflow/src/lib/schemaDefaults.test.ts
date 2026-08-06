@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { STAGES, RELEASE_METHODS } from "../types/models";
-import { legacyEquivalentSchema, blankSchema } from "./schemaDefaults";
+import { legacyEquivalentSchema, blankSchema, reqflowTemplateSnapshot, schemaFromSnapshot, schemaSnapshot } from "./schemaDefaults";
 
 describe("legacyEquivalentSchema", () => {
   it("阶段选项与 STAGES 常量一一对应，只有归档标终态", () => {
@@ -56,5 +56,24 @@ describe("blankSchema", () => {
     expect(schema.stageOptions).toHaveLength(1);
     expect(schema.attributes).toHaveLength(0);
     expect(schema.tabs).toHaveLength(0);
+  });
+});
+
+describe("Schema 模板快照", () => {
+  it("快照移除 viewPreferences，新项目由同一快照创建时获得干净视图偏好", () => {
+    const schema = legacyEquivalentSchema([]);
+    schema.viewPreferences.columnWidths.priority = 280;
+    const snapshot = schemaSnapshot(schema);
+    const created = schemaFromSnapshot(snapshot);
+
+    expect(snapshot).not.toHaveProperty("viewPreferences");
+    expect(created.viewPreferences.columnWidths).toEqual({});
+    expect(created.stageOptions).toEqual(schema.stageOptions);
+  });
+
+  it("reqflow 内置模板包含完整的 7 阶段和预制 Tab", () => {
+    const snapshot = reqflowTemplateSnapshot();
+    expect(snapshot.stageOptions).toHaveLength(7);
+    expect(snapshot.tabs).toHaveLength(5);
   });
 });

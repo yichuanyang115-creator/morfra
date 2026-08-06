@@ -146,17 +146,24 @@ describe("SchemaSettingsPage（Phase 18 骨架）", () => {
     expect(screen.getByDisplayValue("任务")).toBeInTheDocument();
   });
 
-  it("保存为模板按钮本 Phase 是禁用占位", () => {
+  it("保存为模板入口可用，并提交用户输入的名称", async () => {
+    const onSaveTemplate = vi.fn(async () => undefined);
     render(
       <SchemaSettingsPage
         schema={makeSchema()}
         section={{ kind: "attributes" }}
         onSelectSection={vi.fn()}
         onClose={vi.fn()}
+        onSaveTemplate={onSaveTemplate}
         {...stageManagerProps}
       />,
     );
 
-    expect(screen.getByText("保存为模板")).toBeDisabled();
+    await userEvent.click(screen.getByText("保存为模板"));
+    const input = screen.getByLabelText("模板名称");
+    await userEvent.type(input, "我的模板");
+    await userEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(onSaveTemplate).toHaveBeenCalledWith("我的模板");
   });
 });
