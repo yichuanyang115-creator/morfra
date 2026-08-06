@@ -1,46 +1,72 @@
 /*
- * Design tokens。色彩系统改版：青苹果绿主题（参考用户提供的 April 终端主题）。
- * 基底大面积区域（bg/surface/surface-2/topbar/对话框背景）统一用暖白，几乎不带黄调，
- * 不铺绿；--accent 是唯一的高饱和度青苹果绿（#5DA802），集中体现在看板阶段条底色、
- * 按钮、选中态左边条这几个"点"上，不渲染整屏。--st-done 用独立的翠绿色相与 --accent
- * 区分，避免"已完成"状态和"当前重点强调"混淆。命名沿用设计稿原名，数值已不等于原型 HTML。
+ * 主题层级：Primitive → Semantic → Module → Component。
+ * 这里是无 theme.json 时的同步首屏回退，themeRuntime 会在应用首次渲染前覆盖同名变量。
  */
 :root {
-  --bg: #FCFCFA;
-  --surface: #FFFFFF;
-  --surface-2: #F5F5F1;
-  --topbar: #F8F8F4;
-  --fg: #33322E;
-  --muted: #6B6960;
-  --muted-2: #96938A;
-  --border: #E7E6E0;
-  --border-strong: #D6D4CB;
+  --palette-canvas: #FCFCFA;
+  --palette-surface: #FFFFFF;
+  --palette-ink: #2B2421;
+  --palette-green-600: #3F7A02;
+  --palette-green-500: #5DA802;
+  --palette-green-50: #F4FAEC;
+  --palette-purple-700: #5D3A73;
+  --palette-purple-500: #76558C;
+  --palette-purple-100: #E8DDF0;
+  --palette-purple-50: #F5EFF8;
+  --palette-success: #2C7A63;
+  --palette-danger: #B3261E;
+  --palette-warning: #7A5200;
 
-  --accent: #5DA802;
-  --accent-text: #3F7A02;
-  --accent-soft: #F7FAF1;
-  --accent-soft-strong: #EFF6E7;
-  --accent-solid: #5DA802;
-  --accent-solid-fg: #FFFFFF;
-  --context-strong: #5D3A73;
-  /* 中等深度鼠尾草绿，专用于"当前选中"这一类需要比 soft 系列更醒目、但不到按钮实色那么浓的场景。 */
-  --accent-selected: #A9C99A;
+  --semantic-background-canvas: var(--palette-canvas);
+  --semantic-background-surface: var(--palette-surface);
+  --semantic-background-elevated: var(--palette-purple-50);
+  --semantic-text-primary: var(--palette-ink);
+  --semantic-text-secondary: var(--palette-purple-700);
+  --semantic-text-tertiary: var(--palette-purple-500);
+  --semantic-text-disabled: var(--palette-purple-500);
+  --semantic-border-subtle: var(--palette-purple-100);
+  --semantic-border-strong: #B9A6C6;
+  --semantic-action-strong: var(--palette-green-600);
+  --semantic-action-base: var(--palette-green-500);
+  --semantic-action-soft: var(--palette-green-50);
+  --semantic-context-strong: var(--palette-purple-700);
+  --semantic-context-soft: var(--palette-purple-50);
+  --semantic-feedback-success: var(--palette-success);
+  --semantic-feedback-warning: var(--palette-warning);
+  --semantic-feedback-danger: var(--palette-danger);
 
-  --sev-p0: oklch(53% 0.20 24);
-  --sev-p0-soft: oklch(94% 0.03 24);
-  --sev-p1: oklch(52% 0.14 78);
-  --sev-p1-soft: oklch(94% 0.045 78);
-  --sev-p2: #96938A;
-  --sev-p2-soft: #F5F5F1;
-
-  --st-todo: #96938A;
-  --st-todo-soft: #F5F5F1;
-  --st-progress: oklch(50% 0.16 250);
-  --st-progress-soft: oklch(94% 0.03 250);
-  --st-done: #2C7A63;
-  --st-done-soft: #E3F1EC;
-  --st-blocked: oklch(53% 0.19 22);
-  --st-blocked-soft: oklch(94% 0.03 22);
+  /* 兼容既有组件变量；Phase 29 起会按模块逐步收口。 */
+  --bg: var(--semantic-background-canvas);
+  --surface: var(--semantic-background-surface);
+  --surface-2: var(--semantic-background-elevated);
+  --topbar: var(--semantic-background-canvas);
+  --fg: var(--semantic-text-primary);
+  --muted: var(--semantic-text-secondary);
+  --muted-2: var(--semantic-text-tertiary);
+  --border: var(--semantic-border-subtle);
+  --border-strong: var(--semantic-border-strong);
+  --accent: var(--semantic-action-base);
+  --accent-text: var(--semantic-action-strong);
+  --accent-soft: var(--semantic-action-soft);
+  --accent-soft-strong: var(--semantic-context-soft);
+  --accent-solid: var(--semantic-action-strong);
+  --accent-solid-fg: var(--semantic-background-surface);
+  --accent-selected: var(--semantic-context-soft);
+  --context-strong: var(--semantic-context-strong);
+  --sev-p0: var(--semantic-feedback-danger);
+  --sev-p0-soft: #FBE9E7;
+  --sev-p1: var(--semantic-feedback-warning);
+  --sev-p1-soft: #FFF4D6;
+  --sev-p2: var(--semantic-context-strong);
+  --sev-p2-soft: var(--semantic-context-soft);
+  --st-todo: var(--semantic-context-strong);
+  --st-todo-soft: var(--semantic-context-soft);
+  --st-progress: var(--semantic-action-base);
+  --st-progress-soft: var(--semantic-action-soft);
+  --st-done: var(--semantic-feedback-success);
+  --st-done-soft: #E8F4EE;
+  --st-blocked: var(--semantic-feedback-danger);
+  --st-blocked-soft: #FBE9E7;
 
   --font-display: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-body: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;

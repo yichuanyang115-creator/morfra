@@ -6,6 +6,7 @@ const CHAT_STATE_FILE = "_chat.md";
 const SCHEMA_FILE = "schema.json";
 const TEMPLATES_DIR = "templates";
 const TEMPLATES_INITIALIZED_FILE = ".initialized";
+const THEME_FILE = "theme.json";
 
 export async function projectsRootDir(): Promise<string> {
   const base = await appLocalDataDir();
@@ -42,6 +43,11 @@ export async function templatePath(templateId: string): Promise<string> {
 
 export async function templatesInitializedPath(): Promise<string> {
   return join(await templatesRootDir(), TEMPLATES_INITIALIZED_FILE);
+}
+
+/** 应用级外观配置：不属于任何项目，不写进 schema 或 Markdown。 */
+export async function themePath(): Promise<string> {
+  return join(await appLocalDataDir(), THEME_FILE);
 }
 
 export function requirementFileName(requirementId: string): string {

@@ -9,6 +9,7 @@ import { useRequirementStore } from "./stores/requirementStore";
 import { useChatStore } from "./stores/chatStore";
 import { useUiStore } from "./stores/uiStore";
 import { useSchemaStore } from "./stores/schemaStore";
+import { useThemeStore } from "./stores/themeStore";
 import { detailAttributesFor } from "./lib/schemaSelectors";
 import { Toast } from "./components/shared/Toast";
 import { UndoToast } from "./components/shared/UndoToast";
@@ -24,6 +25,10 @@ function App() {
   const showUndoToast = useCallback((summary: string) => setUndoSummary(summary), []);
   useUndoKeyboard(showUndoToast);
   const initProjects = useProjectStore((s) => s.init);
+  const loadTheme = useThemeStore((s) => s.load);
+  const themeLoaded = useThemeStore((s) => s.loaded);
+  const themeRecoveryNotice = useThemeStore((s) => s.recoveryNotice);
+  const acknowledgeThemeRecovery = useThemeStore((s) => s.acknowledgeRecovery);
   const projectsLoaded = useProjectStore((s) => s.loaded);
   const projectsError = useProjectStore((s) => s.error);
   const currentProjectId = useProjectStore((s) => s.currentProjectId);
@@ -82,6 +87,10 @@ function App() {
   const clearStageSort = useSchemaStore((s) => s.clearStageSort);
 
   useEffect(() => {
+    void loadTheme();
+  }, [loadTheme]);
+
+  useEffect(() => {
     void initProjects();
   }, [initProjects]);
 
@@ -115,6 +124,10 @@ function App() {
       if (mostRecentId) selectRequirement(mostRecentId);
     }
   }, [loadedProjectId, currentProjectId, requirements, selectedRequirementId, selectRequirement]);
+
+  if (!themeLoaded) {
+    return <div className="flex h-screen w-screen items-center justify-center text-(--muted) text-[13px]">加载外观…</div>;
+  }
 
   if (projectsError) {
     return (
@@ -301,6 +314,7 @@ function App() {
         />
       )}
       {justMigrated && <Toast message="项目已自动升级为动态 Schema" onDismiss={acknowledgeMigration} />}
+      {themeRecoveryNotice && <Toast message={themeRecoveryNotice} onDismiss={acknowledgeThemeRecovery} />}
       {undoSummary && <UndoToast summary={undoSummary} onDismiss={() => setUndoSummary(null)} />}
     </div>
   );
