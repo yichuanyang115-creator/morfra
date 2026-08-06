@@ -72,7 +72,7 @@ interface BoardProps {
   onSelectRequirement: (id: string) => void;
   onAttributeChange: (requirementId: string, attributeId: string, value: unknown) => void;
   onTransition: (requirementId: string, toStage: Stage) => void;
-  onReorder: (updates: { requirementId: string; manualOrder: number }[]) => void;
+  onReorder: (updates: { requirementId: string; manualOrder: number }[], stageId: string) => Promise<void>;
   /** 右键表头"编辑此属性"跳转到 Schema 设置页对应属性（见 REQ-025 设置页入口）。 */
   onEditAttribute: (attributeId: string) => void;
   /** 右键表头"隐藏此属性"：updateAttribute(showOnBoard:false)，视图偏好可逆（讨论稿 §7）。 */
@@ -104,7 +104,6 @@ export function Board({
 }: BoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
   const schema = useSchemaStore((s) => s.schema);
-  const setStageSortManual = useSchemaStore((s) => s.setStageSortManual);
   const stageOptions = schema?.stageOptions ?? [];
   const boardAttributes = boardAttributesFor(schema);
   // 冻结列数来自 viewPreferences.frozenCount（默认 0 = 只冻结 Name 列，见 REQ-001 MUST）。
@@ -146,8 +145,7 @@ export function Board({
     const sort = effectiveStageSort(activeRequirement.stage, schema?.viewPreferences.globalSort, schema?.viewPreferences.stageSorts, allAttributes);
     const reordered = resolveReorder(requirements, stageOptions, activeId, overId, sort, allAttributes);
     if (reordered) {
-      onReorder(reorderManualOrder(reordered));
-      if (projectId) void setStageSortManual(projectId, activeRequirement.stage);
+      void onReorder(reorderManualOrder(reordered), activeRequirement.stage);
     }
   }
 

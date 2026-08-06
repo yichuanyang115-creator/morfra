@@ -6,6 +6,8 @@ import { projectDir } from "../lib/paths";
 import { todayIso } from "../lib/dates";
 import { FIELD_KEYS, progressOf, releaseDateOf, withAttributeValue } from "../lib/requirementFields";
 import { loadRequirement, saveRequirement } from "./requirementPersistence";
+import { undoStack } from "../lib/undoStack";
+import { enqueueRequirementMutation, mutateRequirement, reorderRequirements } from "./requirementMutations";
 
 interface RequirementState {
   requirements: Requirement[];
@@ -57,28 +59,13 @@ interface RequirementState {
   updateTransitionNote: (projectId: string, requirementId: string, transitionId: string, note: string) => Promise<void>;
   addComment: (projectId: string, requirementId: string, transitionId: string, content: string) => Promise<void>;
   removeTransition: (projectId: string, requirementId: string, transitionId: string) => Promise<void>;
-  reorderManually: (projectId: string, updates: { requirementId: string; manualOrder: number }[]) => Promise<void>;
+  reorderManually: (
+    projectId: string,
+    updates: { requirementId: string; manualOrder: number }[],
+    undoSideEffect?: () => Promise<void>,
+  ) => Promise<void>;
   /** 对全部需求的某个属性值做批量转换（改属性类型/删属性时的级联，见 Product-Spec REQ-025 删除连带影响）。 */
   cascadeAttributeChange: (projectId: string, attributeId: string, transform: (value: unknown) => unknown) => Promise<void>;
-}
-
-type Get = () => RequirementState;
-type Set = (fn: (state: RequirementState) => Partial<RequirementState>) => void;
-
-async function mutateRequirement(
-  get: Get,
-  set: Set,
-  projectId: string,
-  requirementId: string,
-  transform: (requirement: Requirement) => Requirement,
-): Promise<void> {
-  const requirement = get().requirements.find((r) => r.id === requirementId);
-  if (!requirement) return;
-  const updated = transform(requirement);
-  await saveRequirement(projectId, updated);
-  set((state) => ({
-    requirements: state.requirements.map((r) => (r.id === requirementId ? updated : r)),
-  }));
 }
 
 export const useRequirementStore = create<RequirementState>((set, get) => ({
@@ -89,6 +76,8 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
 
   loadForProject: async (projectId) => {
     if (get().loading) return;
+    // Undo 命令闭包绑定项目 id；项目切换后继续执行旧命令会静默修改不可见项目。
+    undoStack.clear();
     set({ loading: true, error: false });
 
     try {
@@ -111,8 +100,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       set({ loadedProjectId: projectId, loading: false, error: true });
     }
   },
-
-  createRequirement: async (projectId, stage, name) => {
+  createRequirement: (projectId, stage, name) => enqueueRequirementMutation(async () => {
     // 新建置顶：manualOrder 落到该阶段现有最小值之前，手动模式下新建的需求排在最前面
     const existingInStage = get().requirements.filter((r) => r.stage === stage);
     const minOrder = existingInStage.reduce((min, r) => Math.min(min, r.manualOrder), 0);
@@ -142,8 +130,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     };
     await saveRequirement(projectId, requirement);
     set((state) => ({ requirements: [...state.requirements, requirement] }));
-  },
-
+  }),
   renameRequirement: (projectId, requirementId, name) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({ ...r, name })),
 
@@ -151,29 +138,24 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       attributeValues: withAttributeValue(r, key, value),
-    })),
-
+    }), "修改属性"),
   updateBody: (projectId, requirementId, body) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({ ...r, body })),
-
   addDeliverable: (projectId, requirementId, name) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => {
       const deliverable: Deliverable = { id: nanoid(), name, checked: false, attach: null, createdAt: new Date().toISOString() };
       return { ...r, deliverables: [...r.deliverables, deliverable] };
-    }),
-
+    }, "新建产出"),
   updateDeliverable: (projectId, requirementId, deliverableId, patch) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       deliverables: r.deliverables.map((d) => (d.id === deliverableId ? { ...d, ...patch } : d)),
-    })),
-
+    }), "修改产出"),
   removeDeliverable: (projectId, requirementId, deliverableId) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       deliverables: r.deliverables.filter((d) => d.id !== deliverableId),
-    })),
-
+    }), "删除产出"),
   addTask: (projectId, requirementId, task) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => {
       const newTask: Task = {
@@ -188,19 +170,18 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
         createdAt: new Date().toISOString(),
       };
       return { ...r, tasks: [...r.tasks, newTask] };
-    }),
-
+    }, "新建任务"),
   updateTask: (projectId, requirementId, taskId, patch) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       tasks: r.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
-    })),
+    }), "修改任务"),
 
   removeTask: (projectId, requirementId, taskId) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       tasks: r.tasks.filter((t) => t.id !== taskId),
-    })),
+    }), "删除任务"),
 
   addAcceptance: (projectId, requirementId, desc) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => {
@@ -212,37 +193,37 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
         createdAt: new Date().toISOString(),
       };
       return { ...r, acceptance: [...r.acceptance, criterion] };
-    }),
+    }, "新建验收标准"),
 
   updateAcceptance: (projectId, requirementId, acceptanceId, patch) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       acceptance: r.acceptance.map((a) => (a.id === acceptanceId ? { ...a, ...patch } : a)),
-    })),
+    }), "修改验收标准"),
 
   removeAcceptance: (projectId, requirementId, acceptanceId) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       acceptance: r.acceptance.filter((a) => a.id !== acceptanceId),
-    })),
+    }), "删除验收标准"),
 
   addTabRecord: (projectId, requirementId, tabId, fieldValues) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => {
       const record: TabRecord = { id: nanoid(), tabId, fieldValues, createdAt: new Date().toISOString() };
       return { ...r, tabRecords: [...(r.tabRecords ?? []), record] };
-    }),
+    }, "新建 Tab 记录"),
 
   updateTabRecord: (projectId, requirementId, recordId, fieldValues) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       tabRecords: (r.tabRecords ?? []).map((record) => (record.id === recordId ? { ...record, fieldValues } : record)),
-    })),
+    }), "修改 Tab 记录"),
 
   removeTabRecord: (projectId, requirementId, recordId) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       tabRecords: (r.tabRecords ?? []).filter((record) => record.id !== recordId),
-    })),
+    }), "删除 Tab 记录"),
 
   transitionRequirement: (projectId, requirementId, toStage, opts) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => {
@@ -275,7 +256,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
         [FIELD_KEYS.releaseDate]: releaseDate,
       };
       return { ...r, stage: targetStage, attributeValues, manualOrder, transitions: [...r.transitions, record] };
-    }),
+    }, "流转阶段"),
 
   updateTransitionNote: (projectId, requirementId, transitionId, note) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
@@ -296,26 +277,24 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       comments: r.comments.filter((c) => c.transitionId !== transitionId),
     })),
 
-  reorderManually: async (projectId, updates) => {
-    const byId = new Map(updates.map((u) => [u.requirementId, u.manualOrder]));
-    const current = get().requirements;
-    const updated = current.map((r) => (byId.has(r.id) ? { ...r, manualOrder: byId.get(r.id)! } : r));
-    await Promise.all(
-      updated.filter((r) => byId.has(r.id)).map((r) => saveRequirement(projectId, r)),
-    );
-    set({ requirements: updated });
-  },
+  reorderManually: (projectId, updates, undoSideEffect) =>
+    reorderRequirements(get, set, projectId, updates, undoSideEffect),
 
-  cascadeAttributeChange: async (projectId, attributeId, transform) => {
-    const current = get().requirements;
-    const updated = current.map((r) =>
-      attributeId in r.attributeValues
-        ? { ...r, attributeValues: withAttributeValue(r, attributeId, transform(r.attributeValues[attributeId])) }
-        : r,
-    );
-    await Promise.all(
-      updated.filter((r, i) => r !== current[i]).map((r) => saveRequirement(projectId, r)),
-    );
-    set({ requirements: updated });
+  cascadeAttributeChange: (projectId, attributeId, transform) => {
+    // 删除/改类型等结构操作会改变 attributeValues 的合法形态，先清掉快照并建立
+    // 失效边界，避免此刻仍在落盘的普通操作把删除前的字段重新入栈。
+    undoStack.clear();
+    return enqueueRequirementMutation(async () => {
+      const current = get().requirements;
+      const updated = current.map((r) =>
+        attributeId in r.attributeValues
+          ? { ...r, attributeValues: withAttributeValue(r, attributeId, transform(r.attributeValues[attributeId])) }
+          : r,
+      );
+      await Promise.all(
+        updated.filter((r, i) => r !== current[i]).map((r) => saveRequirement(projectId, r)),
+      );
+      set({ requirements: updated });
+    });
   },
 }));

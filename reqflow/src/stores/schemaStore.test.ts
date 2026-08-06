@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { undoStack } from "../lib/undoStack";
 
 const files = new Map<string, string>();
 
@@ -58,6 +59,7 @@ describe("schemaStore.loadForProject", () => {
 describe("schemaStore 属性/阶段/Tab CRUD", () => {
   beforeEach(async () => {
     files.clear();
+    undoStack.clear();
     useSchemaStore.setState({ schema: null, loadedProjectId: null, justMigrated: false });
     await useSchemaStore.getState().loadForProject("proj-1", []);
   });
@@ -85,6 +87,13 @@ describe("schemaStore 属性/阶段/Tab CRUD", () => {
     await removeAttribute("proj-1", "priority");
 
     expect(useSchemaStore.getState().schema?.attributes.some((a) => a.id === "priority")).toBe(false);
+  });
+
+  it("结构操作会清空此前的 Undo 命令", async () => {
+    undoStack.push({ summary: "修改属性", undo: async () => undefined });
+    await useSchemaStore.getState().removeAttribute("proj-1", "priority");
+
+    expect(undoStack.size).toBe(0);
   });
 
   it("reorderAttributes 按传入的 id 顺序重排属性并落盘", async () => {

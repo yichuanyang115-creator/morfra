@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { progressOf, releaseDateOf, resultOf } from "../lib/requirementFields";
+import { undoStack } from "../lib/undoStack";
 
 const files = new Map<string, string>();
 
@@ -752,6 +753,129 @@ describe("requirementStore manualOrder（手动排序）", () => {
 
     const filePath = `/app-local-data/projects/proj-1/${a.id}.md`;
     expect(files.get(filePath)).toContain("manualOrder: 5");
+  });
+});
+
+describe("requirementStore Undo（REQ-027）", () => {
+  beforeEach(() => {
+    files.clear();
+    undoStack.clear();
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+  });
+
+  it("属性修改、Tab 记录增删改和阶段流转可按逆序撤销", async () => {
+    const { createRequirement, updateAttributeValue, addTabRecord, updateTabRecord, removeTabRecord, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求 A");
+    const requirement = useRequirementStore.getState().requirements[0];
+
+    await updateAttributeValue("proj-1", requirement.id, "priority", "P0");
+    await addTabRecord("proj-1", requirement.id, "custom", { name: "记录" });
+    const record = useRequirementStore.getState().requirements[0]?.tabRecords?.[0];
+    if (!record) throw new Error("预期新建的 Tab 记录存在");
+    await updateTabRecord("proj-1", requirement.id, record.id, { name: "已修改记录" });
+    await removeTabRecord("proj-1", requirement.id, record.id);
+    await transitionRequirement("proj-1", requirement.id, "need");
+
+    expect(undoStack.size).toBe(5);
+    await expect(undoStack.undo()).resolves.toBe("流转阶段");
+    expect(useRequirementStore.getState().requirements[0].stage).toBe("collect");
+    await expect(undoStack.undo()).resolves.toBe("删除 Tab 记录");
+    const afterRestore = useRequirementStore.getState().requirements[0];
+    expect(afterRestore?.tabRecords).toHaveLength(1);
+    expect(afterRestore?.tabRecords?.[0]?.fieldValues.name).toBe("已修改记录");
+    await expect(undoStack.undo()).resolves.toBe("修改 Tab 记录");
+    expect(useRequirementStore.getState().requirements[0]?.tabRecords?.[0]?.fieldValues.name).toBe("记录");
+    await expect(undoStack.undo()).resolves.toBe("新建 Tab 记录");
+    expect(useRequirementStore.getState().requirements[0].tabRecords).toHaveLength(0);
+    await expect(undoStack.undo()).resolves.toBe("修改属性");
+    expect(useRequirementStore.getState().requirements[0].attributeValues.priority).toBe("P2");
+  });
+
+  it("属性结构变更会清空 Undo 栈，避免旧快照把已删除字段写回", async () => {
+    const { createRequirement, updateAttributeValue, cascadeAttributeChange } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求 B");
+    const requirement = useRequirementStore.getState().requirements[0];
+    await updateAttributeValue("proj-1", requirement.id, "priority", "P0");
+    await cascadeAttributeChange("proj-1", "priority", () => undefined);
+
+    expect(undoStack.size).toBe(0);
+    await expect(undoStack.undo()).resolves.toBeNull();
+    expect(useRequirementStore.getState().requirements[0].attributeValues.priority).toBeUndefined();
+  });
+
+  it("结构操作开始后，先前尚在落盘的属性修改不能把旧快照重新推入 Undo 栈", async () => {
+    const { createRequirement, updateAttributeValue, cascadeAttributeChange } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求竞态");
+    const requirement = useRequirementStore.getState().requirements[0];
+
+    const pendingUpdate = updateAttributeValue("proj-1", requirement.id, "priority", "P0");
+    const pendingCascade = cascadeAttributeChange("proj-1", "priority", () => undefined);
+    await Promise.all([pendingUpdate, pendingCascade]);
+
+    expect(undoStack.size).toBe(0);
+    expect(useRequirementStore.getState().requirements[0].attributeValues.priority).toBeUndefined();
+  });
+
+  it("手动排序撤销后恢复所有受影响需求的顺序", async () => {
+    const { createRequirement, reorderManually } = useRequirementStore.getState();
+    await createRequirement("proj-1", "design", "需求 A");
+    await createRequirement("proj-1", "design", "需求 B");
+    const [first, second] = useRequirementStore.getState().requirements;
+
+    const undoStageSort = vi.fn(async () => undefined);
+    await reorderManually("proj-1", [
+      { requirementId: first.id, manualOrder: 8 },
+      { requirementId: second.id, manualOrder: 9 },
+    ], undoStageSort);
+    await undoStack.undo();
+
+    const restored = useRequirementStore.getState().requirements;
+    expect(restored.find((item) => item.id === first.id)?.manualOrder).toBe(first.manualOrder);
+    expect(restored.find((item) => item.id === second.id)?.manualOrder).toBe(second.manualOrder);
+    expect(undoStageSort).toHaveBeenCalledOnce();
+  });
+
+  it("连续异步修改不同属性时按调用顺序合并，而不是用旧快照互相覆盖", async () => {
+    const { createRequirement, updateAttributeValue } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求 C");
+    const requirement = useRequirementStore.getState().requirements[0];
+
+    await Promise.all([
+      updateAttributeValue("proj-1", requirement.id, "priority", "P0"),
+      updateAttributeValue("proj-1", requirement.id, "source", "用户反馈"),
+    ]);
+
+    const updated = useRequirementStore.getState().requirements[0];
+    expect(updated.attributeValues.priority).toBe("P0");
+    expect(updated.attributeValues.source).toBe("用户反馈");
+    expect(undoStack.size).toBe(2);
+  });
+
+  it("Undo 与已发起但未完成的新编辑共用队列，不会覆盖新编辑之前的状态", async () => {
+    const { createRequirement, updateAttributeValue } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求并发撤销");
+    const requirement = useRequirementStore.getState().requirements[0];
+    await updateAttributeValue("proj-1", requirement.id, "priority", "P0");
+
+    const pendingChange = updateAttributeValue("proj-1", requirement.id, "source", "用户反馈");
+    const pendingUndo = undoStack.undo();
+    await Promise.all([pendingChange, pendingUndo]);
+
+    const updated = useRequirementStore.getState().requirements[0];
+    expect(updated.attributeValues.priority).toBe("P0");
+    expect(updated.attributeValues.source).toBe("内部想法");
+  });
+
+  it("切换项目时清空 Undo 栈，避免撤销命令修改不可见的旧项目", async () => {
+    const { createRequirement, updateAttributeValue, loadForProject } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "需求 D");
+    const requirement = useRequirementStore.getState().requirements[0];
+    await updateAttributeValue("proj-1", requirement.id, "priority", "P0");
+
+    await loadForProject("proj-2");
+
+    expect(undoStack.size).toBe(0);
+    await expect(undoStack.undo()).resolves.toBeNull();
   });
 });
 

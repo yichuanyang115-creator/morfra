@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Topbar } from "./components/topbar/Topbar";
 import { MainLayout } from "./components/layout/MainLayout";
 import { Board } from "./components/board/Board";
@@ -13,6 +13,8 @@ import { detailAttributesFor } from "./lib/schemaSelectors";
 import { countValuedAttribute, typeChangeImpact } from "./lib/attributeImpact";
 import { convertAttributeValue, optionsForTypeChange } from "./lib/attributeTypeConversion";
 import { Toast } from "./components/shared/Toast";
+import { UndoToast } from "./components/shared/UndoToast";
+import { useUndoKeyboard } from "./hooks/useUndoKeyboard";
 
 function mostRecentRequirementId<T extends { id: string; createdAt: string }>(requirements: T[]): string | null {
   if (requirements.length === 0) return null;
@@ -20,6 +22,9 @@ function mostRecentRequirementId<T extends { id: string; createdAt: string }>(re
 }
 
 function App() {
+  const [undoSummary, setUndoSummary] = useState<string | null>(null);
+  const showUndoToast = useCallback((summary: string) => setUndoSummary(summary), []);
+  useUndoKeyboard(showUndoToast);
   const initProjects = useProjectStore((s) => s.init);
   const projectsLoaded = useProjectStore((s) => s.loaded);
   const projectsError = useProjectStore((s) => s.error);
@@ -87,6 +92,9 @@ function App() {
   const updateTab = useSchemaStore((s) => s.updateTab);
   const removeTab = useSchemaStore((s) => s.removeTab);
   const reorderTabs = useSchemaStore((s) => s.reorderTabs);
+  const setStageSortManual = useSchemaStore((s) => s.setStageSortManual);
+  const setStageSort = useSchemaStore((s) => s.setStageSort);
+  const clearStageSort = useSchemaStore((s) => s.clearStageSort);
 
   useEffect(() => {
     void initProjects();
@@ -235,8 +243,15 @@ function App() {
               onTransition={(requirementId, toStage) => {
                 if (currentProjectId) void transitionRequirement(currentProjectId, requirementId, toStage);
               }}
-              onReorder={(updates) => {
-                if (currentProjectId) void reorderManually(currentProjectId, updates);
+              onReorder={async (updates, stageId) => {
+                if (!currentProjectId) return;
+                const previousStageSort = schema?.viewPreferences.stageSorts?.[stageId] ?? null;
+                await setStageSortManual(currentProjectId, stageId);
+                await reorderManually(currentProjectId, updates, async () => {
+                  if (previousStageSort === null) await clearStageSort(currentProjectId, stageId);
+                  else if ("mode" in previousStageSort) await setStageSortManual(currentProjectId, stageId);
+                  else await setStageSort(currentProjectId, stageId, previousStageSort);
+                });
               }}
               onEditAttribute={(attributeId) => openSettings({ kind: "attributes", attributeId })}
               onHideAttribute={(attributeId) => {
@@ -352,6 +367,7 @@ function App() {
         />
       )}
       {justMigrated && <Toast message="项目已自动升级为动态 Schema" onDismiss={acknowledgeMigration} />}
+      {undoSummary && <UndoToast summary={undoSummary} onDismiss={() => setUndoSummary(null)} />}
     </div>
   );
 }

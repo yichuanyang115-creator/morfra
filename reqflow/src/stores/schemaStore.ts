@@ -5,6 +5,7 @@ import { writeFile } from "../lib/fs";
 import { schemaPath } from "../lib/paths";
 import { migrateIfNeeded } from "../lib/migration";
 import { blankSchema } from "../lib/schemaDefaults";
+import { undoStack } from "../lib/undoStack";
 
 interface SchemaState {
   schema: Schema | null;
@@ -45,10 +46,20 @@ async function persistSchema(projectId: string, schema: Schema): Promise<void> {
   await writeFile(path, JSON.stringify(schema, null, 2));
 }
 
-async function mutateSchema(get: Get, set: Set, projectId: string, transform: (schema: Schema) => Schema): Promise<void> {
+async function mutateSchema(
+  get: Get,
+  set: Set,
+  projectId: string,
+  transform: (schema: Schema) => Schema,
+  invalidateUndo = false,
+): Promise<void> {
   const schema = get().schema;
   if (!schema) return;
   const updated = transform(schema);
+  if (updated === schema) return;
+  // 先建立失效边界，再等待异步落盘。否则此刻并发启动的实体写入会在结构操作
+  // 完成后把携带旧字段/旧 Tab 的快照推回 Undo 栈。
+  if (invalidateUndo) undoStack.clear();
   await persistSchema(projectId, updated);
   set(() => ({ schema: updated }));
 }
@@ -77,13 +88,13 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
     mutateSchema(get, set, projectId, (schema) => ({
       ...schema,
       attributes: [...schema.attributes, attribute],
-    })),
+    }), true),
 
   updateAttribute: (projectId, attributeId, patch) =>
     mutateSchema(get, set, projectId, (schema) => ({
       ...schema,
       attributes: schema.attributes.map((a) => (a.id === attributeId ? { ...a, ...patch } : a)),
-    })),
+    }), true),
 
   removeAttribute: (projectId, attributeId) =>
     mutateSchema(get, set, projectId, (schema) => {
@@ -96,26 +107,26 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
         attributes: schema.attributes.filter((a) => a.id !== attributeId),
         viewPreferences: { ...schema.viewPreferences, globalSort, stageSorts },
       };
-    }),
+    }, true),
 
   reorderAttributes: (projectId, orderedIds) =>
     mutateSchema(get, set, projectId, (schema) => {
       const byId = new Map(schema.attributes.map((a) => [a.id, a]));
       const reordered = orderedIds.map((id) => byId.get(id)).filter((a): a is Attribute => a !== undefined);
       return { ...schema, attributes: reordered };
-    }),
+    }, true),
 
   addStageOption: (projectId, stageOption) =>
     mutateSchema(get, set, projectId, (schema) => ({
       ...schema,
       stageOptions: [...schema.stageOptions, stageOption],
-    })),
+    }), true),
 
   updateStageOption: (projectId, stageOptionId, patch) =>
     mutateSchema(get, set, projectId, (schema) => ({
       ...schema,
       stageOptions: schema.stageOptions.map((s) => (s.id === stageOptionId ? { ...s, ...patch } : s)),
-    })),
+    }), true),
 
   removeStageOption: (projectId, stageOptionId) =>
     mutateSchema(get, set, projectId, (schema) => {
@@ -123,39 +134,39 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
       // 而不是只靠 UI 禁用——防止调用方漏加保护导致应用进入无阶段可用的坏状态。
       if (schema.stageOptions.length <= 1) return schema;
       return { ...schema, stageOptions: schema.stageOptions.filter((s) => s.id !== stageOptionId) };
-    }),
+    }, true),
 
   reorderStageOptions: (projectId, orderedIds) =>
     mutateSchema(get, set, projectId, (schema) => {
       const byId = new Map(schema.stageOptions.map((s) => [s.id, s]));
       const reordered = orderedIds.map((id) => byId.get(id)).filter((s): s is StageOption => s !== undefined);
       return { ...schema, stageOptions: reordered };
-    }),
+    }, true),
 
   addTab: (projectId, tab) =>
     mutateSchema(get, set, projectId, (schema) => ({
       ...schema,
       tabs: [...schema.tabs, tab],
-    })),
+    }), true),
 
   updateTab: (projectId, tabId, patch) =>
     mutateSchema(get, set, projectId, (schema) => ({
       ...schema,
       tabs: schema.tabs.map((t) => (t.id === tabId ? { ...t, ...patch } : t)),
-    })),
+    }), true),
 
   removeTab: (projectId, tabId) =>
     mutateSchema(get, set, projectId, (schema) => ({
       ...schema,
       tabs: schema.tabs.filter((t) => t.id !== tabId),
-    })),
+    }), true),
 
   reorderTabs: (projectId, orderedIds) =>
     mutateSchema(get, set, projectId, (schema) => {
       const byId = new Map(schema.tabs.map((t) => [t.id, t]));
       const reordered = orderedIds.map((id) => byId.get(id)).filter((t): t is TabDefinition => t !== undefined);
       return { ...schema, tabs: reordered };
-    }),
+    }, true),
 
   // 视图偏好（列宽/列序/冻结）不改 attributes 数组本身，只写 viewPreferences——
   // 讨论稿 §7 把它归为"可逆、不动 Schema"的一层，与 reorderAttributes 改属性
