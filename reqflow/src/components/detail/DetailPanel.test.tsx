@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DetailPanel } from "./DetailPanel";
 import type { Requirement } from "../../types/models";
-import type { Attribute } from "../../types/schema";
+import type { Attribute, TabDefinition } from "../../types/schema";
 
 function makeRequirement(overrides: Partial<Omit<Requirement, "attributeValues">> = {}): Requirement {
   return {
@@ -57,7 +57,33 @@ const noopHandlers = {
   onDeleteTransition: vi.fn(),
 };
 
+const genericTabs: TabDefinition[] = [
+  { id: "review", name: "复盘", renderer: "generic", visible: true, fields: [{ id: "name", name: "名称", type: "text" }] },
+];
+
 describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
+  it("自定义 Tab 的新建记录入口位于 Tab 栏右侧，点击后显示内容区草稿", async () => {
+    render(
+      <DetailPanel
+        requirement={makeRequirement()}
+        attributes={[]}
+        tabs={genericTabs}
+        projectId="p-1"
+        isTerminal={false}
+        width={800}
+        fullscreen={false}
+        activeTab="review"
+        onToggleFullscreen={vi.fn()}
+        {...noopHandlers}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "新建复盘记录" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "+ 添加记录" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "新建复盘记录" }));
+    expect(screen.getByRole("button", { name: "保存记录" })).toBeInTheDocument();
+  });
+
   it("requirement 为 null 时显示引导占位文案，不渲染详情内容（未选中任何需求）", () => {
     render(
       <DetailPanel

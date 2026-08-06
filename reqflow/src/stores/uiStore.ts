@@ -5,7 +5,7 @@ import { BOARD_DEFAULT_WIDTH, clampBoardWidth, type DetailLayoutMode } from "../
  * 两个同语义类型分别声明后维护者改一处忘另一处（Phase 17 code review 发现）。 */
 export type DetailMode = DetailLayoutMode;
 
-export type DetailTab = "body" | "produce" | "tasks" | "acceptance" | "activity";
+export type DetailTab = string;
 
 /** Schema 设置页左侧导航的三个区域，"tab" 携带具体 tabId 定位到某个 Tab 的字段配置。 */
 export type SettingsSection =

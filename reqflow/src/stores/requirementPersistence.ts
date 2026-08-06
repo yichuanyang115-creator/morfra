@@ -1,4 +1,4 @@
-import type { AcceptanceCriterion, Comment, Deliverable, Requirement, Stage, Task, TransitionRecord } from "../types/models";
+import type { AcceptanceCriterion, Comment, Deliverable, Requirement, Stage, TabRecord, Task, TransitionRecord } from "../types/models";
 import { readFile, writeFile } from "../lib/fs";
 import { parseFrontmatter, stringifyFrontmatter } from "../lib/frontmatter";
 import { requirementPath } from "../lib/paths";
@@ -14,6 +14,7 @@ export interface RequirementFrontmatter {
   deliverables: Deliverable[];
   tasks: Task[];
   acceptance: AcceptanceCriterion[];
+  tabRecords: TabRecord[];
   transitions: TransitionRecord[];
   comments: Comment[];
 }
@@ -43,6 +44,7 @@ export function toFrontmatter(r: Requirement): RequirementFrontmatter {
     deliverables: r.deliverables,
     tasks: r.tasks,
     acceptance: r.acceptance,
+    tabRecords: r.tabRecords ?? [],
     transitions: r.transitions,
     comments: r.comments,
   };
@@ -76,6 +78,7 @@ export function fromFrontmatter(data: StoredFrontmatter, fallbackId: string, bod
     deliverables: data.deliverables ?? [],
     tasks: data.tasks ?? [],
     acceptance: data.acceptance ?? [],
+    tabRecords: data.tabRecords ?? [],
     transitions: data.transitions ?? [],
     comments: data.comments ?? [],
   };

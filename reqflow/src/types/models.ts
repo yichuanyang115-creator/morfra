@@ -71,6 +71,7 @@ export interface Requirement {
   deliverables: Deliverable[];
   tasks: Task[];
   acceptance: AcceptanceCriterion[];
+  tabRecords?: TabRecord[];
   transitions: TransitionRecord[];
   comments: Comment[];
 }
@@ -88,6 +89,13 @@ export interface AcceptanceCriterion {
   desc: string;
   result: AcceptanceResult;
   failNote: string;
+  createdAt: string;
+}
+
+export interface TabRecord {
+  id: string;
+  tabId: string;
+  fieldValues: Record<string, unknown>;
   createdAt: string;
 }
 

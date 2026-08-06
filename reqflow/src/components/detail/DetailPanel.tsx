@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import type { Deliverable, Requirement, Stage, Task } from "../../types/models";
-import type { Attribute } from "../../types/schema";
+import type { Attribute, TabDefinition } from "../../types/schema";
 import type { DetailTab } from "../../stores/uiStore";
 import { DETAIL_MIN_WIDTH } from "../../lib/boardWidth";
 import { DetailHeader } from "./DetailHeader";
@@ -15,6 +15,7 @@ import type { AcceptancePatch } from "./tabs/acceptanceShared";
 import { ActivityTab } from "./tabs/ActivityTab";
 import { TemplateDrawer } from "../editor/TemplateDrawer";
 import { resultOf } from "../../lib/requirementFields";
+import { GenericTab } from "./tabs/GenericTab";
 
 function PlusIcon() {
   return (
@@ -28,6 +29,8 @@ interface DetailPanelProps {
   requirement: Requirement | null;
   /** 已按 schema showOnDetail 过滤好的属性列表，见 lib/schemaSelectors.ts 的 detailAttributesFor。 */
   attributes: Attribute[];
+  tabs?: TabDefinition[];
+  projectId?: string | null;
   /** 该实体所属阶段是否终态（见 Attribute Grid 的 result 只读规则，REQ-022）。 */
   isTerminal: boolean;
   /** 详情面板当前实际渲染宽度，由 MainLayout 用 detailPanelWidthFor 算出后传入——
@@ -66,6 +69,8 @@ interface DetailPanelProps {
 export function DetailPanel({
   requirement,
   attributes,
+  tabs,
+  projectId = null,
   isTerminal,
   width,
   fullscreen,
@@ -94,10 +99,21 @@ export function DetailPanel({
   const [produceDraftOpen, setProduceDraftOpen] = useState(false);
   const [taskDraftOpen, setTaskDraftOpen] = useState(false);
   const [acceptanceDraftOpen, setAcceptanceDraftOpen] = useState(false);
+  const [genericDraftTabId, setGenericDraftTabId] = useState<string | null>(null);
   // 属性区两列→单列的切换阈值（REQ-003 v2.8）：width 是 MainLayout 算出的详情面板
   // 确切宽度，跟 960px 可读性上限（由 MainLayout 外层容器的 max-width 负责）互不
   // 影响——480 远小于 960，两条阈值不会互相干扰。
   const compact = width <= DETAIL_MIN_WIDTH;
+  const effectiveTabs = tabs ?? [
+    { id: "body", name: "正文", renderer: "body" as const, visible: true },
+    { id: "produce", name: "产出", renderer: "deliverables" as const, visible: true },
+    { id: "tasks", name: "任务", renderer: "tasks" as const, visible: true },
+    { id: "acceptance", name: "验收", renderer: "acceptance" as const, visible: true },
+    { id: "activity", name: "活动", renderer: "activity" as const, visible: true },
+  ];
+  const activeDefinition = effectiveTabs.find((tab) => tab.id === activeTab) ?? effectiveTabs.find((tab) => tab.visible);
+  const activeRenderer = activeDefinition?.renderer;
+  const effectiveActiveTab = activeDefinition?.id ?? activeTab;
 
   if (!requirement) {
     return (
@@ -128,16 +144,17 @@ export function DetailPanel({
         onTransition={onTransition}
       />
       <TabBar
-        activeTab={activeTab}
+        tabs={effectiveTabs}
+        activeTab={effectiveActiveTab}
         onSelectTab={onSelectTab}
         slot={
-          activeTab === "body" ? (
+          activeRenderer === "body" ? (
             <TemplateDrawer
               onInsert={(templateMarkdown) => {
                 editorRef.current?.chain().focus().insertContent(templateMarkdown, { contentType: "markdown" }).run();
               }}
             />
-          ) : activeTab === "produce" ? (
+          ) : activeRenderer === "deliverables" ? (
             <button
               type="button"
               title="新建产出"
@@ -147,7 +164,7 @@ export function DetailPanel({
             >
               <PlusIcon />
             </button>
-          ) : activeTab === "tasks" ? (
+          ) : activeRenderer === "tasks" ? (
             <button
               type="button"
               title="新建任务"
@@ -157,7 +174,7 @@ export function DetailPanel({
             >
               <PlusIcon />
             </button>
-          ) : activeTab === "acceptance" ? (
+          ) : activeRenderer === "acceptance" ? (
             <button
               type="button"
               title="新建验收标准"
@@ -167,11 +184,21 @@ export function DetailPanel({
             >
               <PlusIcon />
             </button>
+          ) : activeRenderer === "generic" && activeDefinition ? (
+            <button
+              type="button"
+              title={`新建${activeDefinition.name}记录`}
+              aria-label={`新建${activeDefinition.name}记录`}
+              onClick={() => setGenericDraftTabId(activeDefinition.id)}
+              className="grid size-6.5 place-items-center rounded-full border border-(--border-strong) bg-(--surface) text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
+            >
+              <PlusIcon />
+            </button>
           ) : undefined
         }
       />
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        {activeTab === "body" ? (
+        {activeRenderer === "body" ? (
           <BodyTab
             markdown={requirement.body}
             onChange={onBodyChange}
@@ -179,7 +206,7 @@ export function DetailPanel({
               editorRef.current = editor;
             }}
           />
-        ) : activeTab === "produce" ? (
+        ) : activeRenderer === "deliverables" ? (
           <DeliverablesTab
             deliverables={requirement.deliverables}
             draftOpen={produceDraftOpen}
@@ -191,7 +218,7 @@ export function DetailPanel({
             onUpdate={onUpdateDeliverable}
             onRemove={onRemoveDeliverable}
           />
-        ) : activeTab === "tasks" ? (
+        ) : activeRenderer === "tasks" ? (
           <TasksTab
             tasks={requirement.tasks}
             draftOpen={taskDraftOpen}
@@ -203,7 +230,7 @@ export function DetailPanel({
             onUpdate={onUpdateTask}
             onRemove={onRemoveTask}
           />
-        ) : activeTab === "acceptance" ? (
+        ) : activeRenderer === "acceptance" ? (
           <AcceptanceTab
             acceptance={requirement.acceptance}
             draftOpen={acceptanceDraftOpen}
@@ -215,7 +242,7 @@ export function DetailPanel({
             onUpdate={onUpdateAcceptance}
             onRemove={onRemoveAcceptance}
           />
-        ) : (
+        ) : activeRenderer === "activity" ? (
           <ActivityTab
             currentStage={requirement.stage}
             transitions={requirement.transitions}
@@ -225,7 +252,16 @@ export function DetailPanel({
             onAddComment={onAddComment}
             onDelete={onDeleteTransition}
           />
-        )}
+        ) : activeDefinition ? (
+          <GenericTab
+            key={activeDefinition.id}
+            projectId={projectId}
+            requirementId={requirement.id}
+            tab={activeDefinition}
+            draftOpen={genericDraftTabId === activeDefinition.id}
+            onCloseDraft={() => setGenericDraftTabId(null)}
+          />
+        ) : null}
       </div>
     </div>
   );

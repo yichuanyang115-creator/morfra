@@ -1,37 +1,31 @@
 import type { DetailTab } from "../../stores/uiStore";
-
-const TABS: { key: DetailTab; label: string }[] = [
-  { key: "body", label: "正文" },
-  { key: "produce", label: "产出" },
-  { key: "tasks", label: "任务" },
-  { key: "acceptance", label: "验收" },
-  { key: "activity", label: "活动" },
-];
+import type { TabDefinition } from "../../types/schema";
 
 interface TabBarProps {
   activeTab: DetailTab;
   onSelectTab: (tab: DetailTab) => void;
+  tabs: TabDefinition[];
   slot?: React.ReactNode;
 }
 
-export function TabBar({ activeTab, onSelectTab, slot }: TabBarProps) {
+export function TabBar({ activeTab, onSelectTab, tabs, slot }: TabBarProps) {
   return (
     <div className="flex flex-none items-center justify-between gap-2 border-b border-(--border) py-1 pr-2 pl-3" role="tablist">
       <div className="flex min-w-0 flex-1 gap-0.5">
-        {TABS.map((tab) => (
+        {tabs.filter((tab) => tab.visible).map((tab) => (
           <button
-            key={tab.key}
+            key={tab.id}
             type="button"
             role="tab"
-            aria-selected={activeTab === tab.key}
-            onClick={() => onSelectTab(tab.key)}
+            aria-selected={activeTab === tab.id}
+            onClick={() => onSelectTab(tab.id)}
             className={`min-w-0 flex-1 rounded-(--r-sm) px-2.5 py-1.5 text-center text-[12.5px] text-ellipsis whitespace-nowrap overflow-hidden ${
-              activeTab === tab.key
+              activeTab === tab.id
                 ? "bg-(--accent-soft-strong) font-[550] text-(--fg)"
                 : "text-(--muted) hover:text-(--fg)"
             }`}
           >
-            {tab.label}
+            {tab.name}
           </button>
         ))}
       </div>

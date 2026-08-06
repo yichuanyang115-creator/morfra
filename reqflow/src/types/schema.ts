@@ -48,11 +48,20 @@ export interface StageOption {
 
 export type TabRenderer = "body" | "deliverables" | "tasks" | "acceptance" | "activity" | "generic";
 
+export interface TabField {
+  id: string;
+  name: string;
+  type: AttributeType;
+  options?: SelectOption[];
+  dependsOn?: AttributeDependency;
+}
+
 export interface TabDefinition {
   id: string;
   name: string;
   renderer: TabRenderer;
   visible: boolean;
+  fields?: TabField[];
 }
 
 /**

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type { AcceptanceCriterion, Comment, Deliverable, Requirement, Stage, Task, TransitionRecord } from "../types/models";
+import type { AcceptanceCriterion, Comment, Deliverable, Requirement, Stage, TabRecord, Task, TransitionRecord } from "../types/models";
 import { ensureDir, listFileNames } from "../lib/fs";
 import { projectDir } from "../lib/paths";
 import { todayIso } from "../lib/dates";
@@ -45,6 +45,9 @@ interface RequirementState {
     patch: Partial<Pick<AcceptanceCriterion, "desc" | "result" | "failNote">>,
   ) => Promise<void>;
   removeAcceptance: (projectId: string, requirementId: string, acceptanceId: string) => Promise<void>;
+  addTabRecord: (projectId: string, requirementId: string, tabId: string, fieldValues: Record<string, unknown>) => Promise<void>;
+  updateTabRecord: (projectId: string, requirementId: string, recordId: string, fieldValues: Record<string, unknown>) => Promise<void>;
+  removeTabRecord: (projectId: string, requirementId: string, recordId: string) => Promise<void>;
   transitionRequirement: (
     projectId: string,
     requirementId: string,
@@ -133,6 +136,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       deliverables: [],
       tasks: [],
       acceptance: [],
+      tabRecords: [],
       transitions: [],
       comments: [],
     };
@@ -220,6 +224,24 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     mutateRequirement(get, set, projectId, requirementId, (r) => ({
       ...r,
       acceptance: r.acceptance.filter((a) => a.id !== acceptanceId),
+    })),
+
+  addTabRecord: (projectId, requirementId, tabId, fieldValues) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => {
+      const record: TabRecord = { id: nanoid(), tabId, fieldValues, createdAt: new Date().toISOString() };
+      return { ...r, tabRecords: [...(r.tabRecords ?? []), record] };
+    }),
+
+  updateTabRecord: (projectId, requirementId, recordId, fieldValues) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      tabRecords: (r.tabRecords ?? []).map((record) => (record.id === recordId ? { ...record, fieldValues } : record)),
+    })),
+
+  removeTabRecord: (projectId, requirementId, recordId) =>
+    mutateRequirement(get, set, projectId, requirementId, (r) => ({
+      ...r,
+      tabRecords: (r.tabRecords ?? []).filter((record) => record.id !== recordId),
     })),
 
   transitionRequirement: (projectId, requirementId, toStage, opts) =>

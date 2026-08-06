@@ -258,6 +258,8 @@ function App() {
             <DetailPanel
               requirement={selectedRequirement}
               attributes={detailAttributes}
+              tabs={schema?.tabs ?? []}
+              projectId={currentProjectId}
               isTerminal={selectedStageOption?.isTerminal ?? false}
               width={width}
               fullscreen={detailMode === "fullscreen"}

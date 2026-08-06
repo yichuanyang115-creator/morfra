@@ -94,10 +94,10 @@ describe("TabManager", () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  it("点击展开的 Tab 行显示字段配置占位说明", () => {
+  it("点击展开的 Tab 行显示当前字段结构", () => {
     render(<TabManager {...baseProps} />);
 
-    expect(screen.getByText("字段结构配置将在后续开发中支持。")).toBeInTheDocument();
+    expect(screen.getByText("暂无字段，通用 Tab 将使用默认名称字段。")).toBeInTheDocument();
   });
 
   it("修改显示名后失焦触发 onUpdate", async () => {

@@ -1,15 +1,35 @@
 import { RELEASE_METHODS, STAGES } from "../types/models";
-import type { Attribute, Schema, StageOption, TabDefinition } from "../types/schema";
+import type { Attribute, Schema, StageOption, TabDefinition, TabField } from "../types/schema";
 import { paletteColorAt } from "./stagePalette";
 import { FIELD_KEYS } from "./requirementFields";
 
 const SCHEMA_VERSION = 1;
 
+const DELIVERABLE_FIELDS: TabField[] = [
+  { id: "name", name: "名称", type: "text" },
+  { id: "checked", name: "完成", type: "checkbox" },
+  { id: "attach", name: "附件", type: "attachment" },
+];
+const TASK_FIELDS: TabField[] = [
+  { id: "name", name: "名称", type: "text" },
+  { id: "assignee", name: "负责人", type: "text" },
+  { id: "deadline", name: "截止日期", type: "date" },
+  { id: "progress", name: "进度", type: "percent" },
+  { id: "status", name: "状态", type: "singleSelect", options: [{ id: "todo", label: "待开始" }, { id: "progress", label: "进行中" }, { id: "done", label: "完成" }] },
+  { id: "blocked", name: "阻塞", type: "checkbox" },
+  { id: "blockNote", name: "阻塞原因", type: "text", dependsOn: { attributeId: "blocked", value: true } },
+];
+const ACCEPTANCE_FIELDS: TabField[] = [
+  { id: "desc", name: "描述", type: "text" },
+  { id: "result", name: "结果", type: "singleSelect", options: [{ id: "pass", label: "通过" }, { id: "fail", label: "不通过" }, { id: "unverified", label: "未验证" }] },
+  { id: "failNote", name: "不通过原因", type: "text", dependsOn: { attributeId: "result", value: "fail" } },
+];
+
 const PRECAST_TABS: TabDefinition[] = [
   { id: "body", name: "正文", renderer: "body", visible: true },
-  { id: "deliverables", name: "产出", renderer: "deliverables", visible: true },
-  { id: "tasks", name: "任务", renderer: "tasks", visible: true },
-  { id: "acceptance", name: "验收", renderer: "acceptance", visible: true },
+  { id: "deliverables", name: "产出", renderer: "deliverables", visible: true, fields: DELIVERABLE_FIELDS },
+  { id: "tasks", name: "任务", renderer: "tasks", visible: true, fields: TASK_FIELDS },
+  { id: "acceptance", name: "验收", renderer: "acceptance", visible: true, fields: ACCEPTANCE_FIELDS },
   { id: "activity", name: "活动", renderer: "activity", visible: true },
 ];
 
