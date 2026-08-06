@@ -13,7 +13,7 @@ export function SaveTemplateDialog({ onCancel, onSave }: SaveTemplateDialogProps
   return (
     <ConfirmDialog
       title="保存为模板"
-      body="模板只保存当前阶段、属性和 Tab 结构，不会包含任何需求实体或看板视图偏好。"
+      body="模板只保存当前阶段、属性和 Tab 结构，不会包含任何实体数据或看板视图偏好。"
       onCancel={onCancel}
       onConfirm={() => {
         const trimmed = name.trim();

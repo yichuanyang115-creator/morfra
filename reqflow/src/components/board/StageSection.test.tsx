@@ -50,6 +50,7 @@ const noop = {
   onCreate: vi.fn(),
   onSelectRequirement: vi.fn(),
   onAttributeChange: vi.fn(),
+  onDelete: vi.fn(),
 };
 
 describe("StageSection", () => {
@@ -98,19 +99,19 @@ describe("StageSection", () => {
   it("没有需求时显示空状态文案", () => {
     render(<StageSection stageOption={DESIGN_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
-    expect(screen.getByText("该阶段暂无需求")).toBeInTheDocument();
+    expect(screen.getByText("该阶段暂无实体")).toBeInTheDocument();
   });
 
   it("收集阶段为空时空状态文案带引导语", () => {
     render(<StageSection stageOption={COLLECT_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
-    expect(screen.getByText("该阶段暂无需求，点上方新建记录你的第一个想法")).toBeInTheDocument();
+    expect(screen.getByText("该阶段暂无实体，点上方新建记录你的第一个想法")).toBeInTheDocument();
   });
 
   it("终态阶段不显示新建按钮", () => {
     render(<StageSection stageOption={ARCHIVE_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
-    expect(screen.queryByLabelText("新建需求")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("新建实体")).not.toBeInTheDocument();
   });
 
   it("点击新建按钮出现输入框，输入名称回车后 onCreate 收到去除首尾空格的名称，输入框关闭", async () => {
@@ -119,7 +120,7 @@ describe("StageSection", () => {
       <StageSection stageOption={DESIGN_STAGE} requirements={[]} selectedRequirementId={null} {...noop} onCreate={onCreate} />,
     );
 
-    await userEvent.click(screen.getByLabelText("新建需求"));
+    await userEvent.click(screen.getByLabelText("新建实体"));
     const input = screen.getByPlaceholderText("输入名称，回车创建");
     await userEvent.type(input, "  新需求  {Enter}");
 
@@ -161,8 +162,8 @@ describe("StageSection", () => {
   it("终态阶段标题行显示搜索框而不是新建按钮", () => {
     render(<StageSection stageOption={ARCHIVE_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 
-    expect(screen.getByPlaceholderText("搜索归档需求…")).toBeInTheDocument();
-    expect(screen.queryByLabelText("新建需求")).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("搜索归档实体…")).toBeInTheDocument();
+    expect(screen.queryByLabelText("新建实体")).not.toBeInTheDocument();
   });
 
   it("终态区域为空且未搜索时提示该阶段暂无需求，输入搜索词无匹配时提示没有匹配的需求", async () => {
@@ -175,8 +176,8 @@ describe("StageSection", () => {
       />,
     );
 
-    await userEvent.type(screen.getByPlaceholderText("搜索归档需求…"), "不存在的关键字");
-    expect(screen.getByText("没有匹配的需求")).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText("搜索归档实体…"), "不存在的关键字");
+    expect(screen.getByText("没有匹配的实体")).toBeInTheDocument();
   });
 
   it("终态区域按名称搜索过滤需求行，且按最近流转时间倒序排列", async () => {
@@ -205,7 +206,7 @@ describe("StageSection", () => {
     const rowNames = screen.getAllByText(/归档需求$/).map((el) => el.textContent);
     expect(rowNames).toEqual(["新的归档需求", "旧的归档需求"]);
 
-    await userEvent.type(screen.getByPlaceholderText("搜索归档需求…"), "旧的");
+    await userEvent.type(screen.getByPlaceholderText("搜索归档实体…"), "旧的");
     expect(screen.getByText("旧的归档需求")).toBeInTheDocument();
     expect(screen.queryByText("新的归档需求")).not.toBeInTheDocument();
   });
@@ -235,7 +236,7 @@ describe("StageSection", () => {
     expect(screen.queryByLabelText("排序")).not.toBeInTheDocument();
   });
 
-  it("阶段标题行背景色读取 stageOption.color", () => {
+  it("阶段标题仅用 Schema 色作名称前圆点，不填充整条背景", () => {
     const { container } = render(
       <StageSection
         stageOption={{ ...DESIGN_STAGE, color: "#ABCDEF" }}
@@ -246,6 +247,7 @@ describe("StageSection", () => {
     );
 
     const header = container.firstElementChild as HTMLElement;
-    expect(header.style.backgroundColor).toBe("rgb(171, 205, 239)");
+    expect(header.style.backgroundColor).toBe("");
+    expect(container.querySelector("span[style='background-color: rgb(171, 205, 239);']")).not.toBeNull();
   });
 });

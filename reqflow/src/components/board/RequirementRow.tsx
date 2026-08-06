@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Requirement } from "../../types/models";
@@ -7,6 +7,8 @@ import { FieldCell } from "./FieldCell";
 import { BOARD_COLUMN_GAP, frozenOffsetsFor, gridTemplateColumnsFor } from "../../lib/boardWidth";
 import { dependencySatisfied } from "../../lib/dependencyEngine";
 import { resolveStageOverrides } from "../../lib/overrideEngine";
+import { ConfirmDialog } from "../shared/ConfirmDialog";
+import { EntityContextMenu } from "./EntityContextMenu";
 
 interface RequirementRowProps {
   requirement: Requirement;
@@ -28,6 +30,7 @@ interface RequirementRowProps {
   isTerminal: boolean;
   onSelect: () => void;
   onAttributeChange: (attributeId: string, value: unknown) => void;
+  onDelete?: () => void;
 }
 
 export function RequirementRow({
@@ -41,7 +44,10 @@ export function RequirementRow({
   isTerminal,
   onSelect,
   onAttributeChange,
+  onDelete = () => undefined,
 }: RequirementRowProps) {
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const { attributes: sortableAttributes, listeners, setNodeRef, isDragging, transform, transition } = useSortable({
     id: requirement.id,
     disabled: isTerminal,
@@ -69,6 +75,10 @@ export function RequirementRow({
       {...listeners}
       {...sortableAttributes}
       onClick={onSelect}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        setMenuPosition({ x: event.clientX, y: event.clientY });
+      }}
       style={{
         gridTemplateColumns: gridTemplateColumnsFor(attributes, columnWidths),
         columnGap: BOARD_COLUMN_GAP,
@@ -120,6 +130,28 @@ export function RequirementRow({
         }
         return <div key={attribute.id}>{cell}</div>;
       })}
+      {menuPosition && (
+        <EntityContextMenu
+          position={menuPosition}
+          onClose={() => setMenuPosition(null)}
+          onDelete={() => {
+            setMenuPosition(null);
+            setDeleteOpen(true);
+          }}
+        />
+      )}
+      {deleteOpen && (
+        <ConfirmDialog
+          title={`永久删除「${requirement.name}」？`}
+          body="该实体及其所有 Tab 记录、流转记录和评论将被永久删除，此操作无法撤销。"
+          confirmLabel="永久删除"
+          onCancel={() => setDeleteOpen(false)}
+          onConfirm={() => {
+            onDelete();
+            setDeleteOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

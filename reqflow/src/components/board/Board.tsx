@@ -71,6 +71,7 @@ interface BoardProps {
   onCreate: (stage: Stage, name: string) => void;
   onSelectRequirement: (id: string) => void;
   onAttributeChange: (requirementId: string, attributeId: string, value: unknown) => void;
+  onDelete?: (requirementId: string) => void;
   onTransition: (requirementId: string, toStage: Stage) => void;
   onReorder: (updates: { requirementId: string; manualOrder: number }[], stageId: string) => Promise<void>;
   /** 右键表头"编辑此属性"跳转到 Schema 设置页对应属性（见 REQ-025 设置页入口）。 */
@@ -94,6 +95,7 @@ export function Board({
   onCreate,
   onSelectRequirement,
   onAttributeChange,
+  onDelete = () => undefined,
   onTransition,
   onReorder,
   onEditAttribute,
@@ -156,8 +158,8 @@ export function Board({
           <EmptyState
             text={
               filters.length > 0
-                ? "没有匹配筛选条件的需求"
-                : "还没有需求，点收集阶段的新建按钮记录你的第一个想法"
+                ? "没有匹配筛选条件的实体"
+                : "还没有实体，点收集阶段的新建按钮记录你的第一个想法"
             }
           />
         )}
@@ -195,6 +197,7 @@ export function Board({
             onCreate={(name) => onCreate(s.id, name)}
             onSelectRequirement={onSelectRequirement}
             onAttributeChange={onAttributeChange}
+            onDelete={onDelete}
           />
         ))}
       </div>

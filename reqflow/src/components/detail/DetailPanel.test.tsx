@@ -98,7 +98,7 @@ describe("DetailPanel（AC-002/004/005：右栏切换与全屏）", () => {
       />,
     );
 
-    expect(screen.getByText("选择一条需求查看详情")).toBeInTheDocument();
+    expect(screen.getByText("选择一条实体查看详情")).toBeInTheDocument();
   });
 
   it("requirement 非空时渲染该需求的名称、属性区和 Tab 栏（AC-002/004：点击行后右栏切为该需求详情）", () => {

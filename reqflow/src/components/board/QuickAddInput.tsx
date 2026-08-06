@@ -14,6 +14,11 @@ interface QuickAddInputProps {
 
 export function QuickAddInput({ placeholder, attributes, columnWidths, onSubmit, onCancel }: QuickAddInputProps) {
   const [value, setValue] = useState("");
+  const submit = () => {
+    const trimmed = value.trim();
+    if (trimmed) onSubmit(trimmed);
+    else onCancel();
+  };
 
   return (
     <div
@@ -27,15 +32,12 @@ export function QuickAddInput({ placeholder, attributes, columnWidths, onSubmit,
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onClick={(e) => e.stopPropagation()}
-        onBlur={() => {
-          if (!value.trim()) onCancel();
-        }}
+        onBlur={submit}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
             onCancel();
           } else if (e.key === "Enter") {
-            const trimmed = value.trim();
-            if (trimmed) onSubmit(trimmed);
+            e.currentTarget.blur();
           }
         }}
         className="sticky left-0 w-full border-none bg-transparent pl-5.5 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2)"

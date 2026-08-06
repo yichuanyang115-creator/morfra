@@ -9,6 +9,7 @@ interface ActivityTabProps {
   currentStage: Stage;
   transitions: TransitionRecord[];
   comments: Comment[];
+  stageLabels?: Record<string, string>;
   closureType: "completed" | "abandoned" | null;
   onUpdateNote: (transitionId: string, note: string) => void;
   onAddComment: (transitionId: string, content: string) => void;
@@ -19,6 +20,7 @@ export function ActivityTab({
   currentStage,
   transitions,
   comments,
+  stageLabels = {},
   closureType,
   onUpdateNote,
   onAddComment,
@@ -27,7 +29,7 @@ export function ActivityTab({
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   if (transitions.length === 0) {
-    return <EmptyState text="该需求还没有流转记录" />;
+    return <EmptyState text="该实体还没有流转记录" />;
   }
 
   // 高亮节点是"当前阶段对应的最后一条记录"，不是数组末位——删除最新一条记录后
@@ -47,7 +49,7 @@ export function ActivityTab({
           <TimelineNode
             key={transition.id}
             transition={transition}
-            stageLabel={stageLabelFor(transition.to, idx === currentIdx ? closureType : null)}
+            stageLabel={stageLabelFor(transition.to, idx === currentIdx ? closureType : null, transition.toLabel, stageLabels)}
             isCurrent={idx === currentIdx}
             comments={comments.filter((c) => c.transitionId === transition.id)}
             onUpdateNote={(note) => onUpdateNote(transition.id, note)}

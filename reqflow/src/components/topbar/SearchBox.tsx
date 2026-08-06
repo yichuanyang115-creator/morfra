@@ -68,7 +68,7 @@ export function SearchBox({ requirements, onJumpToRequirement }: SearchBoxProps)
       {open && trimmed && (
         <div className="absolute top-[calc(100%+6px)] left-0 z-50 max-h-80 w-full overflow-y-auto rounded-(--r-md) border border-(--border-strong) bg-(--surface) p-1.25 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]">
           {matches.length === 0 ? (
-            <div className="p-5 text-center text-[12.5px] text-(--muted-2)">没有匹配的需求</div>
+            <div className="p-5 text-center text-[12.5px] text-(--muted-2)">没有匹配的实体</div>
           ) : (
             matches.map((r) => (
               <div

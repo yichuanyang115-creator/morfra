@@ -140,7 +140,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
       {deleteTarget && (
         <ConfirmDialog
           title={`删除项目「${deleteTarget.name}」？`}
-          body="项目文件夹及全部需求数据将被永久删除，此操作无法撤销。"
+          body="项目文件夹及全部实体数据将被永久删除，此操作无法撤销。"
           onCancel={() => setDeleteTargetId(null)}
           onConfirm={() => {
             void deleteProject(deleteTarget.id);

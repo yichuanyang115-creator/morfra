@@ -124,4 +124,22 @@ describe("DetailHeader（AC-005/006：全屏展开与关闭按钮）", () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("永久删除按钮经过二次确认后触发 onDelete", async () => {
+    const onDelete = vi.fn();
+    render(
+      <DetailHeader
+        requirement={makeRequirement({ name: "待删除实体" })}
+        fullscreen={false}
+        onRename={vi.fn()}
+        onToggleFullscreen={vi.fn()}
+        onClose={vi.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "永久删除实体" }));
+    await userEvent.click(screen.getByRole("button", { name: "永久删除" }));
+    expect(onDelete).toHaveBeenCalledOnce();
+  });
 });

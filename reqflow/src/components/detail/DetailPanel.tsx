@@ -30,6 +30,7 @@ interface DetailPanelProps {
   /** 已按 schema showOnDetail 过滤好的属性列表，见 lib/schemaSelectors.ts 的 detailAttributesFor。 */
   attributes: Attribute[];
   tabs?: TabDefinition[];
+  stageOptions?: import("../../types/schema").StageOption[];
   projectId?: string | null;
   /** 该实体所属阶段是否终态（见 Attribute Grid 的 result 只读规则，REQ-022）。 */
   isTerminal: boolean;
@@ -41,6 +42,7 @@ interface DetailPanelProps {
   activeTab: DetailTab;
   onToggleFullscreen: () => void;
   onClose: () => void;
+  onDelete?: () => void;
   onSelectTab: (tab: DetailTab) => void;
   onRename: (name: string) => void;
   onAttributeChange: (attributeId: string, value: unknown) => void;
@@ -70,6 +72,7 @@ export function DetailPanel({
   requirement,
   attributes,
   tabs,
+  stageOptions = [],
   projectId = null,
   isTerminal,
   width,
@@ -77,6 +80,7 @@ export function DetailPanel({
   activeTab,
   onToggleFullscreen,
   onClose,
+  onDelete = () => undefined,
   onSelectTab,
   onRename,
   onAttributeChange,
@@ -121,7 +125,7 @@ export function DetailPanel({
         <svg className="size-7.5" viewBox="0 0 20 20" fill="none">
           <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.4" />
         </svg>
-        <p className="m-0 text-[13px]">选择一条需求查看详情</p>
+        <p className="m-0 text-[13px]">选择一条实体查看详情</p>
       </div>
     );
   }
@@ -134,6 +138,7 @@ export function DetailPanel({
         onRename={onRename}
         onToggleFullscreen={onToggleFullscreen}
         onClose={onClose}
+        onDelete={onDelete}
       />
       <AttributeGrid
         requirement={requirement}
@@ -247,6 +252,7 @@ export function DetailPanel({
             currentStage={requirement.stage}
             transitions={requirement.transitions}
             comments={requirement.comments}
+            stageLabels={Object.fromEntries(stageOptions.map((stage) => [stage.id, stage.label]))}
             closureType={resultOf(requirement)}
             onUpdateNote={onUpdateTransitionNote}
             onAddComment={onAddComment}

@@ -22,6 +22,7 @@
   --accent-soft-strong: #EFF6E7;
   --accent-solid: #5DA802;
   --accent-solid-fg: #FFFFFF;
+  --context-strong: #5D3A73;
   /* 中等深度鼠尾草绿，专用于"当前选中"这一类需要比 soft 系列更醒目、但不到按钮实色那么浓的场景。 */
   --accent-selected: #A9C99A;
 
@@ -48,6 +49,7 @@
   --r-sm: 6px;
   --r-md: 8px;
   --r-lg: 12px;
+  --shadow-floating: 0 12px 30px -10px rgb(43 36 33 / 0.22);
   --topbar-h: 34px;
   --detail-max-w: 960px;
   --board-header-h: 34px;

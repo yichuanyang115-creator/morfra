@@ -8,6 +8,8 @@ import { FIELD_KEYS, progressOf, releaseDateOf, withAttributeValue } from "../li
 import { loadRequirement, saveRequirement } from "./requirementPersistence";
 import { undoStack } from "../lib/undoStack";
 import { enqueueRequirementMutation, mutateRequirement, reorderRequirements } from "./requirementMutations";
+import { deleteRequirement, freezeStageHistory } from "./requirementLifecycle";
+import type { StageOption } from "../types/schema";
 
 interface RequirementState {
   requirements: Requirement[];
@@ -16,6 +18,7 @@ interface RequirementState {
   error: boolean;
   loadForProject: (projectId: string) => Promise<void>;
   createRequirement: (projectId: string, stage: Stage, name: string) => Promise<void>;
+  deleteRequirement: (projectId: string, requirementId: string) => Promise<void>;
   renameRequirement: (projectId: string, requirementId: string, name: string) => Promise<void>;
   updateAttributeValue: (projectId: string, requirementId: string, key: string, value: unknown) => Promise<void>;
   updateBody: (projectId: string, requirementId: string, body: string) => Promise<void>;
@@ -64,8 +67,8 @@ interface RequirementState {
     updates: { requirementId: string; manualOrder: number }[],
     undoSideEffect?: () => Promise<void>,
   ) => Promise<void>;
-  /** 对全部需求的某个属性值做批量转换（改属性类型/删属性时的级联，见 Product-Spec REQ-025 删除连带影响）。 */
   cascadeAttributeChange: (projectId: string, attributeId: string, transform: (value: unknown) => unknown) => Promise<void>;
+  freezeStageHistory: (projectId: string, stage: StageOption) => Promise<void>;
 }
 
 export const useRequirementStore = create<RequirementState>((set, get) => ({
@@ -73,7 +76,6 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
   loadedProjectId: null,
   loading: false,
   error: false,
-
   loadForProject: async (projectId) => {
     if (get().loading) return;
     // Undo 命令闭包绑定项目 id；项目切换后继续执行旧命令会静默修改不可见项目。
@@ -87,7 +89,6 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
         (name) => name.endsWith(".md") && name !== "_project.md" && name !== "_chat.md",
       );
 
-      // 单个需求文件解析失败（如手动损坏了某个 .md）不该拖垮整批需求的显示，逐个隔离捕获、跳过坏文件
       const loaded = await Promise.all(
         fileNames.map((name) =>
           loadRequirement(projectId, name).catch(() => null),
@@ -101,7 +102,6 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     }
   },
   createRequirement: (projectId, stage, name) => enqueueRequirementMutation(async () => {
-    // 新建置顶：manualOrder 落到该阶段现有最小值之前，手动模式下新建的需求排在最前面
     const existingInStage = get().requirements.filter((r) => r.stage === stage);
     const minOrder = existingInStage.reduce((min, r) => Math.min(min, r.manualOrder), 0);
     const requirement: Requirement = {
@@ -131,6 +131,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     await saveRequirement(projectId, requirement);
     set((state) => ({ requirements: [...state.requirements, requirement] }));
   }),
+  deleteRequirement: (projectId, requirementId) => deleteRequirement(get, set, projectId, requirementId),
   renameRequirement: (projectId, requirementId, name) =>
     mutateRequirement(get, set, projectId, requirementId, (r) => ({ ...r, name })),
 
@@ -281,8 +282,6 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     reorderRequirements(get, set, projectId, updates, undoSideEffect),
 
   cascadeAttributeChange: (projectId, attributeId, transform) => {
-    // 删除/改类型等结构操作会改变 attributeValues 的合法形态，先清掉快照并建立
-    // 失效边界，避免此刻仍在落盘的普通操作把删除前的字段重新入栈。
     undoStack.clear();
     return enqueueRequirementMutation(async () => {
       const current = get().requirements;
@@ -297,4 +296,5 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       set({ requirements: updated });
     });
   },
+  freezeStageHistory: (projectId, stage) => freezeStageHistory(get, set, projectId, stage),
 }));

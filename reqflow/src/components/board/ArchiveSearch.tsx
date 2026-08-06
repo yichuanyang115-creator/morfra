@@ -23,8 +23,8 @@ export function ArchiveSearch({ value, onChange }: ArchiveSearchProps) {
       </span>
       <input
         type="text"
-        placeholder="搜索归档需求…"
-        aria-label="搜索归档需求"
+        placeholder="搜索归档实体…"
+        aria-label="搜索归档实体"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-37.5 border-none bg-transparent text-[12px] text-(--fg) outline-none placeholder:text-(--muted-2)"

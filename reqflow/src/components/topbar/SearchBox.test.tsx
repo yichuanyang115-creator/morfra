@@ -35,7 +35,7 @@ describe("SearchBox", () => {
   it("空输入时不展示下拉浮层", () => {
     render(<SearchBox requirements={[]} onJumpToRequirement={vi.fn()} />);
 
-    expect(screen.queryByText("没有匹配的需求")).not.toBeInTheDocument();
+    expect(screen.queryByText("没有匹配的实体")).not.toBeInTheDocument();
   });
 
   it("聚焦但输入为空白字符时不展示下拉浮层", async () => {
@@ -43,7 +43,7 @@ describe("SearchBox", () => {
 
     await userEvent.type(screen.getByPlaceholderText("搜索名称…"), "   ");
 
-    expect(screen.queryByText("没有匹配的需求")).not.toBeInTheDocument();
+    expect(screen.queryByText("没有匹配的实体")).not.toBeInTheDocument();
   });
 
   it("输入关键字后按名称即时过滤，展示匹配结果及所属阶段", async () => {
@@ -81,7 +81,7 @@ describe("SearchBox", () => {
 
     await userEvent.type(screen.getByPlaceholderText("搜索名称…"), "不存在的关键字");
 
-    expect(screen.getByText("没有匹配的需求")).toBeInTheDocument();
+    expect(screen.getByText("没有匹配的实体")).toBeInTheDocument();
   });
 
   it("点击结果调用 onJumpToRequirement 并清空输入框、收起浮层", async () => {
@@ -140,6 +140,6 @@ describe("SearchBox", () => {
 
     await userEvent.clear(input);
     expect(screen.queryByText("登录页优化")).not.toBeInTheDocument();
-    expect(screen.queryByText("没有匹配的需求")).not.toBeInTheDocument();
+    expect(screen.queryByText("没有匹配的实体")).not.toBeInTheDocument();
   });
 });

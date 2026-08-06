@@ -5,7 +5,7 @@ import { TemplateDrawer } from "./TemplateDrawer";
 import { BODY_TEMPLATES } from "../../lib/templates";
 
 describe("TemplateDrawer", () => {
-  it("渲染出两套模板名称（功能需求模板、优化需求模板）", () => {
+  it("渲染出两套模板名称（功能条目模板、优化条目模板）", () => {
     render(<TemplateDrawer onInsert={vi.fn()} />);
     for (const template of BODY_TEMPLATES) {
       expect(screen.getByText(template.name)).toBeInTheDocument();
@@ -17,7 +17,7 @@ describe("TemplateDrawer", () => {
     render(<TemplateDrawer onInsert={onInsert} />);
 
     const featureTemplate = BODY_TEMPLATES.find((t) => t.id === "feature");
-    if (!featureTemplate) throw new Error("测试前提缺失：找不到功能需求模板");
+    if (!featureTemplate) throw new Error("测试前提缺失：找不到功能条目模板");
 
     await userEvent.click(screen.getByText(featureTemplate.name));
 
@@ -25,12 +25,12 @@ describe("TemplateDrawer", () => {
     expect(onInsert).toHaveBeenCalledWith(featureTemplate.markdown);
   });
 
-  it("点击优化需求模板，onInsert 收到的是优化模板内容而不是功能模板内容", async () => {
+  it("点击优化条目模板，onInsert 收到的是优化模板内容而不是功能模板内容", async () => {
     const onInsert = vi.fn();
     render(<TemplateDrawer onInsert={onInsert} />);
 
     const optimizationTemplate = BODY_TEMPLATES.find((t) => t.id === "optimization");
-    if (!optimizationTemplate) throw new Error("测试前提缺失：找不到优化需求模板");
+    if (!optimizationTemplate) throw new Error("测试前提缺失：找不到优化条目模板");
 
     await userEvent.click(screen.getByText(optimizationTemplate.name));
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Requirement } from "../../types/models";
+import { ConfirmDialog } from "../shared/ConfirmDialog";
 
 function FullscreenExitIcon() {
   return (
@@ -37,16 +38,26 @@ function CloseIcon() {
   );
 }
 
+function DeleteIcon() {
+  return (
+    <svg className="size-3.5" viewBox="0 0 20 20" fill="none">
+      <path d="M6 6h8m-7 0 .6 10h4.8l.6-10M8 6V4h4v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 interface DetailHeaderProps {
   requirement: Requirement;
   fullscreen: boolean;
   onRename: (name: string) => void;
   onToggleFullscreen: () => void;
   onClose: () => void;
+  onDelete?: () => void;
 }
 
-export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullscreen, onClose }: DetailHeaderProps) {
+export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullscreen, onClose, onDelete = () => undefined }: DetailHeaderProps) {
   const [name, setName] = useState(requirement.name);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
     <div className="flex flex-none items-center gap-2 border-b border-(--border) px-4.5 pt-4 pb-3.5">
@@ -58,6 +69,14 @@ export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullsc
         }}
         className="min-w-0 flex-1 rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 font-(family-name:--font-display) text-[20px] font-[590] tracking-[-0.01em] text-(--fg) outline-none hover:bg-(--surface-2) focus:bg-(--surface-2)"
       />
+      <button
+        type="button"
+        onClick={() => setDeleteOpen(true)}
+        aria-label="永久删除实体"
+        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--context-strong) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+      >
+        <DeleteIcon />
+      </button>
       <button
         type="button"
         onClick={onToggleFullscreen}
@@ -74,6 +93,18 @@ export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullsc
       >
         <CloseIcon />
       </button>
+      {deleteOpen && (
+        <ConfirmDialog
+          title={`永久删除「${requirement.name}」？`}
+          body="该实体及其所有 Tab 记录、流转记录和评论将被永久删除，此操作无法撤销。"
+          confirmLabel="永久删除"
+          onCancel={() => setDeleteOpen(false)}
+          onConfirm={() => {
+            onDelete();
+            setDeleteOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

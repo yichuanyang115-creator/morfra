@@ -12,7 +12,7 @@ describe("StageTransitionDropdown", () => {
     const options = screen.getAllByRole("option").map((o) => o.textContent);
     expect(options).not.toContain("设计");
     expect(options).toContain("收集");
-    expect(options).toContain("需求");
+    expect(options).toContain("梳理");
     expect(options).toContain("开发");
     expect(options).toContain("验证");
     expect(options).toContain("发布");

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as dndSortable from "@dnd-kit/sortable";
 import { RequirementRow } from "./RequirementRow";
@@ -150,6 +150,18 @@ describe("RequirementRow", () => {
 
     await userEvent.click(screen.getByText("点击测试需求"));
     expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("右键菜单的永久删除经确认后触发 onDelete", async () => {
+    const onDelete = vi.fn();
+    const { container } = renderRow({ requirement: makeRequirement({ name: "待删除实体" }), onDelete });
+
+    fireEvent.contextMenu(container.firstChild as HTMLElement, { clientX: 32, clientY: 48 });
+    await userEvent.click(screen.getByRole("menuitem", { name: "永久删除" }));
+    expect(screen.getByText("永久删除「待删除实体」？")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "永久删除" }));
+    expect(onDelete).toHaveBeenCalledOnce();
   });
 
   it("点击单选下拉不会触发 onSelect（阻止事件冒泡）", async () => {

@@ -43,6 +43,7 @@ interface StageSectionProps {
   onCreate: (name: string) => void;
   onSelectRequirement: (id: string) => void;
   onAttributeChange: (requirementId: string, attributeId: string, value: unknown) => void;
+  onDelete?: (requirementId: string) => void;
 }
 
 export function StageSection({
@@ -57,6 +58,7 @@ export function StageSection({
   onCreate,
   onSelectRequirement,
   onAttributeChange,
+  onDelete = () => undefined,
 }: StageSectionProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [draftOpen, setDraftOpen] = useState(false);
@@ -82,17 +84,16 @@ export function StageSection({
 
   const emptyText = isTerminal
     ? terminalSearch.trim()
-      ? "没有匹配的需求"
-      : "该阶段暂无需求"
-    : `该阶段暂无需求${stageOption.id === "collect" ? "，点上方新建记录你的第一个想法" : ""}`;
+      ? "没有匹配的实体"
+      : "该阶段暂无实体"
+    : `该阶段暂无实体${stageOption.id === "collect" ? "，点上方新建记录你的第一个想法" : ""}`;
 
   return (
     <>
       <div
-        className={`sticky left-0 ${sortOpen ? "z-10" : "z-1"} my-1.5 flex w-full items-center gap-2 rounded-(--r-lg) border pl-5.5 py-1.75 pr-2.5 ${
+        className={`sticky left-0 ${sortOpen ? "z-10" : "z-1"} my-1.5 flex w-full items-center gap-2 rounded-(--r-lg) border bg-(--surface) pl-5.5 py-1.75 pr-2.5 ${
           isOver ? "border-(--accent) bg-(--accent-soft-strong)" : "border-(--accent-soft-strong)"
         }`}
-        style={{ backgroundColor: isOver ? undefined : stageOption.color }}
       >
         <button
           type="button"
@@ -102,6 +103,7 @@ export function StageSection({
           <span className={`flex-none text-(--muted-2) transition-transform duration-150 ${collapsed ? "-rotate-90" : ""}`}>
             <ChevronIcon />
           </span>
+          <span aria-hidden="true" className="size-1.5 flex-none rounded-full" style={{ backgroundColor: stageOption.color }} />
           <span className="font-(family-name:--font-display) text-[13px] font-[590] tracking-[-0.005em] text-(--fg)">
             {stageOption.label}
           </span>
@@ -134,7 +136,7 @@ export function StageSection({
             <button
               type="button"
               onClick={() => setDraftOpen(true)}
-              aria-label="新建需求"
+              aria-label="新建实体"
               className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-transparent px-1.75 py-1 text-[12px] text-(--muted) hover:bg-(--surface-2) hover:text-(--accent-text)"
             >
               <PlusIcon />
@@ -182,6 +184,7 @@ export function StageSection({
                   isTerminal={isTerminal}
                   onSelect={() => onSelectRequirement(r.id)}
                   onAttributeChange={(attributeId, value) => onAttributeChange(r.id, attributeId, value)}
+                  onDelete={() => onDelete(r.id)}
                 />
               ))}
             </SortableContext>

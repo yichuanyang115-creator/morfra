@@ -47,6 +47,9 @@ export interface TransitionRecord {
   id: string;
   from: Stage;
   to: Stage;
+  /** 阶段被删除后保留的显示名快照；仍存在的阶段继续从当前 Schema 读取名称。 */
+  fromLabel?: string;
+  toLabel?: string;
   timestamp: string;
   by: string;
   note: string;
@@ -107,7 +110,7 @@ export const ACCEPTANCE_RESULTS: { key: AcceptanceResult; label: string }[] = [
 
 export const STAGES: { key: Stage; label: string }[] = [
   { key: "collect", label: "收集" },
-  { key: "need", label: "需求" },
+  { key: "need", label: "梳理" },
   { key: "design", label: "设计" },
   { key: "dev", label: "开发" },
   { key: "verify", label: "验证" },

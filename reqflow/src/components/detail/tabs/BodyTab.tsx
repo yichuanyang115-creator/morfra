@@ -11,7 +11,7 @@ export function BodyTab({ markdown, onChange, onEditorReady }: BodyTabProps) {
   return (
     <BlockEditor
       markdown={markdown}
-      placeholder="写下需求描述，或从 Tab 栏右侧模板插入…"
+      placeholder="写下实体描述，或从 Tab 栏右侧模板插入…"
       onChange={onChange}
       onEditorReady={onEditorReady}
     />

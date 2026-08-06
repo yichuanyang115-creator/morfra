@@ -245,7 +245,7 @@ describe("Board", () => {
       <Board requirements={[]} loading={false} error={false} selectedRequirementId={null} {...noop} />,
     );
 
-    expect(screen.getByText("还没有需求，点收集阶段的新建按钮记录你的第一个想法")).toBeInTheDocument();
+    expect(screen.getByText("还没有实体，点收集阶段的新建按钮记录你的第一个想法")).toBeInTheDocument();
   });
 
   it("需求按 stage 分发到对应阶段区域下渲染", () => {

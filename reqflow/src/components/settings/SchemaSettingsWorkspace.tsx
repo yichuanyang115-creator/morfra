@@ -12,6 +12,7 @@ export function SchemaSettingsWorkspace() {
   const currentProjectId = useProjectStore((state) => state.currentProjectId);
   const requirements = useRequirementStore((state) => state.requirements);
   const cascadeAttributeChange = useRequirementStore((state) => state.cascadeAttributeChange);
+  const freezeStageHistory = useRequirementStore((state) => state.freezeStageHistory);
   const schema = useSchemaStore((state) => state.schema);
   const section = useUiStore((state) => state.settingsSection);
   const setSection = useUiStore((state) => state.setSettingsSection);
@@ -46,7 +47,15 @@ export function SchemaSettingsWorkspace() {
       onReorderStages={(orderedIds) => { if (currentProjectId) void reorderStageOptions(currentProjectId, orderedIds); }}
       onAddStage={(stageOption) => { if (currentProjectId) void addStageOption(currentProjectId, stageOption); }}
       onUpdateStage={(id, patch) => { if (currentProjectId) void updateStageOption(currentProjectId, id, patch); }}
-      onRemoveStage={(id) => { if (currentProjectId) void removeStageOption(currentProjectId, id); }}
+      onRemoveStage={(id) => {
+        if (!currentProjectId) return;
+        const stage = schema.stageOptions.find((item) => item.id === id);
+        if (!stage) return;
+        void (async () => {
+          await freezeStageHistory(currentProjectId, stage);
+          await removeStageOption(currentProjectId, id);
+        })();
+      }}
       onReorderAttributes={(orderedIds) => { if (currentProjectId) void reorderAttributes(currentProjectId, orderedIds); }}
       onAddAttribute={(attribute) => { if (currentProjectId) void addAttribute(currentProjectId, attribute); }}
       onUpdateAttribute={(id, patch) => { if (currentProjectId) void updateAttribute(currentProjectId, id, patch); }}

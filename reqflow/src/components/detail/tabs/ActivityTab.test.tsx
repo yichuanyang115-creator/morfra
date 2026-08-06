@@ -30,7 +30,7 @@ describe("ActivityTab", () => {
       />,
     );
 
-    expect(screen.getByText("该需求还没有流转记录")).toBeInTheDocument();
+    expect(screen.getByText("该实体还没有流转记录")).toBeInTheDocument();
   });
 
   it("经过 2 次流转后显示 2 个节点，按顺序排列", () => {
@@ -42,7 +42,7 @@ describe("ActivityTab", () => {
       <ActivityTab currentStage="design" transitions={transitions} comments={[]} closureType={null} onUpdateNote={vi.fn()} onAddComment={vi.fn()} onDelete={vi.fn()} />,
     );
 
-    expect(screen.getByText("需求")).toBeInTheDocument();
+    expect(screen.getByText("梳理")).toBeInTheDocument();
     expect(screen.getByText("设计")).toBeInTheDocument();
   });
 
@@ -53,6 +53,22 @@ describe("ActivityTab", () => {
     );
 
     expect(screen.getByText("归档（废弃）")).toBeInTheDocument();
+  });
+
+  it("已删除阶段使用流转记录上的名称快照，不依赖仍存在的 Schema 阶段", () => {
+    render(
+      <ActivityTab
+        currentStage="design"
+        transitions={[makeTransition({ to: "retired-stage", toLabel: "旧评审" })]}
+        comments={[]}
+        closureType={null}
+        onUpdateNote={vi.fn()}
+        onAddComment={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("旧评审")).toBeInTheDocument();
   });
 
   it("点击说明按钮展开输入框，失焦提交后 onUpdateNote 收到修剪后的说明", async () => {

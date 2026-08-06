@@ -35,6 +35,7 @@ function App() {
   const loadedProjectId = useRequirementStore((s) => s.loadedProjectId);
   const loadForProject = useRequirementStore((s) => s.loadForProject);
   const createRequirement = useRequirementStore((s) => s.createRequirement);
+  const deleteRequirement = useRequirementStore((s) => s.deleteRequirement);
   const renameRequirement = useRequirementStore((s) => s.renameRequirement);
   const updateAttributeValue = useRequirementStore((s) => s.updateAttributeValue);
   const updateBody = useRequirementStore((s) => s.updateBody);
@@ -158,6 +159,13 @@ function App() {
               onAttributeChange={(requirementId, attributeId, value) => {
                 if (currentProjectId) void updateAttributeValue(currentProjectId, requirementId, attributeId, value);
               }}
+              onDelete={(requirementId) => {
+                if (!currentProjectId) return;
+                void (async () => {
+                  await deleteRequirement(currentProjectId, requirementId);
+                  if (selectedRequirementId === requirementId && detailMode !== "closed") toggleClosed();
+                })();
+              }}
               onTransition={(requirementId, toStage) => {
                 if (currentProjectId) void transitionRequirement(currentProjectId, requirementId, toStage);
               }}
@@ -192,6 +200,7 @@ function App() {
               requirement={selectedRequirement}
               attributes={detailAttributes}
               tabs={schema?.tabs ?? []}
+              stageOptions={schema?.stageOptions ?? []}
               projectId={currentProjectId}
               isTerminal={selectedStageOption?.isTerminal ?? false}
               width={width}
@@ -199,6 +208,13 @@ function App() {
               activeTab={activeTab}
               onToggleFullscreen={toggleFullscreen}
               onClose={toggleClosed}
+              onDelete={() => {
+                if (!currentProjectId || !selectedRequirementId) return;
+                void (async () => {
+                  await deleteRequirement(currentProjectId, selectedRequirementId);
+                  if (detailMode !== "closed") toggleClosed();
+                })();
+              }}
               onSelectTab={setActiveTab}
               onRename={(name) => {
                 if (currentProjectId && selectedRequirementId) {

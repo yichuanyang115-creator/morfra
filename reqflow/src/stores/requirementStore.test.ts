@@ -15,7 +15,9 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
   writeTextFile: vi.fn(async (path: string, content: string) => {
     files.set(path, content);
   }),
-  remove: vi.fn(async () => undefined),
+  remove: vi.fn(async (path: string) => {
+    files.delete(path);
+  }),
 }));
 
 vi.mock("@tauri-apps/api/path", () => ({
@@ -923,6 +925,46 @@ describe("requirementStore.cascadeAttributeChange（Phase 18：改类型/删属�
     await cascadeAttributeChange("proj-1", "never_set", () => "新值");
 
     expect(files.get(`/app-local-data/projects/proj-1/${created.id}.md`)).toBe(before);
+  });
+});
+
+describe("requirementStore Phase 26 生命周期", () => {
+  beforeEach(() => {
+    files.clear();
+    undoStack.clear();
+    useRequirementStore.setState({ requirements: [], loadedProjectId: null, loading: false, error: false });
+  });
+
+  it("永久删除实体时移除 Markdown 文件，连同内嵌 Tab 记录、流转记录和评论一起消失", async () => {
+    const { addComment, addTabRecord, createRequirement, deleteRequirement, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "待删除实体");
+    const created = useRequirementStore.getState().requirements[0];
+    await addTabRecord("proj-1", created.id, "custom", { name: "关联记录" });
+    await transitionRequirement("proj-1", created.id, "need");
+    await addComment("proj-1", created.id, useRequirementStore.getState().requirements[0].transitions[0].id, "关联评论");
+
+    expect(useRequirementStore.getState().requirements[0]).toMatchObject({ tabRecords: [{ tabId: "custom" }] });
+    expect(useRequirementStore.getState().requirements[0].transitions).toHaveLength(1);
+    expect(useRequirementStore.getState().requirements[0].comments).toHaveLength(1);
+
+    await deleteRequirement("proj-1", created.id);
+
+    expect(useRequirementStore.getState().requirements).toEqual([]);
+    expect(files.has(`/app-local-data/projects/proj-1/${created.id}.md`)).toBe(false);
+    expect(undoStack.size).toBe(0);
+  });
+
+  it("删除阶段前为所有历史流转写入显示名快照并落盘", async () => {
+    const { createRequirement, freezeStageHistory, transitionRequirement } = useRequirementStore.getState();
+    await createRequirement("proj-1", "collect", "历史实体");
+    const created = useRequirementStore.getState().requirements[0];
+    await transitionRequirement("proj-1", created.id, "review");
+
+    await freezeStageHistory("proj-1", { id: "review", label: "方案评审", color: "#5D3A73", isTerminal: false });
+
+    const transition = useRequirementStore.getState().requirements[0].transitions[0];
+    expect(transition.toLabel).toBe("方案评审");
+    expect(files.get(`/app-local-data/projects/proj-1/${created.id}.md`)).toContain("方案评审");
   });
 });
 
