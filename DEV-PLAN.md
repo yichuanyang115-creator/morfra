@@ -14,6 +14,14 @@
 - Markdown 正文存储：使用 Tiptap 官方 `@tiptap/markdown` 扩展做 JSON↔Markdown 双向转换，正文 Tab 内容以标准 Markdown 文本写入 `.md` 文件正文区（而非只存 Tiptap JSON），保证 REQ-019"文件在应用外可用任何文本编辑器打开阅读"
 - Frontmatter 解析库变更（Phase 2 阶段实测发现）：原计划用 `gray-matter`，实测其内部用 `eval()` 解析部分 YAML 分支（`gray-matter/lib/engines.js`），在浏览器打包环境下触发 rolldown 的 eval 安全警告，且其依赖的 `js-yaml@3.x` 有 `Buffer` externalized 警告（Tauri 前端跑在 WebView/浏览器环境，无 Node Buffer）。改为直接用 `js-yaml`（具名导出 `dump`/`load`）+ 手写的 frontmatter 分隔符解析（约 20 行，按 `---\n...\n---\n` 分隔提取 YAML 块和正文），避免引入有 eval 的第三方包
 
+**Phase 27-31 配色系统规划的拍板与假设**（Product-Spec CHANGELOG v2.11 / REQ-030）：
+- 运行时换色继续使用项目既有 CSS Custom Properties，不引入 CSS-in-JS 或第三方主题库。MDN 官方文档确认自定义属性可在 `:root` 定义、在局部容器覆盖，并可通过 `CSSStyleDeclaration.setProperty()` 在运行时更新，正好承载 Primitive → Semantic → Module 三层映射
+- 主题状态继续使用项目既有 Zustand 5，不新增状态管理依赖；草稿、已应用配置和模块继承关系由独立 `themeStore` 管理，避免混入 `uiStore` 或项目级 `schemaStore`
+- 配置文件固定为 `appLocalDataDir()/theme.json`。Tauri v2 官方路径 API 将该目录解析到当前 bundle identifier 的应用专属本地数据目录，现有 fs 权限与读写封装可复用；主题不写入项目目录、`schema.json` 或实体 Markdown
+- 对比度和颜色合法性使用项目内纯 TypeScript 实现，不引入体量不匹配的颜色库。门禁以 W3C WCAG 2.2 AA 为准：普通文字至少 4.5:1，大文字和非文本控件至少 3:1
+- Schema 阶段色和选项色仍是项目数据，保留具体颜色值；全局主题只改变承载容器和标记形式。旧项目已有颜色不重写，避免无声篡改用户数据
+- Phase 1、13、16、18 已完成内容保持历史记录不动；其旧配色实现由 Phase 27-31 以后续迁移方式替换
+
 **Phase 13 规划的拍板与假设**（MVP 完成后新增，见 Product-Spec CHANGELOG v2.5 / REQ-023）：
 - 应用内下载文件的技术方案：WebSearch 确认 Tauri 官方 `@tauri-apps/plugin-upload`（当前最新 2.4.0）的 `download(url, filePath, progressHandler, headers?)` API 直接满足"下载 dmg + 进度回调"需求，不需要手写流式下载或引入非官方方案
 - 下载完成后打开 dmg：复用 Phase 6 已引入的 `@tauri-apps/plugin-opener`（`openPath`），调用系统默认程序打开下载好的 dmg 文件，触发系统安装窗口，不需要新增插件
@@ -378,6 +386,7 @@ Phase 12 完成，MVP 全部 Phase（1-12）交付完毕。
 | Requirement | `appLocalDataDir()/projects/{projectId}/{requirementId}.md`（frontmatter 存结构化字段，正文区存 Markdown 富文本） | Phase 3 |
 | Deliverable / Task / AcceptanceCriterion / TransitionRecord / Comment | 均作为 Requirement frontmatter 内的嵌套数组字段，随需求文件一并读写，无独立文件 | Phase 6 / 7 / 8 / 9 |
 | ChatState | `appLocalDataDir()/projects/{projectId}/_chat.md`（frontmatter 存 open 开关状态 + width 拖拽宽度，正文区或 frontmatter 存 messages） | Phase 14 |
+| AppThemeConfig | `appLocalDataDir()/theme.json`（version + palette + semantic + moduleOverrides；全项目共享） | Phase 27 |
 
 ## 开发规则
 
@@ -385,7 +394,7 @@ Phase 12 完成，MVP 全部 Phase（1-12）交付完毕。
 - 四步走全部通过后才能 commit
 - Commit message 用 feat、fix、refactor、chore 前缀
 - 包管理器：pnpm
-- Phase 顺序不可打乱：基础设施（1-2）→ 核心看板与详情骨架（3-4）→ 各 Tab 业务功能（5-8）→ 流转与归档（9-10）→ 排序搜索与收尾（11-12）→ MVP 完成后新增（13-14）→ Schema 改造（15-26）
+- Phase 顺序不可打乱：基础设施（1-2）→ 核心看板与详情骨架（3-4）→ 各 Tab 业务功能（5-8）→ 流转与归档（9-10）→ 排序搜索与收尾（11-12）→ MVP 完成后新增（13-14）→ Schema 改造（15-26）→ 全局配色系统（27-31）
 
 ---
 
@@ -746,3 +755,145 @@ Phase 12 完成，MVP 全部 Phase（1-12）交付完毕。
 - 新建实体输入名称后点击其他区域（blur），实体正确创建
 - Product-Spec §9 Schema 改造完成定义全部检查项通过
 - `pnpm tauri build` 成功产出可分发 .app
+
+---
+
+## 全局配色系统（Phase 27-31）
+
+> 以下 Phase 实现 Product-Spec SCOPE-017、TASK-014、FLOW-010、REQ-030，并同步收口 REQ-001、REQ-002、REQ-023、REQ-025 的配色与设置入口变更。视觉与颜色职责以 `Design-Brief.md` §3-§9 为准。
+
+**功能依赖图**：
+
+```text
+Phase 27 主题模型、持久化与运行时
+  └─ Phase 28 应用设置页与语义色草稿
+       └─ Phase 29 模块覆盖与结构模块迁移
+            └─ Phase 30 状态、对话与 Schema 标记迁移
+                 └─ Phase 31 全局禁灰审计与可访问性收口
+```
+
+### Phase 27: 主题模型、持久化与运行时
+
+**交付内容**：
+- 定义版本化 `AppThemeConfig`、默认 Primitive/Semantic/Module 映射和继承解析规则，默认值逐项对应 Design-Brief §3
+- 实现应用级主题的加载、保存与启动恢复；文件缺失时使用默认主题，解析失败或版本不兼容时回退默认并给出非阻断提示
+- 建立统一运行时注入层，将已解析主题映射为 CSS Custom Properties；应用启动先加载主题再呈现主界面，避免先闪旧色再换色
+
+**关键文件**：
+- `reqflow/src/types/theme.ts` — `AppThemeConfig`、语义角色、模块覆盖和配置版本类型
+- `reqflow/src/lib/themeDefaults.ts` — 默认基础色板、语义映射、模块继承值
+- `reqflow/src/lib/themeValidation.ts` — 配置结构、版本、颜色格式和禁灰规则校验
+- `reqflow/src/lib/themeRuntime.ts` — 解析继承并向根节点/模块容器注入 CSS 变量
+- `reqflow/src/stores/themeStore.ts` — 加载、保存、回退和已应用主题状态
+- `reqflow/src/lib/paths.ts` — 新增应用级 `theme.json` 路径
+- `reqflow/src/styles/tokens.css` — 将旧 Token 重组为 Primitive、Semantic、Module 默认变量
+- `reqflow/src/App.tsx` — 启动时加载主题并处理回退提示
+
+**验收标准**：
+- 首次启动无 `theme.json` 时直接显示默认暖白/白/墨色、紫色结构与绿色主操作主题，页面不出现旧灰色主题闪烁
+- 保存一份合法主题后关闭并重开应用，全部项目恢复同一已应用主题；切换项目不改变主题
+- 将配置文件改成损坏 JSON 或不支持的版本后启动，应用仍可运行、使用默认主题并显示一次非阻断提示，项目数据不受影响
+- `pnpm test --run`、`pnpm exec tsc --noEmit` 和 `pnpm build` 全部通过
+
+---
+
+### Phase 28: 应用设置页与语义色草稿
+
+**交付内容**：
+- 将顶栏原“版本”弹层升级为独立“应用设置”页，左侧导航提供“外观”和“版本”，原检查更新能力完整迁入版本区
+- 实现“外观 → 配色”的语义色编辑器和综合预览；进入页面复制当前主题为草稿，编辑只实时影响预览，不提前覆盖全局界面
+- 实现应用、取消和整套恢复默认：应用前执行格式、禁灰和 WCAG 2.2 AA 门禁，失败时阻止保存并定位到具体字段
+
+**关键文件**：
+- `reqflow/src/components/app-settings/AppSettingsPage.tsx` — 独立应用设置页与双栏导航骨架
+- `reqflow/src/components/app-settings/AppSettingsNav.tsx` — 外观/版本导航
+- `reqflow/src/components/app-settings/AppearanceSettings.tsx` — 语义色编辑、草稿操作和错误定位
+- `reqflow/src/components/app-settings/ThemeColorField.tsx` — 不提供灰色、支持合法手动输入的颜色字段
+- `reqflow/src/components/app-settings/ThemePreview.tsx` — 顶栏、看板、详情、业务状态和系统反馈综合预览
+- `reqflow/src/components/app-settings/VersionSettings.tsx` — 承接原 SettingsPanel 检查更新 UI
+- `reqflow/src/components/topbar/Topbar.tsx` — “版本”入口改为“应用设置”并路由到独立页面
+- `reqflow/src/stores/themeStore.ts` — 草稿、应用、取消、恢复默认和门禁错误状态
+- `reqflow/src/stores/uiStore.ts` — 应用设置页面与当前导航项状态
+
+**验收标准**：
+- 点击顶栏“应用设置”进入独立页面，外观和版本可切换；版本区检查更新、下载进度及失败重试行为与迁移前一致
+- 修改语义操作色时综合预览立即更新，但退出应用重开仍是旧主题；点击应用后才全局生效并持久化
+- 连续修改多项后点击取消，预览和全局界面完整恢复进入设置前的主题，磁盘不保存草稿
+- 点击恢复默认只重置草稿；未点应用前可取消，点应用后默认主题持久化
+- 输入灰色、非法颜色或不满足对比度的组合时无法应用，并能看到具体失败字段和原因
+
+---
+
+### Phase 29: 模块覆盖与结构模块迁移
+
+**交付内容**：
+- 在配色设置中按顶栏与导航、看板、详情、设置页四个结构模块提供“跟随主题 / 自定义此模块”，只持久化显式覆盖并支持单模块恢复跟随主题
+- 为四个结构模块建立局部 Module Token 边界，迁移其背景、文字、边框、选中、悬停、焦点和禁用状态，组件不再直接引用 Primitive 或固定颜色
+- 保证同一局部区域只有一个高饱和焦点：紫色承担结构与上下文，绿色只承担主要操作、激活和键盘焦点
+
+**关键文件**：
+- `reqflow/src/components/app-settings/ModuleColorSection.tsx` — 模块继承开关、覆盖编辑和恢复跟随主题
+- `reqflow/src/components/topbar/Topbar.tsx` — 顶栏与导航 Module Token 消费边界
+- `reqflow/src/components/board/Board.tsx` — 看板 Module Token 消费边界
+- `reqflow/src/components/detail/DetailPanel.tsx` — 详情 Module Token 消费边界
+- `reqflow/src/components/settings/SchemaSettingsPage.tsx` — Schema 设置页 Module Token 消费边界
+- `reqflow/src/components/app-settings/AppSettingsPage.tsx` — 应用设置页 Module Token 消费边界
+- `reqflow/src/lib/themeRuntime.ts` — 模块覆盖合并与局部 CSS 变量生成
+- `reqflow/src/stores/themeStore.ts` — 显式模块覆盖、清除覆盖和缺省继承
+
+**验收标准**：
+- 所有模块跟随主题时修改语义结构色，四个结构模块同步更新且 `theme.json` 不写冗余模块值
+- 只自定义看板模块后，顶栏、详情和设置页保持跟随主题；看板显示“自定义”状态并在重启后保留
+- 点击看板“恢复跟随主题”后覆盖值被清除，后续修改主题语义色时看板重新同步变化
+- 顶栏、看板、详情和设置页中不出现绿色与紫色同时争抢主焦点的局部区域，键盘焦点统一为绿色可见轮廓
+
+---
+
+### Phase 30: 状态、对话与 Schema 颜色标记迁移
+
+**交付内容**：
+- 迁移业务与系统状态：P0/阻塞/失败使用危险红，警告/等待使用黄色，P2/待开始/未验证使用紫色，进行中与成功使用对应绿色；颜色只落在文字、图标、圆点、细线或进度条
+- 迁移对话区：用户消息使用极浅紫，AI 消息使用白色或透明，发送和运行中主操作使用绿色，并用位置、图标或标签补足非颜色信号
+- 收口 Schema 阶段与选项颜色：默认自动色板改为稳定绿紫轮询且不提供灰色；既有自定义值不改写，界面统一缩为圆点、细条或小图标，不再填满阶段标题、实体标签或选项主体
+
+**关键文件**：
+- `reqflow/src/components/detail/tabs/TaskCard.tsx` — 任务状态与阻塞标记
+- `reqflow/src/components/detail/tabs/AcceptanceCard.tsx` — 验收结果标记
+- `reqflow/src/components/detail/tabs/TimelineNode.tsx` — 流转与归档状态标记
+- `reqflow/src/components/shared/Skeleton.tsx` — 浅紫加载反馈
+- `reqflow/src/components/shared/Toast.tsx` — 语义反馈标记与非颜色文案
+- `reqflow/src/components/chat/ChatPanel.tsx` — 用户/AI 消息与运行状态配色
+- `reqflow/src/lib/stagePalette.ts` — 稳定绿紫自动色板
+- `reqflow/src/components/settings/ColorPicker.tsx` — 移除灰色选项并校验手动输入
+- `reqflow/src/components/board/StageSection.tsx` — 阶段色改为细条或圆点，标题背景跟随主题 surface
+- `reqflow/src/components/board/FieldCell.tsx` — 单选/多选颜色改为小面积标记
+
+**验收标准**：
+- 任务、验收、危险、警告、加载和成功状态符合 Design-Brief §4.5-§4.6，关闭颜色感知时仍能靠文字、图标或形状辨认
+- 用户消息、AI 消息、发送按钮和运行状态视觉职责清晰，同一区域仅绿色承担高饱和主焦点
+- 新建阶段及单选/多选项只从绿紫色板稳定取色，分配后重排不变；选择器不出现灰色
+- 已有 Schema 自定义颜色值在切换全局主题和重启后保持不变，且只以圆点、细条或小图标显示
+
+---
+
+### Phase 31: 全局禁灰审计与可访问性收口
+
+**交付内容**：
+- 全量审计并迁移剩余组件中的固定 Hex/HSL/RGB、Tailwind 固定颜色和旧语义 Token，建立“组件只消费 Module/Semantic Token”的静态门禁
+- 覆盖默认、悬停、按下、选中、焦点、禁用、加载、空状态和错误状态，确保灰色不作为任何启用或禁用界面状态
+- 按 FLOW-010 与 AC-030~AC-035 完成桌面端端到端回归，验证主题持久化、取消/重置、模块继承、配置损坏回退、Schema 数据隔离和 WCAG 2.2 AA
+
+**关键文件**：
+- `reqflow/src/styles/tokens.css` — 删除迁移期别名，保留最终三层 Token 与默认主题
+- `reqflow/src/styles/global.css` — 全局交互状态、focus-visible 和 reduced-motion 收口
+- `reqflow/src/lib/themeValidation.ts` — 对比度、灰色识别和跨字段错误报告最终门禁
+- `reqflow/src/lib/themeAudit.test.ts` — 扫描组件源码中的固定颜色与禁用 Token 用法
+- `reqflow/src/components/app-settings/ThemePreview.tsx` — 补齐全部验收状态样本
+- `reqflow/src/App.tsx` — 启动、回退提示和设置页/主界面路由最终接线
+
+**验收标准**：
+- `rg` 扫描 `reqflow/src/components` 不存在组件内固定 Hex/HSL/RGB 或 Tailwind 灰色系颜色类；业务组件只能通过语义或模块 Token 取色
+- 默认主题下普通文字对比度均不低于 4.5:1，大文字、焦点轮廓和非文本控件均不低于 3:1；自定义主题不达标时无法应用
+- 灰色输入、灰色预设、灰色禁用态和灰色加载态均不存在；红色只用于危险/错误/阻塞，黄色只用于警告/等待
+- AC-030~AC-035 全部通过，现有项目、Schema、检查更新、看板、详情、Tab 和对话功能无回归
+- `pnpm test --run`、`pnpm exec tsc --noEmit`、`pnpm build` 与 `pnpm tauri build` 全部通过，可运行产物中完成一次真实窗口视觉验收
