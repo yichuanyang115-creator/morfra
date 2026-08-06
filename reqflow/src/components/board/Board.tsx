@@ -150,7 +150,7 @@ export function Board({
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="overflow-x-auto px-5.5 pb-6">
+      <div className="overflow-x-auto pr-5.5 pb-6">
         {visibleRequirements.length === 0 && (
           <EmptyState
             text={

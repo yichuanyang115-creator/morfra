@@ -71,14 +71,16 @@ export function FilterPanel({ attributes, filters, onChange, onClose }: FilterPa
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={addCondition}
-        className="mt-2.5 inline-flex w-full items-center justify-center gap-1 rounded-(--r-sm) border-none bg-transparent py-1.5 text-[12px] font-[550] text-(--accent-text) hover:bg-(--accent-soft)"
-      >
-        <PlusIcon />
-        添加条件
-      </button>
+      <div className="mt-2.5 border-t border-(--border) pt-2">
+        <button
+          type="button"
+          onClick={addCondition}
+          className="inline-flex w-full items-center gap-1.5 rounded-(--r-sm) border-none bg-transparent px-1.5 py-1 text-[12px] font-[550] text-(--accent-text) hover:bg-(--accent-soft)"
+        >
+          <PlusIcon />
+          添加条件
+        </button>
+      </div>
     </div>
   );
 }

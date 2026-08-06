@@ -27,7 +27,7 @@ export function SettingsPanel({ onClose }: SettingsPanelProps) {
       style={{ top: "calc(var(--topbar-h) + 6px)" }}
     >
       <div className="mb-2.5 flex items-center justify-between">
-        <span className="font-(family-name:--font-display) text-[13px] font-[590] text-(--fg)">设置</span>
+        <span className="font-(family-name:--font-display) text-[13px] font-[590] text-(--fg)">版本</span>
         <span className="font-(family-name:--font-mono) text-[11px] text-(--muted-2)">
           {currentVersion ? `v${currentVersion}` : "…"}
         </span>

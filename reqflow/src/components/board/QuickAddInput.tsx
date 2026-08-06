@@ -38,7 +38,7 @@ export function QuickAddInput({ placeholder, attributes, columnWidths, onSubmit,
             if (trimmed) onSubmit(trimmed);
           }
         }}
-        className="sticky left-0 w-full border-none bg-transparent font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2)"
+        className="sticky left-0 w-full border-none bg-transparent pl-5.5 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2)"
       />
     </div>
   );

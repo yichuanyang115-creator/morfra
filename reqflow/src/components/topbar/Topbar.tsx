@@ -27,7 +27,7 @@ function ChevDownIcon() {
 
 function FilterIcon() {
   return (
-    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
+    <svg className="size-[15px]" viewBox="0 0 20 20" fill="none">
       <path
         d="M4 4.5h12l-4.5 5.5v4.3l-3 1.5v-5.8L4 4.5Z"
         stroke="currentColor"
@@ -40,7 +40,7 @@ function FilterIcon() {
 
 function SortIcon() {
   return (
-    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
+    <svg className="size-[15px]" viewBox="0 0 20 20" fill="none">
       <path d="M6.5 4v11M6.5 4 4 6.5M6.5 4 9 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M13.5 16V5M13.5 16 11 13.5M13.5 16 16 13.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -49,7 +49,7 @@ function SortIcon() {
 
 function FieldsIcon() {
   return (
-    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
+    <svg className="size-[15px]" viewBox="0 0 20 20" fill="none">
       <path d="M4 5.5h2M4 10h2M4 14.5h2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       <path d="M8.5 5.5h7.5M8.5 10h7.5M8.5 14.5h7.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
@@ -58,7 +58,7 @@ function FieldsIcon() {
 
 function AppSettingsIcon() {
   return (
-    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
+    <svg className="size-[15px]" viewBox="0 0 20 20" fill="none">
       <circle cx="10" cy="10" r="6.8" stroke="currentColor" strokeWidth="1.4" />
       <path d="M10 9.2v4M10 6.7h.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
@@ -67,7 +67,7 @@ function AppSettingsIcon() {
 
 function SchemaSettingsIcon() {
   return (
-    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
+    <svg className="size-[15px]" viewBox="0 0 20 20" fill="none">
       <path
         d="M8.5 3.2h3l.45 1.9 1.75.9 1.85-.7 1.5 2.6-1.35 1.35v2l1.35 1.35-1.5 2.6-1.85-.7-1.75.9-.45 1.9h-3l-.45-1.9-1.75-.9-1.85.7-1.5-2.6 1.35-1.35v-2L2.95 8.9l1.5-2.6 1.85.7 1.75-.9.45-1.9Z"
         stroke="currentColor"
@@ -161,7 +161,7 @@ export function Topbar() {
         </button>
         <button
           type="button"
-          aria-label="应用设置"
+          aria-label="版本"
           aria-haspopup="true"
           onClick={() => setAppSettingsOpen((v) => !v)}
           className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"

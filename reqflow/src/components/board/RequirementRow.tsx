@@ -80,7 +80,7 @@ export function RequirementRow({
       } ${selected ? "bg-(--accent-selected)" : "hover:bg-(--surface)"}`}
     >
       <div
-        className={`sticky left-0 z-1 flex min-w-0 items-center gap-1.5 pr-2 text-[13px] text-(--fg) ${
+        className={`sticky left-0 z-1 flex min-w-0 items-center gap-1.5 pl-5.5 pr-2 text-[13px] text-(--fg) ${
           selected ? "bg-(--accent-selected)" : "bg-(--surface)"
         }`}
       >

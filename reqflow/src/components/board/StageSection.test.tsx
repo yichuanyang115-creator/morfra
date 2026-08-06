@@ -70,7 +70,8 @@ describe("StageSection", () => {
 
     const section = container.querySelector("section");
     expect(section).toHaveClass("bg-(--accent-soft)");
-    const header = section?.firstElementChild;
+    // 标题栏已提到 section 外（fragment 第一个子元素，sticky 钉在看板滚动层）
+    const header = container.firstElementChild;
     expect(header).toHaveClass("border-(--accent)");
     spy.mockRestore();
   });
@@ -275,8 +276,7 @@ describe("StageSection", () => {
       />,
     );
 
-    const section = container.querySelector("section");
-    const header = section?.firstElementChild as HTMLElement;
+    const header = container.firstElementChild as HTMLElement;
     expect(header.style.backgroundColor).toBe("rgb(171, 205, 239)");
   });
 });

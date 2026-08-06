@@ -82,12 +82,9 @@ export function StageSection({
     : `该阶段暂无需求${stageOption.id === "collect" ? "，点上方新建记录你的第一个想法" : ""}`;
 
   return (
-    <section
-      ref={setNodeRef}
-      className={`mb-1 rounded-(--r-lg) ${isOver ? "bg-(--accent-soft)" : ""}`}
-    >
+    <>
       <div
-        className={`my-1.5 flex w-fit min-w-full items-center gap-2 rounded-(--r-lg) border px-2.5 py-1.75 ${
+        className={`sticky left-0 z-1 my-1.5 flex w-full items-center gap-2 rounded-(--r-lg) border pl-5.5 py-1.75 pr-2.5 ${
           isOver ? "border-(--accent) bg-(--accent-soft-strong)" : "border-(--accent-soft-strong)"
         }`}
         style={{ backgroundColor: isOver ? undefined : stageOption.color }}
@@ -131,7 +128,10 @@ export function StageSection({
           </>
         )}
       </div>
-
+      <section
+        ref={setNodeRef}
+        className={`mb-1 rounded-(--r-lg) ${isOver ? "bg-(--accent-soft)" : ""}`}
+      >
       {!collapsed && (
         <>
           {draftOpen && (
@@ -173,6 +173,7 @@ export function StageSection({
           )}
         </>
       )}
-    </section>
+      </section>
+    </>
   );
 }

@@ -47,6 +47,14 @@ button {
   background: var(--muted-2);
 }
 
+/* 线性图标标准尺寸：icon-sm 全局统一 14px。此前该类从未定义，无尺寸 SVG
+   渲染失控（裸 SVG 达数百 px，仅靠 flex 容器挤压到 ~28px，比文字大两倍多），
+   定义为显式尺寸后所有图标与文字协调。 */
+.icon-sm {
+  width: 14px;
+  height: 14px;
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
