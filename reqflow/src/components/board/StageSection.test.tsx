@@ -216,6 +216,19 @@ describe("StageSection", () => {
     expect(screen.getByLabelText("排序")).toBeInTheDocument();
   });
 
+  it("排序卡片展开时提升当前阶段标题层级，避免被后续阶段标题遮挡", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<StageSection stageOption={DESIGN_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
+
+    await user.click(screen.getByLabelText("排序"));
+
+    expect(container.firstElementChild).toHaveClass("z-10");
+
+    await user.click(document.body);
+
+    expect(container.firstElementChild).toHaveClass("z-1");
+  });
+
   it("终态阶段标题行不显示排序控制", () => {
     render(<StageSection stageOption={ARCHIVE_STAGE} requirements={[]} selectedRequirementId={null} {...noop} />);
 

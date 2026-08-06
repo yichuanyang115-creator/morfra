@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Attribute, SortRule } from "../../types/schema";
 import { isSortRuleActive, sortableAttributes } from "../../lib/requirementSort";
-
-function SortIcon() {
-  return (
-    <svg className="icon-sm" viewBox="0 0 20 20" fill="none">
-      <path d="M4 6h12M6 10h8M8.5 14h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
+import { SortIcon } from "../shared/SortIcon";
 
 function ChevDownIcon() {
   return <svg className="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>;
@@ -26,20 +19,26 @@ interface SortControlProps {
   onChange: (rule: SortRule | null) => void;
   onToggleDirection: () => void;
   onRestore: () => void;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function SortControl({ rule, attributes, manual, hasLocalRule, onChange, onToggleDirection, onRestore }: SortControlProps) {
+export function SortControl({ rule, attributes, manual, hasLocalRule, onChange, onToggleDirection, onRestore, onOpenChange }: SortControlProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const options = sortableAttributes(attributes);
 
+  function updateOpen(next: boolean) {
+    setOpen(next);
+    onOpenChange?.(next);
+  }
+
   useEffect(() => {
     if (!open) return;
     function handlePointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target as Node)) updateOpen(false);
     }
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") updateOpen(false);
     }
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
@@ -53,7 +52,7 @@ export function SortControl({ rule, attributes, manual, hasLocalRule, onChange, 
     <div ref={rootRef} className="relative flex-none" onClick={(event) => event.stopPropagation()}>
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => updateOpen(!open)}
         title="排序"
         aria-label="排序"
         className={`grid size-6 place-items-center rounded-(--r-sm) border-none bg-transparent ${

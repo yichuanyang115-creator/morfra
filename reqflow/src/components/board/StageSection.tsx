@@ -61,6 +61,7 @@ export function StageSection({
   const [collapsed, setCollapsed] = useState(false);
   const [draftOpen, setDraftOpen] = useState(false);
   const [terminalSearch, setTerminalSearch] = useState("");
+  const [sortOpen, setSortOpen] = useState(false);
   const { setNodeRef, isOver } = useDroppable({ id: stageOption.id });
 
   const schema = useSchemaStore((s) => s.schema);
@@ -88,7 +89,7 @@ export function StageSection({
   return (
     <>
       <div
-        className={`sticky left-0 z-1 my-1.5 flex w-full items-center gap-2 rounded-(--r-lg) border pl-5.5 py-1.75 pr-2.5 ${
+        className={`sticky left-0 ${sortOpen ? "z-10" : "z-1"} my-1.5 flex w-full items-center gap-2 rounded-(--r-lg) border pl-5.5 py-1.75 pr-2.5 ${
           isOver ? "border-(--accent) bg-(--accent-soft-strong)" : "border-(--accent-soft-strong)"
         }`}
         style={{ backgroundColor: isOver ? undefined : stageOption.color }}
@@ -128,6 +129,7 @@ export function StageSection({
                 void setStageSort(projectId, stageOption.id, { ...sort.rule, direction: sort.rule.direction === "desc" ? "asc" : "desc" });
               }}
               onRestore={() => { if (projectId) void clearStageSort(projectId, stageOption.id); }}
+              onOpenChange={setSortOpen}
             />
             <button
               type="button"
