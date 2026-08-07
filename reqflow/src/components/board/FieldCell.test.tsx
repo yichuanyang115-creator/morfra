@@ -80,7 +80,16 @@ describe("FieldCell", () => {
       const requirement = makeRequirement({ attributeValues: { custom_status: "todo" } });
       render(<FieldCell attribute={attribute} requirement={requirement} onChange={vi.fn()} />);
       const badge = screen.getByText("待办", { selector: "span" });
-      expect(badge).toHaveStyle({ backgroundColor: "#ABCDEF" });
+      expect(badge.querySelector("[aria-hidden=\"true\"]")).toHaveStyle({ backgroundColor: "#ABCDEF" });
+    });
+
+    it("优先级选项存在自定义颜色时，圆点使用该颜色而不是覆盖为语义色", () => {
+      const attribute: Attribute = {
+        ...PRIORITY_ATTR,
+        options: [{ id: "P0", label: "P0", color: "#ABCDEF" }],
+      };
+      render(<FieldCell attribute={attribute} requirement={makeRequirement({ attributeValues: { priority: "P0" } })} onChange={vi.fn()} />);
+      expect(screen.getByText("P0", { selector: "span" }).querySelector("[aria-hidden=\"true\"]")).toHaveStyle({ backgroundColor: "#ABCDEF" });
     });
   });
 
@@ -137,13 +146,13 @@ describe("FieldCell", () => {
       const { unmount } = render(
         <FieldCell attribute={attribute} requirement={makeRequirement({ attributeValues: { tags2: ["b", "d"] } })} onChange={vi.fn()} />,
       );
-      const dColorWhenSelectedWithB = getComputedStyle(screen.getByText("D")).backgroundColor;
+      const dColorWhenSelectedWithB = getComputedStyle(screen.getByText("D").querySelector("[aria-hidden=\"true\"]") as Element).backgroundColor;
       unmount();
 
       render(
         <FieldCell attribute={attribute} requirement={makeRequirement({ attributeValues: { tags2: ["a", "b", "d"] } })} onChange={vi.fn()} />,
       );
-      const dColorWhenSelectedWithAB = getComputedStyle(screen.getByText("D")).backgroundColor;
+      const dColorWhenSelectedWithAB = getComputedStyle(screen.getByText("D").querySelector("[aria-hidden=\"true\"]") as Element).backgroundColor;
 
       expect(dColorWhenSelectedWithAB).toBe(dColorWhenSelectedWithB);
     });

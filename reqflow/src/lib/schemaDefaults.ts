@@ -1,10 +1,21 @@
 import { DEFAULT_SOURCES, RELEASE_METHODS, STAGES } from "../types/models";
-import type { Attribute, Schema, StageOption, TabDefinition, TabField } from "../types/schema";
-import { paletteColorAt } from "./stagePalette";
+import type { Attribute, Schema, SelectOption, StageOption, TabDefinition, TabField } from "../types/schema";
+import { nextPaletteColor, paletteColorAt } from "./stagePalette";
 import { FIELD_KEYS } from "./requirementFields";
 import type { SchemaSnapshot } from "../types/templates";
 
 const SCHEMA_VERSION = 1;
+
+/** 自动色一旦分配就写入 Schema；已有显式颜色永远保留。 */
+function withAutoColors(options: SelectOption[]): SelectOption[] {
+  const used = options.map((option) => option.color);
+  return options.map((option) => {
+    if (option.color !== undefined) return option;
+    const color = nextPaletteColor(used);
+    used.push(color);
+    return { ...option, color };
+  });
+}
 
 const DELIVERABLE_FIELDS: TabField[] = [
   { id: "name", name: "名称", type: "text" },
@@ -16,13 +27,13 @@ const TASK_FIELDS: TabField[] = [
   { id: "assignee", name: "负责人", type: "text" },
   { id: "deadline", name: "截止日期", type: "date" },
   { id: "progress", name: "进度", type: "percent" },
-  { id: "status", name: "状态", type: "singleSelect", options: [{ id: "todo", label: "待开始" }, { id: "progress", label: "进行中" }, { id: "done", label: "完成" }] },
+  { id: "status", name: "状态", type: "singleSelect", options: withAutoColors([{ id: "todo", label: "待开始" }, { id: "progress", label: "进行中" }, { id: "done", label: "完成" }]) },
   { id: "blocked", name: "阻塞", type: "checkbox" },
   { id: "blockNote", name: "阻塞原因", type: "text", dependsOn: { attributeId: "blocked", value: true } },
 ];
 const ACCEPTANCE_FIELDS: TabField[] = [
   { id: "desc", name: "描述", type: "text" },
-  { id: "result", name: "结果", type: "singleSelect", options: [{ id: "pass", label: "通过" }, { id: "fail", label: "不通过" }, { id: "unverified", label: "未验证" }] },
+  { id: "result", name: "结果", type: "singleSelect", options: withAutoColors([{ id: "pass", label: "通过" }, { id: "fail", label: "不通过" }, { id: "unverified", label: "未验证" }]) },
   { id: "failNote", name: "不通过原因", type: "text", dependsOn: { attributeId: "result", value: "fail" } },
 ];
 
@@ -50,9 +61,11 @@ function legacyAttributes(sources: string[]): Attribute[] {
       name: "优先级",
       type: "singleSelect",
       options: [
-        { id: "P0", label: "P0" },
-        { id: "P1", label: "P1" },
-        { id: "P2", label: "P2" },
+        ...withAutoColors([
+          { id: "P0", label: "P0" },
+          { id: "P1", label: "P1" },
+          { id: "P2", label: "P2" },
+        ]),
       ],
       showOnBoard: true,
       showOnDetail: true,
@@ -68,7 +81,7 @@ function legacyAttributes(sources: string[]): Attribute[] {
       id: FIELD_KEYS.source,
       name: "来源",
       type: "singleSelect",
-      options: sources.map((s) => ({ id: s, label: s })),
+      options: withAutoColors(sources.map((s) => ({ id: s, label: s }))),
       showOnBoard: false,
       showOnDetail: true,
     },
@@ -90,7 +103,7 @@ function legacyAttributes(sources: string[]): Attribute[] {
       id: FIELD_KEYS.releaseMethod,
       name: "发布方式",
       type: "singleSelect",
-      options: RELEASE_METHODS.map((m) => ({ id: m, label: m })),
+      options: withAutoColors(RELEASE_METHODS.map((m) => ({ id: m, label: m }))),
       showOnBoard: true,
       showOnDetail: true,
     },
@@ -105,10 +118,10 @@ function legacyAttributes(sources: string[]): Attribute[] {
       id: FIELD_KEYS.result,
       name: "结果",
       type: "singleSelect",
-      options: [
+      options: withAutoColors([
         { id: "completed", label: "完成" },
         { id: "abandoned", label: "废弃" },
-      ],
+      ]),
       showOnBoard: true,
       showOnDetail: true,
     },

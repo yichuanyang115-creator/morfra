@@ -23,4 +23,42 @@ describe("ColorPicker", () => {
     await userEvent.click(screen.getByLabelText(`颜色 ${STAGE_PALETTE[3]}`));
     expect(onChange).toHaveBeenCalledWith(STAGE_PALETTE[3]);
   });
+
+  it("手动输入合法 Hex 后失焦触发 onChange", async () => {
+    const onChange = vi.fn();
+    render(<ColorPicker value={STAGE_PALETTE[0]} onChange={onChange} />);
+
+    const input = screen.getByLabelText("自定义颜色");
+    await userEvent.clear(input);
+    await userEvent.type(input, "#4F9200");
+    await userEvent.tab();
+
+    expect(onChange).toHaveBeenCalledWith("#4F9200");
+  });
+
+  it("手动输入灰色或非法颜色时阻止保存并显示错误", async () => {
+    const onChange = vi.fn();
+    render(<ColorPicker value={STAGE_PALETTE[0]} onChange={onChange} />);
+
+    const input = screen.getByLabelText("自定义颜色");
+    await userEvent.clear(input);
+    await userEvent.type(input, "#808080");
+    await userEvent.tab();
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("不能使用灰色");
+  });
+
+  it("手动输入红色时允许保留但提示反馈语义边界", async () => {
+    const onChange = vi.fn();
+    render(<ColorPicker value={STAGE_PALETTE[0]} onChange={onChange} />);
+
+    const input = screen.getByLabelText("自定义颜色");
+    await userEvent.clear(input);
+    await userEvent.type(input, "#B3261E");
+    await userEvent.tab();
+
+    expect(onChange).toHaveBeenCalledWith("#B3261E");
+    expect(screen.getByRole("status")).toHaveTextContent("红色仅建议用于危险反馈");
+  });
 });

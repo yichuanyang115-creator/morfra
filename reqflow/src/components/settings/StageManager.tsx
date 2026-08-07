@@ -5,7 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { Attribute, StageOption } from "../../types/schema";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { StageEditor } from "./StageEditor";
-import { paletteColorAt } from "../../lib/stagePalette";
+import { nextPaletteColor } from "../../lib/stagePalette";
 import { newStageOptionId } from "../../stores/schemaStore";
 
 function ChevronIcon() {
@@ -84,7 +84,7 @@ function StageRow({
           <DragHandleIcon />
         </span>
         <button type="button" onClick={onToggleExpand} className="flex flex-1 items-center gap-2 border-none bg-transparent p-0 text-left">
-          <span className="flex-none size-3 rounded-(--r-sm)" style={{ backgroundColor: stageOption.color }} />
+          <span className="flex-none size-3 rounded-full" style={{ backgroundColor: stageOption.color }} />
           <span className="flex-1 truncate font-(family-name:--font-body) text-[13px] text-(--fg)">{stageOption.label}</span>
           {stageOption.isTerminal && (
             <span className="flex-none rounded-(--r-sm) bg-(--accent-selected) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--context-strong)">
@@ -157,7 +157,7 @@ export function StageManager({
   function submitDraft() {
     const trimmed = draftLabel.trim();
     if (!trimmed) return;
-    onAdd({ id: newStageOptionId(), label: trimmed, color: paletteColorAt(stageOptions.length), isTerminal: false });
+    onAdd({ id: newStageOptionId(), label: trimmed, color: nextPaletteColor(stageOptions.map((stage) => stage.color)), isTerminal: false });
     setDraftLabel("");
   }
 

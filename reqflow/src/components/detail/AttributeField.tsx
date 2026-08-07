@@ -9,7 +9,7 @@ export const inputClass =
   "block h-7 w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft) focus:border-(--accent) focus:bg-(--accent-soft)";
 
 const SELECT_ARROW_URL =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2368748a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")";
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%235D3A73' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")";
 
 export const selectClass = `${inputClass} cursor-pointer appearance-none bg-no-repeat pr-5`;
 export const selectStyle: React.CSSProperties = {
@@ -21,10 +21,26 @@ export const selectStyle: React.CSSProperties = {
 const readonlyClass = "block h-7 w-full rounded-(--r-sm) border border-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--muted)";
 
 const PRIORITY_BADGE_STYLE: Record<string, string> = {
-  P0: "bg-(--sev-p0-soft) text-(--sev-p0)",
-  P1: "bg-(--sev-p1-soft) text-(--sev-p1)",
-  P2: "bg-(--sev-p2-soft) text-(--muted)",
+  P0: "text-(--sev-p0)",
+  P1: "text-(--sev-p1)",
+  P2: "text-(--sev-p2)",
 };
+
+const PRIORITY_DOT_STYLE: Record<string, string> = {
+  P0: "bg-(--sev-p0)",
+  P1: "bg-(--sev-p1)",
+  P2: "bg-(--sev-p2)",
+};
+
+function PriorityMarker({ value, color }: { value: string; color?: string }) {
+  return (
+    <span
+      className={`mr-1.5 size-1.5 rounded-full ${color ? "" : PRIORITY_DOT_STYLE[value] ?? "bg-(--context-strong)"}`}
+      style={color ? { backgroundColor: color } : undefined}
+      aria-hidden="true"
+    />
+  );
+}
 
 function clampPercent(value: string): number | null {
   const n = Number.parseInt(value, 10);
@@ -42,22 +58,35 @@ function SingleSelectField({
   onChange: (value: unknown) => void;
 }) {
   const options = attribute.options ?? [];
+  const selected = options.find((option) => option.id === value);
+  const selectedIndex = options.findIndex((option) => option.id === value);
+  const isPriority = attribute.id === "priority";
+  const markerColor = selected?.color ?? (!isPriority ? paletteColorAt(selectedIndex) : undefined);
 
   return (
-    <select
-      value={value}
-      aria-label={attribute.name}
-      onChange={(e) => onChange(e.target.value || null)}
-      className={selectClass}
-      style={selectStyle}
-    >
-      <option value="">未设置</option>
-      {options.map((o) => (
-        <option key={o.id} value={o.id}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+    <div className="flex min-w-0 items-center gap-1.5">
+      {selected && (
+        <span
+          className={`size-1.5 flex-none rounded-full ${markerColor ? "" : PRIORITY_DOT_STYLE[value] ?? "bg-(--context-strong)"}`}
+          style={markerColor ? { backgroundColor: markerColor } : undefined}
+          aria-hidden="true"
+        />
+      )}
+      <select
+        value={value}
+        aria-label={attribute.name}
+        onChange={(e) => onChange(e.target.value || null)}
+        className={`${selectClass} min-w-0 flex-1`}
+        style={selectStyle}
+      >
+        <option value="">未设置</option>
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 
@@ -72,9 +101,13 @@ function SingleSelectReadonly({ attribute, value }: { attribute: Attribute; valu
 
   return (
     <span
-      className={`inline-flex h-6.5 w-fit items-center rounded-(--r-sm) px-1.75 font-(family-name:--font-body) text-[12.5px] ${badgeClass ?? ""}`}
-      style={badgeColor ? { backgroundColor: badgeColor } : undefined}
+      className={`inline-flex h-6.5 w-fit items-center font-(family-name:--font-body) text-[12.5px] ${badgeClass ?? ""}`}
     >
+      {isPriority ? (
+        <PriorityMarker value={value} color={selected.color} />
+      ) : (
+        <span className="mr-1.5 size-1.5 rounded-full" style={badgeColor ? { backgroundColor: badgeColor } : undefined} aria-hidden="true" />
+      )}
       {selected.label}
     </span>
   );
@@ -109,11 +142,11 @@ function MultiSelectField({
               key={o.id}
               type="button"
               onClick={() => toggle(o.id)}
-              style={active ? { backgroundColor: o.color ?? paletteColorAt(options.findIndex((opt) => opt.id === o.id)) } : undefined}
               className={`inline-flex h-6 w-fit items-center rounded-(--r-sm) px-1.75 font-(family-name:--font-body) text-[12px] ${
                 active ? "text-(--fg)" : "border border-(--border) text-(--muted-2)"
               }`}
             >
+              {active && <span className="mr-1.5 size-1.5 rounded-full" style={{ backgroundColor: o.color ?? paletteColorAt(options.findIndex((opt) => opt.id === o.id)) }} aria-hidden="true" />}
               {o.label}
             </button>
           );

@@ -123,6 +123,52 @@ describe("AttributeGrid（REQ-004：属性区从 schema 动态渲染）", () => 
     expect(screen.queryByRole("combobox", { name: "结果" })).not.toBeInTheDocument();
   });
 
+  it("Schema 自定义颜色在详情只显示为小圆点，不填充选项主体", () => {
+    const attributes: Attribute[] = [
+      makeAttribute({
+        id: "result",
+        name: "结果",
+        type: "singleSelect",
+        options: [{ id: "completed", label: "完成", color: "#ABCDEF" }],
+      }),
+    ];
+    render(
+      <AttributeGrid
+        requirement={makeRequirement({ stage: "archive" }, { result: "completed" })}
+        attributes={attributes}
+        compact={false}
+        isTerminal={true}
+        {...noopHandlers}
+      />,
+    );
+
+    const label = screen.getByText("完成", { selector: "span" });
+    expect(label).not.toHaveStyle({ backgroundColor: "#ABCDEF" });
+    expect(label.querySelector("[aria-hidden=\"true\"]")).toHaveStyle({ backgroundColor: "#ABCDEF" });
+  });
+
+  it("详情编辑态的优先级选项也显示自定义颜色圆点", () => {
+    const attributes: Attribute[] = [
+      makeAttribute({
+        id: "priority",
+        name: "优先级",
+        type: "singleSelect",
+        options: [{ id: "P0", label: "P0", color: "#ABCDEF" }],
+      }),
+    ];
+    render(
+      <AttributeGrid
+        requirement={makeRequirement({}, { priority: "P0" })}
+        attributes={attributes}
+        compact={false}
+        isTerminal={false}
+        {...noopHandlers}
+      />,
+    );
+
+    expect(screen.getByLabelText("优先级").parentElement?.querySelector("[aria-hidden=\"true\"]")).toHaveStyle({ backgroundColor: "#ABCDEF" });
+  });
+
   it("阶段流转下拉始终渲染（不受 attributes 列表影响，因 Stage 是骨架属性不在 schema.attributes 里）", () => {
     render(
       <AttributeGrid requirement={makeRequirement()} attributes={[]} compact={false} isTerminal={false} {...noopHandlers} />,

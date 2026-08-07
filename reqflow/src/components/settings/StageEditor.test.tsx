@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Attribute, StageOption } from "../../types/schema";
+import { STAGE_PALETTE } from "../../lib/stagePalette";
 import { StageEditor } from "./StageEditor";
 
 const STAGE: StageOption = { id: "release", label: "发布", color: "hsl(0,55%,88%)", isTerminal: false };
@@ -46,8 +47,8 @@ describe("StageEditor", () => {
     const onUpdate = vi.fn();
     render(<StageEditor stageOption={STAGE} availableAttributes={ATTRIBUTES} onUpdate={onUpdate} />);
 
-    await userEvent.click(screen.getByLabelText("颜色 hsl(180, 55%, 88%)"));
-    expect(onUpdate).toHaveBeenCalledWith({ color: "hsl(180, 55%, 88%)" });
+    await userEvent.click(screen.getByLabelText(`颜色 ${STAGE_PALETTE[3]}`));
+    expect(onUpdate).toHaveBeenCalledWith({ color: STAGE_PALETTE[3] });
   });
 
   it("无覆盖规则时显示提示文案", () => {

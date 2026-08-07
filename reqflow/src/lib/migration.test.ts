@@ -85,4 +85,68 @@ describe("migrateIfNeeded", () => {
     expect(schema.viewPreferences.columnOrder).toEqual(["priority"]);
     expect(schema.viewPreferences.columnWidths).toEqual({ priority: 80 });
   });
+
+  it("为缺少颜色的 Schema 选项分配稳定色并落盘，同时保留已有自定义颜色", async () => {
+    files.set(
+      "/app-local-data/projects/proj-1/schema.json",
+      JSON.stringify({
+        version: 1,
+        stageOptions: [],
+        attributes: [{ id: "status", name: "状态", type: "singleSelect", options: [
+          { id: "a", label: "A" },
+          { id: "b", label: "B", color: "#ABCDEF" },
+        ], showOnBoard: true, showOnDetail: true }],
+        tabs: [],
+        viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0, filters: [], globalSort: null, stageSorts: {} },
+      }),
+    );
+
+    const { schema } = await migrateIfNeeded("proj-1", []);
+    const options = schema.attributes[0].options ?? [];
+
+    expect(options[0].color).toBeDefined();
+    expect(options[1].color).toBe("#ABCDEF");
+    expect(JSON.parse(files.get("/app-local-data/projects/proj-1/schema.json")!).attributes[0].options[0].color).toBe(options[0].color);
+  });
+
+  it("为缺少颜色的阶段分配稳定色并落盘，同时保留已有阶段自定义颜色", async () => {
+    files.set(
+      "/app-local-data/projects/proj-1/schema.json",
+      JSON.stringify({
+        version: 1,
+        stageOptions: [
+          { id: "collect", label: "收集", isTerminal: false },
+          { id: "design", label: "设计", color: "#ABCDEF", isTerminal: false },
+        ],
+        attributes: [],
+        tabs: [],
+        viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0, filters: [], globalSort: null, stageSorts: {} },
+      }),
+    );
+
+    const { schema } = await migrateIfNeeded("proj-1", []);
+    expect(schema.stageOptions[0].color).toBeDefined();
+    expect(schema.stageOptions[1].color).toBe("#ABCDEF");
+    expect(JSON.parse(files.get("/app-local-data/projects/proj-1/schema.json")!).stageOptions[0].color).toBe(schema.stageOptions[0].color);
+  });
+
+  it("迁移补色会避开同组已有颜色，不因索引重复", async () => {
+    files.set(
+      "/app-local-data/projects/proj-1/schema.json",
+      JSON.stringify({
+        version: 1,
+        stageOptions: [
+          { id: "a", label: "A", isTerminal: false },
+          { id: "b", label: "B", color: "#3F7A02", isTerminal: false },
+        ],
+        attributes: [{ id: "status", name: "状态", type: "singleSelect", options: [{ id: "a", label: "A" }, { id: "b", label: "B", color: "#5D3A73" }], showOnBoard: true, showOnDetail: true }],
+        tabs: [],
+        viewPreferences: { columnOrder: [], columnWidths: {}, frozenCount: 0, filters: [], globalSort: null, stageSorts: {} },
+      }),
+    );
+
+    const { schema } = await migrateIfNeeded("proj-1", []);
+    expect(schema.stageOptions[0].color).not.toBe("#3F7A02");
+    expect(schema.attributes[0].options?.[0].color).not.toBe("#5D3A73");
+  });
 });

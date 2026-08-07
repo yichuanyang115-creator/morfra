@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Attribute, AttributeType, SelectOption } from "../../types/schema";
 import { ATTRIBUTE_TYPE_LABEL, USER_ASSIGNABLE_TYPES } from "../../lib/attributeTypeLabels";
-import { paletteColorAt } from "../../lib/stagePalette";
+import { nextPaletteColor, paletteColorAt } from "../../lib/stagePalette";
 import { newSelectOptionId } from "../../stores/schemaStore";
 import { DependencyValueControl } from "./DependencyValueControl";
 
@@ -39,10 +39,12 @@ function isSelectType(type: AttributeType): boolean {
 
 function OptionRow({
   option,
+  optionIndex,
   onRename,
   onRemove,
 }: {
   option: SelectOption;
+  optionIndex: number;
   onRename: (label: string) => void;
   onRemove: () => void;
 }) {
@@ -56,7 +58,7 @@ function OptionRow({
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className="size-3 flex-none rounded-(--r-sm)" style={{ backgroundColor: option.color }} />
+      <span className="size-3 flex-none rounded-full" style={{ backgroundColor: option.color ?? paletteColorAt(optionIndex) }} />
       <input
         type="text"
         value={label}
@@ -112,7 +114,7 @@ export function AttributeEditor({ attribute, availableAttributes, typeChangeLock
 
   function addOption() {
     onUpdate({
-      options: [...options, { id: newSelectOptionId(), label: "新选项", color: paletteColorAt(options.length) }],
+      options: [...options, { id: newSelectOptionId(), label: "新选项", color: nextPaletteColor(options.map((option) => option.color)) }],
     });
   }
 
@@ -175,6 +177,7 @@ export function AttributeEditor({ attribute, availableAttributes, typeChangeLock
                 <OptionRow
                   key={option.id}
                   option={option}
+                  optionIndex={i}
                   onRename={(label) => renameOptionAt(i, label)}
                   onRemove={() => removeOptionAt(i)}
                 />

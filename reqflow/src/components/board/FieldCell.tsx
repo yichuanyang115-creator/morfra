@@ -5,9 +5,15 @@ import { lastTransitionTimestamp, stayDays as computeStayDays, totalDays as comp
 import { paletteColorAt } from "../../lib/stagePalette";
 
 const PRIORITY_STYLE: Record<string, string> = {
-  P0: "bg-(--sev-p0-soft) text-(--sev-p0)",
-  P1: "bg-(--sev-p1-soft) text-(--sev-p1)",
-  P2: "bg-(--sev-p2-soft) text-(--muted)",
+  P0: "text-(--sev-p0)",
+  P1: "text-(--sev-p1)",
+  P2: "text-(--sev-p2)",
+};
+
+const PRIORITY_DOT_STYLE: Record<string, string> = {
+  P0: "bg-(--sev-p0)",
+  P1: "bg-(--sev-p1)",
+  P2: "bg-(--sev-p2)",
 };
 
 const cellTextClass = "overflow-hidden text-ellipsis text-center font-(family-name:--font-mono) text-[12px] whitespace-nowrap text-(--muted)";
@@ -22,6 +28,25 @@ function badgeStyleFor(attribute: Attribute, optionId: string, optionIndex: numb
   if (attribute.id === "priority") return undefined;
   const option = attribute.options?.find((o) => o.id === optionId);
   return option?.color ?? paletteColorAt(optionIndex);
+}
+
+function SelectMarker({ label, color }: { label: string; color?: string }) {
+  return (
+    <span className="inline-flex items-center">
+      <span className="mr-1.5 size-1.5 rounded-full" style={color ? { backgroundColor: color } : undefined} aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
+
+function PriorityMarker({ value, color }: { value: string; color?: string }) {
+  return (
+    <span
+      className={`mr-1.5 size-1.5 rounded-full ${color ? "" : PRIORITY_DOT_STYLE[value] ?? "bg-(--context-strong)"}`}
+      style={color ? { backgroundColor: color } : undefined}
+      aria-hidden="true"
+    />
+  );
 }
 
 interface FieldCellProps {
@@ -80,7 +105,18 @@ function SingleSelectCell({
   const selected = options.find((o) => o.id === value);
 
   if (readOnly) {
-    return <div className={cellTextClass}>{selected?.label ?? "—"}</div>;
+    return (
+      <div className={cellTextClass}>
+        {selected ? (
+          attribute.id === "priority" ? (
+            <span className={`inline-flex items-center ${PRIORITY_STYLE[value] ?? ""}`}>
+              <PriorityMarker value={value} color={selected.color} />
+              {selected.label}
+            </span>
+          ) : <SelectMarker label={selected.label} color={selected.color ?? paletteColorAt(options.findIndex((option) => option.id === value))} />
+        ) : "—"}
+      </div>
+    );
   }
 
   const isPriority = attribute.id === "priority";
@@ -94,10 +130,12 @@ function SingleSelectCell({
   return (
     <div className="relative flex justify-center" onClick={(e) => e.stopPropagation()}>
       {selected && (
-        <span
-          className={`pointer-events-none inline-flex h-5 w-fit items-center justify-center rounded-(--r-sm) px-1.75 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.05em] ${badgeStyle ?? ""}`}
-          style={badgeColor ? { backgroundColor: badgeColor } : undefined}
-        >
+        <span className={`pointer-events-none inline-flex h-5 w-fit items-center justify-center font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.05em] ${badgeStyle ?? ""}`}>
+          {isPriority ? (
+            <PriorityMarker value={value} color={selected.color} />
+          ) : (
+            <span className="mr-1.5 size-1.5 rounded-full" style={badgeColor ? { backgroundColor: badgeColor } : undefined} aria-hidden="true" />
+          )}
           {selected.label}
         </span>
       )}
@@ -145,9 +183,9 @@ function MultiSelectCell({
             key={o.id}
             type="button"
             onClick={() => toggle(o.id)}
-            style={{ backgroundColor: o.color ?? paletteColorAt(options.findIndex((opt) => opt.id === o.id)) }}
-            className="inline-flex h-5 w-fit items-center justify-center rounded-(--r-sm) px-1.75 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.05em] text-(--fg)"
+            className="inline-flex h-5 w-fit items-center justify-center rounded-(--r-sm) px-1.75 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.05em] text-(--fg) hover:bg-(--accent-soft)"
           >
+            <span className="mr-1.5 size-1.5 rounded-full" style={{ backgroundColor: o.color ?? paletteColorAt(options.findIndex((opt) => opt.id === o.id)) }} aria-hidden="true" />
             {o.label}
           </button>
         ))
