@@ -24,7 +24,7 @@ export function ChatToggle() {
       aria-pressed={open}
       onClick={() => void toggleOpen()}
       className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none text-(--muted) ${
-        open ? "bg-(--accent-soft) text-(--accent-text)" : "bg-transparent hover:bg-(--surface) hover:text-(--fg)"
+        open ? "bg-(--accent-selected) text-(--context-strong)" : "bg-transparent hover:bg-(--accent-soft) hover:text-(--accent-text)"
       }`}
     >
       <ChatIcon />

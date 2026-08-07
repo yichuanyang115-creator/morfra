@@ -29,7 +29,7 @@ export function GlobalSortPanel({ attributes, sort, onChange, onClose }: GlobalS
   }, [onClose]);
 
   return (
-    <div ref={rootRef} className="absolute top-10 right-24 z-50 w-60 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-2 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]" onClick={(event) => event.stopPropagation()}>
+    <div ref={rootRef} className="absolute top-10 right-24 z-50 w-60 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-2 shadow-(--shadow-floating)" onClick={(event) => event.stopPropagation()}>
       <div className="mb-1 px-1 text-[11px] font-[550] text-(--muted-2)">全局排序</div>
       <div className="flex items-center gap-1.5 px-0.5 py-1">
         <select
@@ -53,7 +53,7 @@ export function GlobalSortPanel({ attributes, sort, onChange, onClose }: GlobalS
         </select>
       </div>
       {options.length === 0 && <div className="px-1 py-1 text-[11.5px] text-(--muted-2)">暂无可排序属性</div>}
-      {sort && <button type="button" onClick={() => onChange(null)} className="mt-1 w-full rounded-(--r-sm) border-none bg-transparent py-1 text-[11.5px] text-(--muted) hover:bg-(--surface-2)">清除全局排序</button>}
+      {sort && <button type="button" onClick={() => onChange(null)} className="mt-1 w-full rounded-(--r-sm) border-none bg-transparent py-1 text-[11.5px] text-(--muted) hover:bg-(--accent-soft)">清除全局排序</button>}
     </div>
   );
 }

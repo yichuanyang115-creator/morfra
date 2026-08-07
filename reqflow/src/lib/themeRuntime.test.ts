@@ -29,12 +29,26 @@ describe("themeRuntime", () => {
 
   it("模块未覆盖时继承语义层，显式覆盖只影响对应模块", () => {
     const config = createDefaultTheme();
-    config.moduleOverrides.board = { rowSelectedBg: "green50" };
+    config.moduleOverrides.board = { contextSoft: "purple100" };
 
     const resolved = resolveTheme(config);
 
-    expect(resolved.modules.board.contextSoft).toBe("#F5EFF8");
-    expect(resolved.modules.board.rowSelectedBg).toBe("#F4FAEC");
-    expect(resolved.modules.detail.rowSelectedBg).toBeUndefined();
+    expect(resolved.modules.board.contextSoft).toBe("#E8DDF0");
+    expect(resolved.modules.detail.contextSoft).toBe("#F5EFF8");
+  });
+
+  it("为每个模块写入独立 CSS 变量，清除覆盖后重新跟随语义层", () => {
+    const config = createDefaultTheme();
+    config.moduleOverrides.board = { contextSoft: "purple100" };
+    const root = document.createElement("div").style;
+
+    applyTheme(config, root);
+    expect(root.getPropertyValue("--module-board-context-soft")).toBe("#E8DDF0");
+    expect(root.getPropertyValue("--module-detail-context-soft")).toBe("#F5EFF8");
+
+    delete config.moduleOverrides.board;
+    config.semantic.contextSoft = "#F2E8F7";
+    applyTheme(config, root);
+    expect(root.getPropertyValue("--module-board-context-soft")).toBe("#F2E8F7");
   });
 });

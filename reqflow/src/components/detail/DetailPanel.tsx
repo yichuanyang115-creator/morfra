@@ -121,7 +121,7 @@ export function DetailPanel({
 
   if (!requirement) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 p-5 text-center text-(--muted-2)">
+      <div data-theme-module="detail" className="theme-module-detail flex h-full flex-col items-center justify-center gap-2 p-5 text-center text-(--muted-2)">
         <svg className="size-7.5" viewBox="0 0 20 20" fill="none">
           <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.4" />
         </svg>
@@ -131,7 +131,7 @@ export function DetailPanel({
   }
 
   return (
-    <div key={requirement.id} className="flex h-full min-w-0 flex-col">
+    <div key={requirement.id} data-theme-module="detail" className="theme-module-detail flex h-full min-w-0 flex-col bg-(--surface)">
       <DetailHeader
         requirement={requirement}
         fullscreen={fullscreen}

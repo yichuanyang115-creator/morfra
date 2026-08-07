@@ -31,7 +31,7 @@ export function AcceptanceDraftRow({
             resolve();
           }
         }}
-        className="w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2) focus:border-(--border) focus:bg-(--surface)"
+        className="w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2) focus:border-(--accent) focus:bg-(--accent-soft)"
       />
     </div>
   );

@@ -69,4 +69,23 @@ describe("AppSettingsPage 外观草稿", () => {
     const preview = screen.getByTestId("theme-preview-surface");
     expect(preview.getAttribute("style")).toContain("--semantic-action-base");
   });
+
+  it("可单独自定义看板模块并恢复跟随，其他模块保持缺省继承", async () => {
+    const user = userEvent.setup();
+    render(<AppSettingsPage section="appearance" onSelectSection={vi.fn()} onClose={vi.fn()} />);
+
+    const boardModuleSwitch = await screen.findByRole("checkbox", { name: "看板：自定义此模块" });
+    await user.click(boardModuleSwitch);
+    expect(useThemeStore.getState().draftTheme?.moduleOverrides.board).toBeDefined();
+    expect(useThemeStore.getState().draftTheme?.moduleOverrides.topbar).toBeUndefined();
+    expect(screen.getByLabelText(/模块底色/)).toBeInTheDocument();
+
+    const selectedBackground = screen.getByLabelText(/选中背景/);
+    await user.clear(selectedBackground);
+    await user.type(selectedBackground, "purple100");
+    expect(useThemeStore.getState().draftTheme?.moduleOverrides.board?.contextSoft).toBe("purple100");
+
+    await user.click(screen.getByRole("button", { name: "恢复跟随主题" }));
+    expect(useThemeStore.getState().draftTheme?.moduleOverrides.board).toBeUndefined();
+  });
 });

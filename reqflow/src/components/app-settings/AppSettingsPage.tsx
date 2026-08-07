@@ -19,10 +19,10 @@ function CloseIcon() {
 
 export function AppSettingsPage({ section, onSelectSection, onClose }: AppSettingsPageProps) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div data-theme-module="settings" className="theme-module-settings flex min-h-0 flex-1 flex-col bg-(--surface)">
       <div className="flex flex-none items-center justify-between border-b border-(--border) px-4.5 py-3">
         <span className="font-(family-name:--font-display) text-[15px] font-[590] text-(--fg)">应用设置</span>
-        <button type="button" onClick={onClose} aria-label="关闭应用设置" className="grid size-7 place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface-2) hover:text-(--fg)">
+        <button type="button" onClick={onClose} aria-label="关闭应用设置" className="grid size-7 place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)">
           <CloseIcon />
         </button>
       </div>

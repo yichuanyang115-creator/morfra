@@ -121,4 +121,34 @@ describe("themeStore", () => {
       { field: "theme", message: "主题保存失败，请重试" },
     ]);
   });
+
+  it("模块默认不落盘，启用后只保存显式覆盖，恢复跟随后删除整个模块键", async () => {
+    useThemeStore.getState().beginDraft();
+    useThemeStore.getState().enableModuleOverride("board", ["contextSoft", "actionBase"]);
+    useThemeStore.getState().updateModuleOverride("board", "contextSoft", "purple100");
+
+    expect(useThemeStore.getState().draftTheme?.moduleOverrides).toEqual({
+      board: { contextSoft: "purple100", actionBase: "green500" },
+    });
+    expect(await useThemeStore.getState().applyDraft()).toBe(true);
+    const persisted = JSON.parse(files.get(THEME_PATH) ?? "{}") as { moduleOverrides?: unknown };
+    expect(persisted.moduleOverrides).toEqual({ board: { contextSoft: "purple100", actionBase: "green500" } });
+
+    useThemeStore.setState({ appliedTheme: createDefaultTheme(), draftTheme: null, loaded: false });
+    await useThemeStore.getState().load();
+    expect(useThemeStore.getState().appliedTheme.moduleOverrides.board).toEqual({
+      contextSoft: "purple100",
+      actionBase: "green500",
+    });
+    useThemeStore.getState().beginDraft();
+
+    useThemeStore.getState().clearModuleOverride("board");
+    expect(useThemeStore.getState().draftTheme?.moduleOverrides).toEqual({});
+    expect(await useThemeStore.getState().applyDraft()).toBe(true);
+    expect(JSON.parse(files.get(THEME_PATH) ?? "{}").moduleOverrides).toEqual({});
+
+    useThemeStore.setState({ appliedTheme: createDefaultTheme(), draftTheme: null, loaded: false });
+    await useThemeStore.getState().load();
+    expect(useThemeStore.getState().appliedTheme.moduleOverrides).toEqual({});
+  });
 });

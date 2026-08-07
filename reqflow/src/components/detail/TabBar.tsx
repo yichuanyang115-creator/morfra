@@ -21,8 +21,8 @@ export function TabBar({ activeTab, onSelectTab, tabs, slot }: TabBarProps) {
             onClick={() => onSelectTab(tab.id)}
             className={`min-w-0 flex-1 rounded-(--r-sm) px-2.5 py-1.5 text-center text-[12.5px] text-ellipsis whitespace-nowrap overflow-hidden ${
               activeTab === tab.id
-                ? "bg-(--accent-soft-strong) font-[550] text-(--fg)"
-                : "text-(--muted) hover:text-(--fg)"
+                ? "bg-(--accent-selected) font-[550] text-(--context-strong)"
+                : "text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
             }`}
           >
             {tab.name}

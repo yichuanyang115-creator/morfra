@@ -126,7 +126,7 @@ export function SchemaSettingsPage({
 }: SchemaSettingsPageProps) {
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div data-theme-module="settings" className="theme-module-settings flex h-full min-h-0 flex-col bg-(--surface)">
       <div className="flex flex-none items-center justify-between border-b border-(--border) px-4.5 py-3">
         <span className="font-(family-name:--font-display) text-[15px] font-[590] text-(--fg)">Schema 设置</span>
         <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export function SchemaSettingsPage({
             type="button"
             onClick={onClose}
             aria-label="关闭设置"
-            className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface-2) hover:text-(--fg)"
+            className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
           >
             <CloseIcon />
           </button>

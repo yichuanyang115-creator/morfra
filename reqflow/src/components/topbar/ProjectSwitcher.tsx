@@ -64,7 +64,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
 
   return (
     <>
-      <div className="fixed left-3 z-50 w-80 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-1.5 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]"
+      <div className="fixed left-3 z-50 w-80 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-1.5 shadow-(--shadow-floating)"
         style={{ top: "calc(var(--topbar-h) + 6px)" }}
       >
         {projects.map((project) => {
@@ -75,7 +75,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
             <div
               key={project.id}
               className={`group flex w-full items-center gap-2.25 rounded-(--r-sm) px-2.25 py-2 text-[13px] text-(--fg) ${
-                isActive ? "bg-(--accent-soft) text-(--accent-text)" : "hover:bg-(--surface-2)"
+                isActive ? "bg-(--accent-selected) text-(--context-strong)" : "hover:bg-(--accent-soft) hover:text-(--accent-text)"
               } ${isRenaming ? "" : "cursor-pointer"}`}
               onClick={isRenaming ? undefined : () => handleSwitch(project.id)}
             >
@@ -108,7 +108,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
                         e.stopPropagation();
                         startRename(project.id, project.name);
                       }}
-                      className="grid size-5 flex-none place-items-center border-none bg-transparent text-(--muted-2) hover:text-(--fg)"
+                      className="grid size-5 flex-none place-items-center border-none bg-transparent text-(--muted-2) hover:text-(--accent-text)"
                     >
                       <RenameIcon />
                     </button>

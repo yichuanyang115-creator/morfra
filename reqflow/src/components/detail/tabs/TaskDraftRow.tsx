@@ -39,7 +39,7 @@ export function TaskDraftRow({ onCreate, onCancel }: { onCreate: (task: NewTaskI
           placeholder="任务名称（必填），填完点其他地方或回车即创建"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2) focus:border-(--border) focus:bg-(--surface)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2) focus:border-(--accent) focus:bg-(--accent-soft)"
         />
       </div>
       <div className="flex items-center gap-1.5">

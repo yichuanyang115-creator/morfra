@@ -92,7 +92,7 @@ export function StageSection({
     <>
       <div
         className={`sticky left-0 ${sortOpen ? "z-10" : "z-1"} my-1.5 flex w-full items-center gap-2 rounded-(--r-lg) border bg-(--surface) pl-5.5 py-1.75 pr-2.5 ${
-          isOver ? "border-(--accent) bg-(--accent-soft-strong)" : "border-(--accent-soft-strong)"
+          isOver ? "border-(--accent) bg-(--accent-soft)" : "border-(--accent-selected)"
         }`}
       >
         <button
@@ -137,7 +137,7 @@ export function StageSection({
               type="button"
               onClick={() => setDraftOpen(true)}
               aria-label="新建实体"
-              className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-transparent px-1.75 py-1 text-[12px] text-(--muted) hover:bg-(--surface-2) hover:text-(--accent-text)"
+              className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-transparent px-1.75 py-1 text-[12px] text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
             >
               <PlusIcon />
               新建

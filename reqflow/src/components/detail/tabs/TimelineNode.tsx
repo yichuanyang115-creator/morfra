@@ -85,7 +85,7 @@ export function TimelineNode({
             setNoteValue(transition.note);
             setNoteEditing(true);
           }}
-          className="mb-0.5 block max-w-full truncate rounded-(--r-sm) px-1 py-0.5 text-left font-(family-name:--font-body) text-[12px] text-(--muted) hover:bg-(--surface-2) hover:text-(--fg)"
+          className="mb-0.5 block max-w-full truncate rounded-(--r-sm) px-1 py-0.5 text-left font-(family-name:--font-body) text-[12px] text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
         >
           {transition.note || "点击添加说明…"}
         </button>
@@ -122,7 +122,7 @@ export function TimelineNode({
         <button
           type="button"
           onClick={() => setCommentOpen(true)}
-          className="mt-1 rounded-(--r-sm) px-1 py-0.5 font-(family-name:--font-body) text-[11.5px] text-(--muted-2) hover:bg-(--surface-2) hover:text-(--fg)"
+          className="mt-1 rounded-(--r-sm) px-1 py-0.5 font-(family-name:--font-body) text-[11.5px] text-(--muted-2) hover:bg-(--accent-soft) hover:text-(--accent-text)"
         >
           + 评论
         </button>

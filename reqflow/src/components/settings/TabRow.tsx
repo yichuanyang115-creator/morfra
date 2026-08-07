@@ -78,14 +78,14 @@ export function TabRow({ tab, expanded, onToggleExpand, onUpdate, onRequestDelet
       className={`mb-1.5 rounded-(--r-md) border border-(--border) ${isDragging ? "opacity-40" : ""}`}
     >
       <div className="flex items-center gap-2 px-2.5 py-2">
-        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--fg)">
+        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--accent-text)">
           <DragHandleIcon />
         </span>
         <button
           type="button"
           aria-label={tab.visible ? `隐藏 Tab「${tab.name}」` : `显示 Tab「${tab.name}」`}
           onClick={() => onUpdate({ visible: !tab.visible })}
-          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--surface-2) ${
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--accent-soft) ${
             tab.visible ? "text-(--fg)" : "text-(--muted-2)"
           }`}
         >
@@ -94,7 +94,7 @@ export function TabRow({ tab, expanded, onToggleExpand, onUpdate, onRequestDelet
         <button type="button" onClick={onToggleExpand} className="flex flex-1 items-center gap-2 border-none bg-transparent p-0 text-left">
           <span className="flex-1 truncate font-(family-name:--font-body) text-[13px] text-(--fg)">{tab.name}</span>
           {tab.renderer !== "generic" && (
-            <span className="flex-none rounded-(--r-sm) bg-(--accent-soft) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--accent-text)">
+            <span className="flex-none rounded-(--r-sm) bg-(--accent-selected) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--context-strong)">
               预制
             </span>
           )}

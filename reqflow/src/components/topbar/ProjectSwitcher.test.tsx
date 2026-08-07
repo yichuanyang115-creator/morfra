@@ -53,6 +53,16 @@ describe("ProjectSwitcher（REQ-018/FLOW-009 多项目管理）", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("当前项目使用紫色上下文态，普通项目使用绿色悬停态", async () => {
+    const { createProject } = useProjectStore.getState();
+    await createProject("项目甲");
+    await createProject("项目乙");
+    render(<ProjectSwitcher onClose={vi.fn()} />);
+
+    expect(screen.getByText("项目乙").closest("div.group")).toHaveClass("bg-(--accent-selected)", "text-(--context-strong)");
+    expect(screen.getByText("项目甲").closest("div.group")).toHaveClass("hover:bg-(--accent-soft)", "hover:text-(--accent-text)");
+  });
+
   it("只有一个项目时不显示删除按钮（FLOW-009 边界情况）", async () => {
     const { createProject } = useProjectStore.getState();
     await createProject("唯一项目");

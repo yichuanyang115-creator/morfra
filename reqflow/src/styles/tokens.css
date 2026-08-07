@@ -68,6 +68,8 @@
   --st-blocked: var(--semantic-feedback-danger);
   --st-blocked-soft: color-mix(in srgb, var(--semantic-feedback-danger) 12%, var(--semantic-background-surface));
 
+  /* 结构模块在自己的边界内把组件变量指向局部 Token；未覆盖时由运行时写入继承值。 */
+
   --font-display: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-body: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -79,4 +81,96 @@
   --topbar-h: 34px;
   --detail-max-w: 960px;
   --board-header-h: 34px;
+}
+
+.theme-module-topbar {
+  --module-scope-background-canvas: var(--module-topbar-background-canvas, var(--semantic-background-canvas));
+  --module-scope-background-surface: var(--module-topbar-background-surface, var(--semantic-background-surface));
+  --module-scope-background-elevated: var(--module-topbar-background-elevated, var(--semantic-background-elevated));
+  --module-scope-text-primary: var(--module-topbar-text-primary, var(--semantic-text-primary));
+  --module-scope-text-secondary: var(--module-topbar-text-secondary, var(--semantic-text-secondary));
+  --module-scope-text-tertiary: var(--module-topbar-text-tertiary, var(--semantic-text-tertiary));
+  --module-scope-text-disabled: var(--module-topbar-text-disabled, var(--semantic-text-disabled));
+  --module-scope-border-subtle: var(--module-topbar-border-subtle, var(--semantic-border-subtle));
+  --module-scope-border-strong: var(--module-topbar-border-strong, var(--semantic-border-strong));
+  --module-scope-action-strong: var(--module-topbar-action-strong, var(--semantic-action-strong));
+  --module-scope-action-base: var(--module-topbar-action-base, var(--semantic-action-base));
+  --module-scope-action-soft: var(--module-topbar-action-soft, var(--semantic-action-soft));
+  --module-scope-context-strong: var(--module-topbar-context-strong, var(--semantic-context-strong));
+  --module-scope-context-soft: var(--module-topbar-context-soft, var(--semantic-context-soft));
+}
+
+.theme-module-board {
+  --module-scope-background-canvas: var(--module-board-background-canvas, var(--semantic-background-canvas));
+  --module-scope-background-surface: var(--module-board-background-surface, var(--semantic-background-surface));
+  --module-scope-background-elevated: var(--module-board-background-elevated, var(--semantic-background-elevated));
+  --module-scope-text-primary: var(--module-board-text-primary, var(--semantic-text-primary));
+  --module-scope-text-secondary: var(--module-board-text-secondary, var(--semantic-text-secondary));
+  --module-scope-text-tertiary: var(--module-board-text-tertiary, var(--semantic-text-tertiary));
+  --module-scope-text-disabled: var(--module-board-text-disabled, var(--semantic-text-disabled));
+  --module-scope-border-subtle: var(--module-board-border-subtle, var(--semantic-border-subtle));
+  --module-scope-border-strong: var(--module-board-border-strong, var(--semantic-border-strong));
+  --module-scope-action-strong: var(--module-board-action-strong, var(--semantic-action-strong));
+  --module-scope-action-base: var(--module-board-action-base, var(--semantic-action-base));
+  --module-scope-action-soft: var(--module-board-action-soft, var(--semantic-action-soft));
+  --module-scope-context-strong: var(--module-board-context-strong, var(--semantic-context-strong));
+  --module-scope-context-soft: var(--module-board-context-soft, var(--semantic-context-soft));
+}
+
+.theme-module-detail {
+  --module-scope-background-canvas: var(--module-detail-background-canvas, var(--semantic-background-canvas));
+  --module-scope-background-surface: var(--module-detail-background-surface, var(--semantic-background-surface));
+  --module-scope-background-elevated: var(--module-detail-background-elevated, var(--semantic-background-elevated));
+  --module-scope-text-primary: var(--module-detail-text-primary, var(--semantic-text-primary));
+  --module-scope-text-secondary: var(--module-detail-text-secondary, var(--semantic-text-secondary));
+  --module-scope-text-tertiary: var(--module-detail-text-tertiary, var(--semantic-text-tertiary));
+  --module-scope-text-disabled: var(--module-detail-text-disabled, var(--semantic-text-disabled));
+  --module-scope-border-subtle: var(--module-detail-border-subtle, var(--semantic-border-subtle));
+  --module-scope-border-strong: var(--module-detail-border-strong, var(--semantic-border-strong));
+  --module-scope-action-strong: var(--module-detail-action-strong, var(--semantic-action-strong));
+  --module-scope-action-base: var(--module-detail-action-base, var(--semantic-action-base));
+  --module-scope-action-soft: var(--module-detail-action-soft, var(--semantic-action-soft));
+  --module-scope-context-strong: var(--module-detail-context-strong, var(--semantic-context-strong));
+  --module-scope-context-soft: var(--module-detail-context-soft, var(--semantic-context-soft));
+}
+
+.theme-module-settings {
+  --module-scope-background-canvas: var(--module-settings-background-canvas, var(--semantic-background-canvas));
+  --module-scope-background-surface: var(--module-settings-background-surface, var(--semantic-background-surface));
+  --module-scope-background-elevated: var(--module-settings-background-elevated, var(--semantic-background-elevated));
+  --module-scope-text-primary: var(--module-settings-text-primary, var(--semantic-text-primary));
+  --module-scope-text-secondary: var(--module-settings-text-secondary, var(--semantic-text-secondary));
+  --module-scope-text-tertiary: var(--module-settings-text-tertiary, var(--semantic-text-tertiary));
+  --module-scope-text-disabled: var(--module-settings-text-disabled, var(--semantic-text-disabled));
+  --module-scope-border-subtle: var(--module-settings-border-subtle, var(--semantic-border-subtle));
+  --module-scope-border-strong: var(--module-settings-border-strong, var(--semantic-border-strong));
+  --module-scope-action-strong: var(--module-settings-action-strong, var(--semantic-action-strong));
+  --module-scope-action-base: var(--module-settings-action-base, var(--semantic-action-base));
+  --module-scope-action-soft: var(--module-settings-action-soft, var(--semantic-action-soft));
+  --module-scope-context-strong: var(--module-settings-context-strong, var(--semantic-context-strong));
+  --module-scope-context-soft: var(--module-settings-context-soft, var(--semantic-context-soft));
+}
+
+:where(.theme-module-topbar, .theme-module-board, .theme-module-detail, .theme-module-settings) {
+  --bg: var(--module-scope-background-canvas);
+  --surface: var(--module-scope-background-surface);
+  --surface-2: var(--module-scope-background-elevated);
+  --topbar: var(--module-scope-background-canvas);
+  --fg: var(--module-scope-text-primary);
+  --muted: var(--module-scope-text-secondary);
+  --muted-2: var(--module-scope-text-tertiary);
+  --border: var(--module-scope-border-subtle);
+  --border-strong: var(--module-scope-border-strong);
+  --accent: var(--module-scope-action-base);
+  --accent-text: var(--module-scope-action-strong);
+  --accent-soft: var(--module-scope-action-soft);
+  --accent-soft-strong: var(--module-scope-context-soft);
+  --accent-solid: var(--module-scope-action-strong);
+  --accent-solid-fg: var(--module-scope-background-surface);
+  --accent-selected: var(--module-scope-context-soft);
+  --context-strong: var(--module-scope-context-strong);
+}
+
+:where(.theme-module-topbar, .theme-module-board, .theme-module-detail, .theme-module-settings) :disabled {
+  color: var(--module-scope-text-disabled);
 }

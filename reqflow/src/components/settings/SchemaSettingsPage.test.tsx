@@ -49,6 +49,7 @@ describe("SchemaSettingsPage（Phase 18 骨架）", () => {
     expect(screen.getByText("属性")).toBeInTheDocument();
     expect(screen.getByText("任务")).toBeInTheDocument();
     expect(screen.getByLabelText("新建属性")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "属性" })).toHaveClass("bg-(--accent-selected)", "text-(--context-strong)");
   });
 
   it("属性区域渲染 AttributeManager（新建属性入口）而非占位文案", () => {

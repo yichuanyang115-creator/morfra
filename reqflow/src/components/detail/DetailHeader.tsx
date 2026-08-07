@@ -67,7 +67,7 @@ export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullsc
         onBlur={() => {
           if (name !== requirement.name) onRename(name);
         }}
-        className="min-w-0 flex-1 rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 font-(family-name:--font-display) text-[20px] font-[590] tracking-[-0.01em] text-(--fg) outline-none hover:bg-(--surface-2) focus:bg-(--surface-2)"
+        className="min-w-0 flex-1 rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 font-(family-name:--font-display) text-[20px] font-[590] tracking-[-0.01em] text-(--fg) outline-none hover:bg-(--accent-soft) focus:bg-(--accent-soft)"
       />
       <button
         type="button"
@@ -81,7 +81,7 @@ export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullsc
         type="button"
         onClick={onToggleFullscreen}
         aria-label={fullscreen ? "退出全屏" : "全屏"}
-        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface-2) hover:text-(--fg)"
+        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
       >
         {fullscreen ? <FullscreenExitIcon /> : <FullscreenEnterIcon />}
       </button>
@@ -89,7 +89,7 @@ export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullsc
         type="button"
         onClick={onClose}
         aria-label="关闭"
-        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface-2) hover:text-(--fg)"
+        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
       >
         <CloseIcon />
       </button>

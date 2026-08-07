@@ -66,19 +66,19 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
             onChange={(event) => setName(event.target.value)}
             className="min-w-0 flex-1 rounded-(--r-sm) border border-(--border) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] outline-none focus:border-(--accent)"
           />
-          <button type="submit" aria-label="创建" className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-(--fg) text-(--surface)">
+          <button type="submit" aria-label="创建" className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-(--accent-solid) text-(--accent-solid-fg)">
             <PlusIcon />
           </button>
         </div>
 
         <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
           <legend className="px-0.5 text-[11px] text-(--muted-2)">选择模板</legend>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-(--r-sm) px-1.5 py-1 text-[12px] text-(--fg) hover:bg-(--surface-2)">
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-(--r-sm) px-1.5 py-1 text-[12px] text-(--fg) hover:bg-(--accent-soft)">
             <input type="radio" name="project-template" checked={selectedTemplateId === null} onChange={() => setSelectedTemplateId(null)} />
             不使用模板（空白项目）
           </label>
           {templates.map((template) => (
-            <div key={template.id} className="flex items-center gap-1 rounded-(--r-sm) px-1.5 py-1 hover:bg-(--surface-2)">
+            <div key={template.id} className="flex items-center gap-1 rounded-(--r-sm) px-1.5 py-1 hover:bg-(--accent-soft)">
               {renamingTemplateId === template.id ? (
                 <input
                   autoFocus
@@ -114,7 +114,7 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
                   setRenamingTemplateId(template.id);
                   setTemplateName(template.name);
                 }}
-                className="text-[11px] text-(--muted-2) hover:text-(--fg)"
+                className="text-[11px] text-(--muted-2) hover:text-(--accent-text)"
               >
                 改名
               </button>

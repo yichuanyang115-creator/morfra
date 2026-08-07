@@ -85,13 +85,13 @@ export function RequirementRow({
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className={`grid w-fit min-w-full cursor-pointer items-center border-b border-(--border) px-2 py-2 ${
+      className={`group grid w-fit min-w-full cursor-pointer items-center border-b border-l-2 border-b-(--border) px-2 py-2 ${
         isDragging ? "opacity-40" : ""
-      } ${selected ? "bg-(--accent-selected)" : "hover:bg-(--surface)"}`}
+      } ${selected ? "border-l-(--context-strong) bg-(--accent-selected)" : "border-l-transparent hover:bg-(--accent-soft)"}`}
     >
       <div
         className={`sticky left-0 z-1 flex min-w-0 items-center gap-1.5 pl-5.5 pr-2 text-[13px] text-(--fg) ${
-          selected ? "bg-(--accent-selected)" : "bg-(--surface)"
+          selected ? "bg-(--accent-selected)" : "bg-(--surface) group-hover:bg-(--accent-soft)"
         }`}
       >
         <span className="overflow-hidden text-ellipsis whitespace-nowrap">{requirement.name}</span>
@@ -122,7 +122,7 @@ export function RequirementRow({
             <div
               key={attribute.id}
               style={{ left: frozenOffsets[columnId] }}
-              className={`sticky z-1 ${selected ? "bg-(--accent-selected)" : "bg-(--surface)"}`}
+              className={`sticky z-1 ${selected ? "bg-(--accent-selected)" : "bg-(--surface) group-hover:bg-(--accent-soft)"}`}
             >
               {cell}
             </div>

@@ -67,14 +67,14 @@ function FieldRow({ attribute, onToggleBoard }: FieldRowProps) {
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`flex items-center gap-2 rounded-(--r-sm) px-1.5 py-1.5 ${isDragging ? "opacity-40" : ""}`}
     >
-      <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--fg)">
+      <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--accent-text)">
         <DragHandleIcon />
       </span>
       <button
         type="button"
         aria-label={attribute.showOnBoard ? `隐藏「${attribute.name}」看板列` : `显示「${attribute.name}」看板列`}
         onClick={() => onToggleBoard(attribute.id, !attribute.showOnBoard)}
-        className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--surface-2) ${
+        className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--accent-soft) ${
           attribute.showOnBoard ? "text-(--fg)" : "text-(--muted-2)"
         }`}
       >
@@ -143,7 +143,7 @@ export function FieldsPanel({ attributes, onToggleBoard, onReorder, onAdd, onClo
 
   return (
     <div
-      className="fixed right-3 z-50 w-72 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-3.5 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]"
+      className="fixed right-3 z-50 w-72 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-3.5 shadow-(--shadow-floating)"
       style={{ top: "calc(var(--topbar-h) + 6px)" }}
     >
       <div className="mb-2 flex items-center justify-between">
@@ -196,7 +196,7 @@ export function FieldsPanel({ attributes, onToggleBoard, onReorder, onAdd, onClo
         <button
           type="submit"
           aria-label="新建属性"
-          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--fg) px-2.5 py-1.5 text-[12.5px] text-(--surface) hover:opacity-90"
+          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--accent-solid) px-2.5 py-1.5 text-[12.5px] text-(--accent-solid-fg) hover:opacity-90"
         >
           <PlusIcon />
           新建

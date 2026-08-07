@@ -15,7 +15,7 @@ function isActive(section: SettingsSection, candidate: SettingsSection): boolean
 
 const navItemClass = (active: boolean) =>
   `block w-full rounded-(--r-sm) px-2.5 py-1.75 text-left font-(family-name:--font-body) text-[13px] ${
-    active ? "bg-(--accent-soft) text-(--accent-text) font-[550]" : "text-(--muted) hover:bg-(--surface-2) hover:text-(--fg)"
+    active ? "bg-(--accent-selected) text-(--context-strong) font-[550]" : "text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
   }`;
 
 export function SettingsNav({ schema, section, onSelect }: SettingsNavProps) {

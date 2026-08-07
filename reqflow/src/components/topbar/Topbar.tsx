@@ -95,11 +95,11 @@ export function Topbar() {
   const globalSort = schema?.viewPreferences.globalSort ?? null;
 
   return (
-    <header className="relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--topbar) px-2.5 border-b border-(--border)">
+    <header data-theme-module="topbar" className="theme-module-topbar relative flex h-(--topbar-h) flex-none items-center justify-between bg-(--topbar) px-2.5 border-b border-(--border)">
       <button
         type="button"
         onClick={() => setSwitcherOpen((v) => !v)}
-        className="inline-flex max-w-80 flex-none items-center gap-[5px] rounded-(--r-md) border-none bg-transparent px-1.5 py-1 font-(family-name:--font-display) text-[12px] font-[590] text-(--fg) hover:bg-(--surface)"
+        className="inline-flex max-w-80 flex-none items-center gap-[5px] rounded-(--r-md) border-none bg-transparent px-1.5 py-1 font-(family-name:--font-display) text-[12px] font-[590] text-(--fg) hover:bg-(--accent-soft) hover:text-(--accent-text)"
         aria-haspopup="true"
       >
         <span className="overflow-hidden text-ellipsis whitespace-nowrap">{project?.name ?? "项目"}</span>
@@ -116,14 +116,14 @@ export function Topbar() {
           aria-label="筛选"
           aria-haspopup="true"
           onClick={() => setFilterOpen((v) => !v)}
-          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent hover:bg-(--surface) hover:text-(--fg) ${
-            filterOpen || filters.length > 0 ? "bg-(--accent-soft) text-(--accent-text)" : "text-(--muted)"
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent hover:bg-(--accent-soft) hover:text-(--accent-text) ${
+            filterOpen || filters.length > 0 ? "bg-(--accent-selected) text-(--context-strong)" : "text-(--muted)"
           }`}
         >
           <FilterIcon />
         </button>
         {filters.length > 0 && (
-          <span className="flex flex-none items-center gap-1 rounded-(--r-full) bg-(--accent-soft) px-1.5 py-0.5 font-(family-name:--font-mono) text-[11px] font-[590] leading-none text-(--accent-text)">
+          <span className="flex flex-none items-center gap-1 rounded-(--r-full) bg-(--accent-selected) px-1.5 py-0.5 font-(family-name:--font-mono) text-[11px] font-[590] leading-none text-(--context-strong)">
             <span className="tabular-nums">{filters.length}</span>
             <button
               type="button"
@@ -131,7 +131,7 @@ export function Topbar() {
               onClick={() => {
                 if (currentProjectId) void setFilters(currentProjectId, []);
               }}
-              className="grid size-3.5 place-items-center rounded-full border-none bg-transparent text-[11px] leading-none text-(--accent-text) hover:bg-(--accent-soft-strong)"
+              className="grid size-3.5 place-items-center rounded-full border-none bg-transparent text-[11px] leading-none text-(--context-strong) hover:bg-(--accent-soft) hover:text-(--accent-text)"
             >
               ×
             </button>
@@ -142,7 +142,7 @@ export function Topbar() {
           aria-label="排序"
           aria-haspopup="true"
           onClick={() => setSortOpen((v) => !v)}
-          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent hover:bg-(--surface) hover:text-(--fg) ${sortOpen || globalSort ? "bg-(--accent-soft) text-(--accent-text)" : "text-(--muted)"}`}
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent hover:bg-(--accent-soft) hover:text-(--accent-text) ${sortOpen || globalSort ? "bg-(--accent-selected) text-(--context-strong)" : "text-(--muted)"}`}
         >
           <SortIcon />
         </button>
@@ -151,8 +151,8 @@ export function Topbar() {
           aria-label="字段"
           aria-haspopup="true"
           onClick={() => setFieldsOpen((v) => !v)}
-          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent hover:bg-(--surface) hover:text-(--fg) ${
-            fieldsOpen ? "bg-(--surface) text-(--fg)" : "text-(--muted)"
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent hover:bg-(--accent-soft) hover:text-(--accent-text) ${
+            fieldsOpen ? "bg-(--accent-selected) text-(--context-strong)" : "text-(--muted)"
           }`}
         >
           <FieldsIcon />
@@ -161,7 +161,7 @@ export function Topbar() {
           type="button"
           aria-label="应用设置"
           onClick={() => openAppSettings()}
-          className={appSettingsSection ? "grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-(--accent-soft) text-(--accent-text)" : "grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"}
+          className={appSettingsSection ? "grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-(--accent-selected) text-(--context-strong)" : "grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"}
         >
           <AppSettingsIcon />
         </button>
@@ -171,7 +171,7 @@ export function Topbar() {
           disabled={!schemaLoaded}
           onClick={() => openSettings()}
           className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent disabled:cursor-not-allowed disabled:opacity-40 ${
-            settingsSection ? "bg-(--accent-soft) text-(--accent-text)" : "text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+            settingsSection ? "bg-(--accent-selected) text-(--context-strong)" : "text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
           }`}
         >
           <SchemaSettingsIcon />

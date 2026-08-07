@@ -79,7 +79,7 @@ export function TaskCard({
             if (trimmed && trimmed !== task.name) onUpdate({ name: trimmed });
             else if (!trimmed) setName(task.name);
           }}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--surface) focus:border-(--border) focus:bg-(--surface)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft) focus:border-(--accent) focus:bg-(--accent-soft)"
         />
         <button
           type="button"
@@ -98,7 +98,7 @@ export function TaskCard({
           className={`grid size-6 flex-none place-items-center rounded-(--r-sm) ${
             task.blocked
               ? "bg-(--st-blocked-soft) text-(--st-blocked)"
-              : "text-(--muted-2) hover:bg-(--surface-2) hover:text-(--fg)"
+              : "text-(--muted-2) hover:bg-(--accent-soft) hover:text-(--accent-text)"
           }`}
         >
           <BlockIcon />
@@ -188,7 +188,7 @@ export function TaskCard({
             setProgressInput(clamped == null ? "" : String(clamped));
             if (clamped !== task.progress) onUpdate({ progress: clamped });
           }}
-          className="ml-auto w-8 flex-none rounded-(--r-sm) border border-transparent bg-transparent px-0.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--surface-2) hover:text-(--fg) focus:border-(--border) focus:bg-(--surface-2) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="ml-auto w-8 flex-none rounded-(--r-sm) border border-transparent bg-transparent px-0.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text) focus:border-(--accent) focus:bg-(--accent-soft) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <span>%</span>
       </div>

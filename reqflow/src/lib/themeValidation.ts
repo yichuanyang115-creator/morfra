@@ -51,21 +51,35 @@ function resolveColor(reference: ThemeColorReference, palette: AppThemeConfig["p
 
 type ReservedColorFamily = "red" | "yellow" | "green" | "other";
 
-function reservedColorFamily(value: string): ReservedColorFamily {
-  if (!isHexColor(value)) return "other";
+function colorHue(value: string, minimumSpread: number): number | null {
+  if (!isHexColor(value)) return null;
   const channels = [1, 3, 5].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16) / 255);
   const max = Math.max(...channels);
   const min = Math.min(...channels);
   const spread = max - min;
-  if (spread < 0.2 || max === 0) return "other";
+  if (spread < minimumSpread || max === 0) return null;
   let hue = 0;
   if (max === channels[0]) hue = 60 * (((channels[1] - channels[2]) / spread) % 6);
   else if (max === channels[1]) hue = 60 * ((channels[2] - channels[0]) / spread + 2);
   else hue = 60 * ((channels[0] - channels[1]) / spread + 4);
   if (hue < 0) hue += 360;
+  return hue;
+}
+
+function reservedColorFamily(value: string): ReservedColorFamily {
+  const hue = colorHue(value, 0.2);
+  if (hue === null) return "other";
   if (hue >= 345 || hue < 20) return "red";
   if (hue >= 20 && hue < 75) return "yellow";
   if (hue >= 75 && hue < 185) return "green";
+  return "other";
+}
+
+function structuralColorFamily(value: string): "green" | "purple" | "other" {
+  const hue = colorHue(value, 0.02);
+  if (hue === null) return "other";
+  if (hue >= 75 && hue < 185) return "green";
+  if (hue >= 240 && hue < 330) return "purple";
   return "other";
 }
 
@@ -123,7 +137,8 @@ function collectContrastIssues(config: AppThemeConfig): ThemeValidationIssue[] {
 
 function collectRoleIssues(config: AppThemeConfig): ThemeValidationIssue[] {
   return SEMANTIC_TOKENS.flatMap((token) => {
-    const family = reservedColorFamily(resolveColor(config.semantic[token], config.palette));
+    const color = resolveColor(config.semantic[token], config.palette);
+    const family = reservedColorFamily(color);
     if (token === "feedbackDanger" && family !== "red") {
       return [{ field: "semantic." + token, message: "危险反馈只能使用红色语义色" }];
     }
@@ -135,6 +150,12 @@ function collectRoleIssues(config: AppThemeConfig): ThemeValidationIssue[] {
     }
     if (token !== "feedbackDanger" && token !== "feedbackWarning" && (family === "red" || family === "yellow")) {
       return [{ field: "semantic." + token, message: "普通操作和结构角色不能占用红色或黄色保留色" }];
+    }
+    if (["actionStrong", "actionBase", "actionSoft"].includes(token) && structuralColorFamily(color) !== "green") {
+      return [{ field: "semantic." + token, message: "操作、悬停和键盘焦点只能使用绿色" }];
+    }
+    if (["contextStrong", "contextSoft"].includes(token) && structuralColorFamily(color) !== "purple") {
+      return [{ field: "semantic." + token, message: "结构与选中状态只能使用紫色" }];
     }
     return [];
   });
@@ -176,7 +197,8 @@ export function validateThemeConfig(value: unknown): ThemeValidationResult {
     if (!THEME_MODULES.some((module) => module === moduleName) || !isRecord(overrides)) {
       return { valid: false, reason: "模块覆盖无效", issues: [{ field: "moduleOverrides." + moduleName, message: "模块覆盖无效" }] };
     }
-    if (!Object.values(overrides).every(isColorReference)) {
+    if (!Object.keys(overrides).every((token) => SEMANTIC_TOKENS.some((semanticToken) => semanticToken === token)) ||
+        !Object.values(overrides).every(isColorReference)) {
       return {
         valid: false,
         reason: "模块 " + moduleName + " 的颜色无效",
@@ -195,5 +217,21 @@ export function validateThemeConfig(value: unknown): ThemeValidationResult {
     return { valid: false, reason: contrastIssues[0].message, issues: contrastIssues };
   }
 
-  return { valid: true, config: value as unknown as AppThemeConfig };
+  const config = value as unknown as AppThemeConfig;
+  for (const [moduleName, overrides] of Object.entries(config.moduleOverrides)) {
+    const scopedConfig = { ...config, semantic: { ...config.semantic, ...overrides } };
+    const moduleIssues = [...collectRoleIssues(scopedConfig), ...collectContrastIssues(scopedConfig)];
+    if (moduleIssues.length > 0) {
+      return {
+        valid: false,
+        reason: moduleIssues[0].message,
+        issues: moduleIssues.map((issue) => ({
+          field: `moduleOverrides.${moduleName}.${issue.field.replace("semantic.", "")}`,
+          message: issue.message,
+        })),
+      };
+    }
+  }
+
+  return { valid: true, config };
 }

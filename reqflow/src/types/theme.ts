@@ -61,7 +61,8 @@ export type SemanticTheme = Record<SemanticToken, ThemeColorReference>;
 export const THEME_MODULES = ["topbar", "board", "detail", "settings", "chat", "business", "feedback"] as const;
 
 export type ThemeModule = (typeof THEME_MODULES)[number];
-export type ModuleOverrides = Partial<Record<ThemeModule, Record<string, ThemeColorReference>>>;
+export type ModuleTokenOverrides = Partial<Record<SemanticToken, ThemeColorReference>>;
+export type ModuleOverrides = Partial<Record<ThemeModule, ModuleTokenOverrides>>;
 
 export interface AppThemeConfig {
   version: typeof THEME_CONFIG_VERSION;

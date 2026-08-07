@@ -66,7 +66,7 @@ export function SearchBox({ requirements, onJumpToRequirement }: SearchBoxProps)
       </div>
 
       {open && trimmed && (
-        <div className="absolute top-[calc(100%+6px)] left-0 z-50 max-h-80 w-full overflow-y-auto rounded-(--r-md) border border-(--border-strong) bg-(--surface) p-1.25 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]">
+        <div className="absolute top-[calc(100%+6px)] left-0 z-50 max-h-80 w-full overflow-y-auto rounded-(--r-md) border border-(--border-strong) bg-(--surface) p-1.25 shadow-(--shadow-floating)">
           {matches.length === 0 ? (
             <div className="p-5 text-center text-[12.5px] text-(--muted-2)">没有匹配的实体</div>
           ) : (
@@ -74,7 +74,7 @@ export function SearchBox({ requirements, onJumpToRequirement }: SearchBoxProps)
               <div
                 key={r.id}
                 onClick={() => jump(r.id)}
-                className="flex cursor-pointer items-center gap-2 rounded-(--r-sm) px-2.25 py-1.75 text-[13px] text-(--fg) hover:bg-(--surface-2)"
+                className="flex cursor-pointer items-center gap-2 rounded-(--r-sm) px-2.25 py-1.75 text-[13px] text-(--fg) hover:bg-(--accent-soft)"
               >
                 <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{r.name}</span>
                 <span className="flex-none font-(family-name:--font-mono) text-[11px] text-(--muted-2)">{STAGE_LABEL[r.stage]}</span>

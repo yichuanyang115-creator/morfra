@@ -99,7 +99,7 @@ function DraftRow({ onCreate, onCancel }: { onCreate: (name: string) => void; on
             else onCancel();
           }
         }}
-        className="w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2) focus:border-(--border) focus:bg-(--surface)"
+        className="w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2) focus:border-(--accent) focus:bg-(--accent-soft)"
       />
     </div>
   );
@@ -168,7 +168,7 @@ function DeliverableCard({
             if (trimmed && trimmed !== deliverable.name) onUpdate({ name: trimmed });
             else if (!trimmed) setName(deliverable.name);
           }}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--surface) focus:border-(--border) focus:bg-(--surface)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft) focus:border-(--accent) focus:bg-(--accent-soft)"
         />
         <button
           type="button"

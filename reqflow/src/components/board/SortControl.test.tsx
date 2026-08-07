@@ -47,4 +47,22 @@ describe("SortControl", () => {
     expect(screen.getByText("已手动调整顺序")).toBeInTheDocument();
     expect(screen.getByText("恢复规则")).toBeInTheDocument();
   });
+
+  it("已配置状态使用紫色上下文，未配置状态使用绿色悬停", () => {
+    const { rerender } = renderControl();
+    expect(screen.getByLabelText("排序")).toHaveClass("hover:bg-(--accent-soft)", "hover:text-(--accent-text)");
+
+    rerender(
+      <SortControl
+        rule={null}
+        attributes={ATTRIBUTES}
+        manual
+        hasLocalRule={false}
+        onChange={vi.fn()}
+        onToggleDirection={vi.fn()}
+        onRestore={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("排序")).toHaveClass("bg-(--accent-selected)", "text-(--context-strong)");
+  });
 });

@@ -160,7 +160,7 @@ export function AttributeManager({
         <button
           type="submit"
           aria-label="新建属性"
-          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--fg) px-2.5 py-1.5 text-[12.5px] text-(--surface) hover:opacity-90"
+          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--accent-solid) px-2.5 py-1.5 text-[12.5px] text-(--accent-solid-fg) hover:opacity-90"
         >
           <PlusIcon />
           新建属性

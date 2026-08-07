@@ -6,7 +6,7 @@ import { lastTransitionTimestamp, stayDays as computeStayDays, totalDays as comp
 import { paletteColorAt } from "../../lib/stagePalette";
 
 export const inputClass =
-  "block h-7 w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--fg) outline-none hover:border-(--border) hover:bg-(--surface) focus:border-(--border) focus:bg-(--surface)";
+  "block h-7 w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft) focus:border-(--accent) focus:bg-(--accent-soft)";
 
 const SELECT_ARROW_URL =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2368748a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")";

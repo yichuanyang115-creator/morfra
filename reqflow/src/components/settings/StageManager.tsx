@@ -80,14 +80,14 @@ function StageRow({
       className={`mb-1.5 rounded-(--r-md) border border-(--border) ${isDragging ? "opacity-40" : ""}`}
     >
       <div className="flex items-center gap-2 px-2.5 py-2">
-        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--fg)">
+        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--accent-text)">
           <DragHandleIcon />
         </span>
         <button type="button" onClick={onToggleExpand} className="flex flex-1 items-center gap-2 border-none bg-transparent p-0 text-left">
           <span className="flex-none size-3 rounded-(--r-sm)" style={{ backgroundColor: stageOption.color }} />
           <span className="flex-1 truncate font-(family-name:--font-body) text-[13px] text-(--fg)">{stageOption.label}</span>
           {stageOption.isTerminal && (
-            <span className="flex-none rounded-(--r-sm) bg-(--accent-soft) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--accent-text)">
+            <span className="flex-none rounded-(--r-sm) bg-(--accent-selected) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--context-strong)">
               终态
             </span>
           )}
@@ -200,7 +200,7 @@ export function StageManager({
         <button
           type="submit"
           aria-label="新建阶段"
-          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--fg) px-2.5 py-1.5 text-[12.5px] text-(--surface) hover:opacity-90"
+          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--accent-solid) px-2.5 py-1.5 text-[12.5px] text-(--accent-solid-fg) hover:opacity-90"
         >
           <PlusIcon />
           新建阶段

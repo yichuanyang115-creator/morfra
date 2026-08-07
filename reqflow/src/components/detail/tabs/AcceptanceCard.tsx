@@ -62,7 +62,7 @@ export function AcceptanceCard({
                 setEditingDesc(false);
               }
             }}
-            className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--surface) focus:border-(--border) focus:bg-(--surface)"
+            className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft) focus:border-(--accent) focus:bg-(--accent-soft)"
           />
         ) : (
           <button
@@ -71,7 +71,7 @@ export function AcceptanceCard({
               setDescValue(criterion.desc);
               setEditingDesc(true);
             }}
-            className="min-w-0 flex-1 truncate rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 text-left font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--surface)"
+            className="min-w-0 flex-1 truncate rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 text-left font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft)"
           >
             {criterion.desc}
           </button>

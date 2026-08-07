@@ -16,4 +16,4 @@ export const RESULT_BTN_STYLE: Record<AcceptanceResult, string> = {
 };
 
 export const resultBtnBaseClass =
-  "rounded-full px-1.75 py-0.5 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.03em] text-(--muted-2) hover:bg-(--surface-2)";
+  "rounded-full px-1.75 py-0.5 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.03em] text-(--muted-2) hover:bg-(--accent-soft) hover:text-(--accent-text)";

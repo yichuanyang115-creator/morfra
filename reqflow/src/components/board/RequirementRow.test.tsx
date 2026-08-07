@@ -98,6 +98,25 @@ describe("RequirementRow", () => {
     spy.mockRestore();
   });
 
+  it("选中态使用紫色背景和深紫细条，未选中态使用绿色悬停", () => {
+    const { container, rerender } = renderRow();
+    expect(container.firstChild).toHaveClass("border-l-transparent", "hover:bg-(--accent-soft)");
+
+    rerender(
+      <RequirementRow
+        requirement={makeRequirement()}
+        attributes={[PRIORITY_ATTR]}
+        columnWidths={{}}
+        frozenCount={0}
+        selected
+        isTerminal={false}
+        onSelect={vi.fn()}
+        onAttributeChange={vi.fn()}
+      />,
+    );
+    expect(container.firstChild).toHaveClass("border-l-(--context-strong)", "bg-(--accent-selected)");
+  });
+
   it("useSortable 用需求 id 作为拖拽/排序标识注册", () => {
     const spy = vi.spyOn(dndSortable, "useSortable");
 
@@ -245,6 +264,14 @@ describe("RequirementRow", () => {
       const { container } = renderRow({ attributes: [PRIORITY_ATTR, RESULT_ATTR], frozenCount: 1, columnWidths: { priority: 90 } });
       // 列宽的存值只影响它右侧列的偏移，不影响它自己：priority 的 left 仍是 152
       expect(frozenLefts(container)).toEqual(["152px"]);
+      spy.mockRestore();
+    });
+
+    it("冻结属性列继承整行的绿色悬停态", () => {
+      const spy = mockSortable();
+      const { container } = renderRow({ attributes: [PRIORITY_ATTR], frozenCount: 1 });
+      const frozenAttribute = Array.from(container.querySelectorAll(".sticky")).find((element) => (element as HTMLElement).style.left !== "");
+      expect(frozenAttribute).toHaveClass("group-hover:bg-(--accent-soft)");
       spy.mockRestore();
     });
 

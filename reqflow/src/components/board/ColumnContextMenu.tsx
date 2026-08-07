@@ -44,13 +44,13 @@ export function ColumnContextMenu({ position, canFreeze, onHide, onFreeze, onEdi
   }, [onClose]);
 
   const itemClass =
-    "w-full rounded-(--r-sm) border-none bg-transparent px-2.25 py-1.75 text-left text-[13px] text-(--fg) hover:bg-(--surface-2)";
+    "w-full rounded-(--r-sm) border-none bg-transparent px-2.25 py-1.75 text-left text-[13px] text-(--fg) hover:bg-(--accent-soft)";
 
   return (
     <div
       ref={rootRef}
       style={{ top: position.y, left: position.x }}
-      className="fixed z-50 w-40 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-1.25 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]"
+      className="fixed z-50 w-40 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-1.25 shadow-(--shadow-floating)"
     >
       <button type="button" onClick={onHide} className={itemClass}>
         隐藏此属性

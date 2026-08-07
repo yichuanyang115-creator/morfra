@@ -4,7 +4,7 @@ import { createDefaultTheme } from "../lib/themeDefaults";
 import { themePath } from "../lib/paths";
 import { applyTheme } from "../lib/themeRuntime";
 import { validateThemeConfig, type ThemeValidationIssue } from "../lib/themeValidation";
-import type { AppThemeConfig } from "../types/theme";
+import type { AppThemeConfig, SemanticToken, ThemeColorReference, ThemeModule } from "../types/theme";
 
 interface ThemeState {
   appliedTheme: AppThemeConfig;
@@ -16,6 +16,9 @@ interface ThemeState {
   save: (config: AppThemeConfig) => Promise<boolean>;
   beginDraft: () => void;
   updateDraft: (update: (theme: AppThemeConfig) => AppThemeConfig) => void;
+  enableModuleOverride: (moduleName: ThemeModule, tokens: SemanticToken[]) => void;
+  updateModuleOverride: (moduleName: ThemeModule, token: SemanticToken, value: ThemeColorReference) => void;
+  clearModuleOverride: (moduleName: ThemeModule) => void;
   resetDraft: () => void;
   cancelDraft: () => void;
   applyDraft: () => Promise<boolean>;
@@ -91,6 +94,34 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     const current = get().draftTheme ?? get().appliedTheme;
     const next = update(cloneTheme(current));
     set({ draftTheme: next, draftIssues: issuesFor(next) });
+  },
+
+  enableModuleOverride: (moduleName, tokens) => {
+    get().updateDraft((theme) => ({
+      ...theme,
+      moduleOverrides: {
+        ...theme.moduleOverrides,
+        [moduleName]: Object.fromEntries(tokens.map((token) => [token, theme.semantic[token]])),
+      },
+    }));
+  },
+
+  updateModuleOverride: (moduleName, token, value) => {
+    get().updateDraft((theme) => ({
+      ...theme,
+      moduleOverrides: {
+        ...theme.moduleOverrides,
+        [moduleName]: { ...theme.moduleOverrides[moduleName], [token]: value },
+      },
+    }));
+  },
+
+  clearModuleOverride: (moduleName) => {
+    get().updateDraft((theme) => {
+      const moduleOverrides = { ...theme.moduleOverrides };
+      delete moduleOverrides[moduleName];
+      return { ...theme, moduleOverrides };
+    });
   },
 
   resetDraft: () => {

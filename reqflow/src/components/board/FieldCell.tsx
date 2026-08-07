@@ -168,7 +168,7 @@ function NumberCell({ value, onChange }: { value: number | null; onChange: (valu
         const n = trimmed === "" ? null : Number.parseFloat(trimmed);
         onChange(n === null || Number.isNaN(n) ? null : n);
       }}
-      className="w-full rounded border border-transparent bg-transparent px-0.5 py-px text-center font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--surface-2) hover:text-(--fg) focus:border-(--border) focus:bg-(--surface-2) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      className="w-full rounded border border-transparent bg-transparent px-0.5 py-px text-center font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text) focus:border-(--accent) focus:bg-(--accent-soft) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
     />
   );
 }
@@ -187,7 +187,7 @@ function PercentCell({ value, onChange }: { value: number | null; onChange: (val
           const clamped = clampPercent(e.target.value);
           onChange(clamped);
         }}
-        className="w-7 rounded border border-transparent bg-transparent px-0.5 py-px text-right font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--surface-2) hover:text-(--fg) focus:border-(--border) focus:bg-(--surface-2) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="w-7 rounded border border-transparent bg-transparent px-0.5 py-px text-right font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text) focus:border-(--accent) focus:bg-(--accent-soft) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       %
     </div>
@@ -218,7 +218,7 @@ function TextCell({ value, onChange }: { value: string; onChange: (value: unknow
       placeholder="—"
       onClick={(e) => e.stopPropagation()}
       onBlur={(e) => onChange(e.target.value)}
-      className="w-full overflow-hidden rounded border border-transparent bg-transparent px-0.5 text-center font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none hover:border-(--border) hover:bg-(--surface-2) hover:text-(--fg) focus:border-(--border) focus:bg-(--surface-2) focus:text-(--fg)"
+      className="w-full overflow-hidden rounded border border-transparent bg-transparent px-0.5 text-center font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text) focus:border-(--accent) focus:bg-(--accent-soft) focus:text-(--fg)"
     />
   );
 }

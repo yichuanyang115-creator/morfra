@@ -56,13 +56,13 @@ export function SortControl({ rule, attributes, manual, hasLocalRule, onChange, 
         title="排序"
         aria-label="排序"
         className={`grid size-6 place-items-center rounded-(--r-sm) border-none bg-transparent ${
-          manual || hasLocalRule ? "bg-(--accent-soft) text-(--accent-text)" : "text-(--muted-2) hover:bg-(--surface-2) hover:text-(--fg)"
+          manual || hasLocalRule ? "bg-(--accent-selected) text-(--context-strong)" : "text-(--muted-2) hover:bg-(--accent-soft) hover:text-(--accent-text)"
         }`}
       >
         <SortIcon />
       </button>
       {open && (
-        <div className="absolute top-[30px] right-0 z-6 w-60 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-2 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]">
+        <div className="absolute top-[30px] right-0 z-6 w-60 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-2 shadow-(--shadow-floating)">
           {manual && (
             <div className="mb-2 flex items-center justify-between gap-1.5 rounded-(--r-sm) bg-(--surface-2) px-2 py-1.5 text-[11.5px] text-(--muted)">
               <span>已手动调整顺序</span>
@@ -81,12 +81,12 @@ export function SortControl({ rule, attributes, manual, hasLocalRule, onChange, 
               <option value="">不设置</option>
               {options.map((attribute) => <option key={attribute.id} value={attribute.id}>{attribute.name}</option>)}
             </select>
-            <button type="button" disabled={!rule} onClick={onToggleDirection} title={rule?.direction === "desc" ? "降序" : "升序"} aria-label={rule?.direction === "desc" ? "切换为升序" : "切换为降序"} className="grid size-6 flex-none place-items-center rounded border-none bg-transparent text-(--muted) disabled:opacity-40 hover:bg-(--surface-2) hover:text-(--fg)">
+            <button type="button" disabled={!rule} onClick={onToggleDirection} title={rule?.direction === "desc" ? "降序" : "升序"} aria-label={rule?.direction === "desc" ? "切换为升序" : "切换为降序"} className="grid size-6 flex-none place-items-center rounded border-none bg-transparent text-(--muted) disabled:opacity-40 hover:bg-(--accent-soft) hover:text-(--accent-text)">
               {rule?.direction === "desc" ? <ChevDownIcon /> : <ChevUpIcon />}
             </button>
           </div>
           {options.length === 0 && <div className="px-1 py-1 text-[11.5px] text-(--muted-2)">暂无可排序属性</div>}
-          {isSortRuleActive(rule) && !manual && <button type="button" onClick={onRestore} className="mt-1 w-full rounded-(--r-sm) border-none bg-transparent py-1 text-[11.5px] text-(--muted) hover:bg-(--surface-2)">恢复全局排序</button>}
+          {isSortRuleActive(rule) && !manual && <button type="button" onClick={onRestore} className="mt-1 w-full rounded-(--r-sm) border-none bg-transparent py-1 text-[11.5px] text-(--muted) hover:bg-(--accent-soft)">恢复全局排序</button>}
         </div>
       )}
     </div>

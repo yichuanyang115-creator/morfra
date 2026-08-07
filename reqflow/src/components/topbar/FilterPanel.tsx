@@ -48,7 +48,7 @@ export function FilterPanel({ attributes, filters, onChange, onClose }: FilterPa
 
   return (
     <div
-      className="fixed right-3 z-50 w-72 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-3.5 shadow-[0_12px_32px_-8px_rgba(30,40,70,0.18),0_2px_8px_rgba(30,40,70,0.05)]"
+      className="fixed right-3 z-50 w-72 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-3.5 shadow-(--shadow-floating)"
       style={{ top: "calc(var(--topbar-h) + 6px)" }}
     >
       <div className="mb-2 flex items-center justify-between">

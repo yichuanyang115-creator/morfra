@@ -77,4 +77,20 @@ describe("themeValidation", () => {
       expect(result.issues?.some((issue) => issue.field === "semantic.actionStrong")).toBe(true);
     }
   });
+
+  it("拒绝用紫色覆盖操作与焦点角色，也拒绝用绿色覆盖结构与选中角色", () => {
+    const purpleFocus = createDefaultTheme();
+    purpleFocus.moduleOverrides.board = { actionBase: "purple700" };
+    const greenSelection = createDefaultTheme();
+    greenSelection.moduleOverrides.topbar = { contextSoft: "green50" };
+
+    expect(validateThemeConfig(purpleFocus)).toMatchObject({
+      valid: false,
+      issues: [{ field: "moduleOverrides.board.actionBase", message: "操作、悬停和键盘焦点只能使用绿色" }],
+    });
+    expect(validateThemeConfig(greenSelection)).toMatchObject({
+      valid: false,
+      issues: [{ field: "moduleOverrides.topbar.contextSoft", message: "结构与选中状态只能使用紫色" }],
+    });
+  });
 });

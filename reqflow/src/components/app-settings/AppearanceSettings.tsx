@@ -3,6 +3,7 @@ import { useThemeStore } from "../../stores/themeStore";
 import type { SemanticToken } from "../../types/theme";
 import { ThemeColorField } from "./ThemeColorField";
 import { ThemePreview } from "./ThemePreview";
+import { ModuleColorSection } from "./ModuleColorSection";
 
 const SEMANTIC_LABELS: Record<SemanticToken, string> = {
   backgroundCanvas: "应用底色",
@@ -109,6 +110,16 @@ export function AppearanceSettings({ onClose }: { onClose: () => void }) {
               </div>
             </section>
           ))}
+          <section className="mb-24">
+            <h2 className="m-0 border-b border-(--border) pb-2 text-[12.5px] font-[590] text-(--context-strong)">模块覆盖</h2>
+            <p className="m-0 mt-2 text-[12px] text-(--muted)">默认跟随主题；仅开启自定义的模块会写入配置。</p>
+            <div className="mt-3 grid gap-3">
+              <ModuleColorSection moduleName="topbar" label="顶栏与导航" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
+              <ModuleColorSection moduleName="board" label="看板" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
+              <ModuleColorSection moduleName="detail" label="详情" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
+              <ModuleColorSection moduleName="settings" label="设置页" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
+            </div>
+          </section>
         </div>
       </main>
       <ThemePreview theme={draftTheme} hasValidationErrors={draftIssues.length > 0} />

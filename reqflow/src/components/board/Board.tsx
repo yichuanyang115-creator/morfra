@@ -120,12 +120,12 @@ export function Board({
   const columnWidths = draftColumnWidths ?? schema?.viewPreferences.columnWidths ?? {};
 
   if (loading) {
-    return <Skeleton />;
+    return <div data-theme-module="board" className="theme-module-board"><Skeleton /></div>;
   }
 
   if (error) {
     return (
-      <div className="px-5.5 py-15 text-center text-[13px] text-(--muted)">
+      <div data-theme-module="board" className="theme-module-board px-5.5 py-15 text-center text-[13px] text-(--muted)">
         数据读取失败，请检查项目文件夹
       </div>
     );
@@ -153,7 +153,7 @@ export function Board({
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="overflow-x-auto pr-5.5 pb-6">
+      <div data-theme-module="board" className="theme-module-board overflow-x-auto pr-5.5 pb-6">
         {visibleRequirements.length === 0 && (
           <EmptyState
             text={

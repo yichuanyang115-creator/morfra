@@ -34,4 +34,4 @@ export const metaInputClass =
   "w-27.5 rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--fg) outline-none focus:border-(--accent)";
 
 export const metaBtnClass =
-  "max-w-30 truncate rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--muted-2) hover:border-(--border) hover:bg-(--surface-2) hover:text-(--fg)";
+  "max-w-30 truncate rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--muted-2) hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text)";

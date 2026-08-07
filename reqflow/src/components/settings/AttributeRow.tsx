@@ -88,7 +88,7 @@ export function AttributeRow({
       className={`mb-1.5 rounded-(--r-md) border border-(--border) ${isDragging ? "opacity-40" : ""}`}
     >
       <div className="flex items-center gap-2 px-2.5 py-2">
-        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--fg)">
+        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--accent-text)">
           <DragHandleIcon />
         </span>
         <button
@@ -96,7 +96,7 @@ export function AttributeRow({
           aria-label={attribute.showOnBoard ? `隐藏「${attribute.name}」看板列` : `显示「${attribute.name}」看板列`}
           title="看板显示"
           onClick={onToggleBoard}
-          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--surface-2) ${
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--accent-soft) ${
             attribute.showOnBoard ? "text-(--fg)" : "text-(--muted-2)"
           }`}
         >
@@ -107,7 +107,7 @@ export function AttributeRow({
           aria-label={attribute.showOnDetail ? `隐藏「${attribute.name}」详情页属性` : `显示「${attribute.name}」详情页属性`}
           title="详情页显示"
           onClick={onToggleDetail}
-          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--surface-2) ${
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--accent-soft) ${
             attribute.showOnDetail ? "text-(--fg)" : "text-(--muted-2)"
           }`}
         >
