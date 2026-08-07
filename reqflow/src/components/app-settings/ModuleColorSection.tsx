@@ -17,6 +17,9 @@ const MODULE_EDIT_TOKENS: SemanticToken[] = [
   "actionSoft",
   "contextStrong",
   "contextSoft",
+  "feedbackSuccess",
+  "feedbackWarning",
+  "feedbackDanger",
 ];
 
 const TOKEN_LABELS: Partial<Record<SemanticToken, string>> = {
@@ -34,6 +37,9 @@ const TOKEN_LABELS: Partial<Record<SemanticToken, string>> = {
   actionSoft: "悬停背景",
   contextStrong: "选中文字",
   contextSoft: "选中背景",
+  feedbackSuccess: "成功反馈",
+  feedbackWarning: "警告反馈",
+  feedbackDanger: "危险反馈",
 };
 
 interface ModuleColorSectionProps {

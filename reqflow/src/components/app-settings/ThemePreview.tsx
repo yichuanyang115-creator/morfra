@@ -50,9 +50,9 @@ export function ThemePreview({ theme, hasValidationErrors = false }: ThemePrevie
             <span className="text-(--muted)">优先级</span>
             <span className="font-[550] text-(--fg)">P1</span>
           </div>
-          <div className="mt-1 flex items-center justify-between text-[11px]">
+          <div className="theme-module-business mt-1 flex items-center justify-between text-[11px]">
             <span className="text-(--muted)">状态</span>
-            <span className="text-(--st-done)">✓ 已通过</span>
+            <span className="inline-flex items-center gap-1 text-(--st-done)"><span aria-hidden="true" className="size-1.5 rounded-full bg-(--st-done)" />✓ 已通过</span>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -63,7 +63,7 @@ export function ThemePreview({ theme, hasValidationErrors = false }: ThemePrevie
               应用
             </button>
           </div>
-          <div className="rounded-(--r-sm) border border-(--border) bg-(--surface) p-2">
+          <div className="theme-module-feedback rounded-(--r-sm) border border-(--border) bg-(--surface) p-2">
             <span className="text-[10px] text-(--muted-2)">系统反馈</span>
             <p className={"m-0 mt-1 text-[11px] font-[550] " + (hasValidationErrors ? "text-(--st-blocked)" : "text-(--st-done)")}>
               {hasValidationErrors ? "对比度待修复" : "对比度通过"}

@@ -65,7 +65,11 @@ describe("AcceptanceTab", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "通过" }));
+    const passButton = screen.getByRole("button", { name: "通过" });
+    const card = passButton.closest("div")?.parentElement;
+    expect(card?.className).not.toMatch(/bg-\(--(?:st|sev)-/);
+    expect(passButton.querySelector("[aria-hidden=\"true\"]")).not.toBeNull();
+    await userEvent.click(passButton);
 
     expect(onUpdate).toHaveBeenCalledWith("a-1", { result: "pass" });
   });

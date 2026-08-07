@@ -82,7 +82,12 @@ describe("TasksTab", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "任务状态：待开始，点击切换到下一状态" }));
+    const statusButton = screen.getByRole("button", { name: "任务状态：待开始，点击切换到下一状态" });
+    const card = statusButton.closest("div")?.parentElement;
+    expect(card?.className).not.toMatch(/bg-\(--(?:st|sev)-/);
+    expect(statusButton.querySelector("[aria-hidden=\"true\"]")).not.toBeNull();
+    expect(statusButton).toHaveClass("ring-1", "ring-current");
+    await userEvent.click(statusButton);
 
     expect(onUpdate).toHaveBeenCalledWith("t-1", { status: "progress" });
   });

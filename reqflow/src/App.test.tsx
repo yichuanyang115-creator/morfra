@@ -62,6 +62,7 @@ describe("App 主题启动门", () => {
     render(<App />);
 
     expect(screen.getByText("外观配置无效，已恢复默认主题")).toBeInTheDocument();
+    expect(screen.getByText("外观配置无效，已恢复默认主题").closest("[role=\"status\"]")).toHaveClass("theme-module-feedback", "border-l-(--st-blocked)");
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2500);
     });

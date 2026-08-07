@@ -201,7 +201,7 @@ export function AppWorkspace() {
           )}
         />
       )}
-      {justMigrated && <Toast message="项目已自动升级为动态 Schema" onDismiss={acknowledgeMigration} />}
+      {justMigrated && <Toast message="项目已自动升级为动态 Schema" tone="success" onDismiss={acknowledgeMigration} />}
     </div>
   );
 }

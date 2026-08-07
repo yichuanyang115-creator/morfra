@@ -6,6 +6,7 @@ import {
   metaBtnClass,
   metaInputClass,
   STATUS_PILL_STYLE,
+  STATUS_DOT_STYLE,
   TASK_STATUS_LABEL,
   TASK_STATUS_ORDER,
   type TaskPatch,
@@ -63,7 +64,7 @@ export function TaskCard({
 
   return (
     <div
-      className={`relative mb-1.5 flex flex-col gap-1.5 rounded-(--r-md) border p-2.25 last:mb-0 ${
+      className={`theme-module-business relative mb-1.5 flex flex-col gap-1.5 rounded-(--r-md) border p-2.25 last:mb-0 ${
         task.blocked ? "border-(--st-blocked)" : "border-(--border)"
       }`}
     >
@@ -85,8 +86,9 @@ export function TaskCard({
           type="button"
           onClick={cycleStatus}
           aria-label={`任务状态：${TASK_STATUS_LABEL[task.status]}，点击切换到下一状态`}
-          className={`flex-none rounded-full px-2 py-0.5 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.03em] ${STATUS_PILL_STYLE[task.status]}`}
+          className={`inline-flex flex-none items-center gap-1 rounded-full px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.03em] ${STATUS_PILL_STYLE[task.status]}`}
         >
+          <span aria-hidden="true" className={`size-1.5 rounded-full ${STATUS_DOT_STYLE[task.status]}`} />
           {TASK_STATUS_LABEL[task.status]}
         </button>
         <button
@@ -97,7 +99,7 @@ export function TaskCard({
           onClick={toggleBlocked}
           className={`grid size-6 flex-none place-items-center rounded-(--r-sm) ${
             task.blocked
-              ? "bg-(--st-blocked-soft) text-(--st-blocked)"
+              ? "text-(--st-blocked) ring-1 ring-inset ring-(--st-blocked)"
               : "text-(--muted-2) hover:bg-(--accent-soft) hover:text-(--accent-text)"
           }`}
         >
@@ -209,7 +211,7 @@ export function TaskCard({
                 setNoteOpen(false);
               }
             }}
-            className="min-h-11 w-full resize-y rounded-(--r-sm) border border-(--st-blocked) bg-(--st-blocked-soft) px-2 py-1.5 font-(family-name:--font-body) text-[12px] text-(--fg) outline-none"
+            className="min-h-11 w-full resize-y rounded-(--r-sm) border border-(--st-blocked) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[12px] text-(--fg) outline-none"
           />
         ) : (
           <button

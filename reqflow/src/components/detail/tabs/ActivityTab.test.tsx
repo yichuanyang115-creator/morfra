@@ -153,7 +153,7 @@ describe("ActivityTab", () => {
     );
 
     const dots = container.querySelectorAll("span.absolute.top-0\\.5");
-    expect(dots[0]).toHaveClass("bg-(--accent)");
-    expect(dots[1]).not.toHaveClass("bg-(--accent)");
+    expect(dots[0]).toHaveClass("bg-(--st-progress)");
+    expect(dots[1]).not.toHaveClass("bg-(--st-progress)");
   });
 });

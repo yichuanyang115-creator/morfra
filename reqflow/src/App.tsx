@@ -101,7 +101,7 @@ function App() {
   return (
     <>
       <AppWorkspace />
-      {themeRecoveryNotice && <Toast message={themeRecoveryNotice} onDismiss={acknowledgeThemeRecovery} />}
+      {themeRecoveryNotice && <Toast message={themeRecoveryNotice} tone="danger" onDismiss={acknowledgeThemeRecovery} />}
       {undoSummary && <UndoToast summary={undoSummary} onDismiss={() => setUndoSummary(null)} />}
     </>
   );

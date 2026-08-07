@@ -118,6 +118,9 @@ export function AppearanceSettings({ onClose }: { onClose: () => void }) {
               <ModuleColorSection moduleName="board" label="看板" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
               <ModuleColorSection moduleName="detail" label="详情" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
               <ModuleColorSection moduleName="settings" label="设置页" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
+              <ModuleColorSection moduleName="business" label="业务状态" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
+              <ModuleColorSection moduleName="feedback" label="系统反馈" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
+              <ModuleColorSection moduleName="chat" label="对话区" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
             </div>
           </section>
         </div>

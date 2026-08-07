@@ -77,7 +77,7 @@
   --r-sm: 6px;
   --r-md: 8px;
   --r-lg: 12px;
-  --shadow-floating: 0 12px 30px -10px rgb(43 36 33 / 0.22);
+  --shadow-floating: 0 12px 30px -10px color-mix(in srgb, var(--semantic-text-primary) 22%, transparent);
   --topbar-h: 34px;
   --detail-max-w: 960px;
   --board-header-h: 34px;
@@ -98,6 +98,9 @@
   --module-scope-action-soft: var(--module-topbar-action-soft, var(--semantic-action-soft));
   --module-scope-context-strong: var(--module-topbar-context-strong, var(--semantic-context-strong));
   --module-scope-context-soft: var(--module-topbar-context-soft, var(--semantic-context-soft));
+  --module-scope-feedback-success: var(--module-topbar-feedback-success, var(--semantic-feedback-success));
+  --module-scope-feedback-warning: var(--module-topbar-feedback-warning, var(--semantic-feedback-warning));
+  --module-scope-feedback-danger: var(--module-topbar-feedback-danger, var(--semantic-feedback-danger));
 }
 
 .theme-module-board {
@@ -115,6 +118,9 @@
   --module-scope-action-soft: var(--module-board-action-soft, var(--semantic-action-soft));
   --module-scope-context-strong: var(--module-board-context-strong, var(--semantic-context-strong));
   --module-scope-context-soft: var(--module-board-context-soft, var(--semantic-context-soft));
+  --module-scope-feedback-success: var(--module-board-feedback-success, var(--semantic-feedback-success));
+  --module-scope-feedback-warning: var(--module-board-feedback-warning, var(--semantic-feedback-warning));
+  --module-scope-feedback-danger: var(--module-board-feedback-danger, var(--semantic-feedback-danger));
 }
 
 .theme-module-detail {
@@ -132,6 +138,9 @@
   --module-scope-action-soft: var(--module-detail-action-soft, var(--semantic-action-soft));
   --module-scope-context-strong: var(--module-detail-context-strong, var(--semantic-context-strong));
   --module-scope-context-soft: var(--module-detail-context-soft, var(--semantic-context-soft));
+  --module-scope-feedback-success: var(--module-detail-feedback-success, var(--semantic-feedback-success));
+  --module-scope-feedback-warning: var(--module-detail-feedback-warning, var(--semantic-feedback-warning));
+  --module-scope-feedback-danger: var(--module-detail-feedback-danger, var(--semantic-feedback-danger));
 }
 
 .theme-module-settings {
@@ -149,9 +158,72 @@
   --module-scope-action-soft: var(--module-settings-action-soft, var(--semantic-action-soft));
   --module-scope-context-strong: var(--module-settings-context-strong, var(--semantic-context-strong));
   --module-scope-context-soft: var(--module-settings-context-soft, var(--semantic-context-soft));
+  --module-scope-feedback-success: var(--module-settings-feedback-success, var(--semantic-feedback-success));
+  --module-scope-feedback-warning: var(--module-settings-feedback-warning, var(--semantic-feedback-warning));
+  --module-scope-feedback-danger: var(--module-settings-feedback-danger, var(--semantic-feedback-danger));
 }
 
-:where(.theme-module-topbar, .theme-module-board, .theme-module-detail, .theme-module-settings) {
+.theme-module-chat {
+  --module-scope-background-canvas: var(--module-chat-background-canvas, var(--semantic-background-canvas));
+  --module-scope-background-surface: var(--module-chat-background-surface, var(--semantic-background-surface));
+  --module-scope-background-elevated: var(--module-chat-background-elevated, var(--semantic-background-elevated));
+  --module-scope-text-primary: var(--module-chat-text-primary, var(--semantic-text-primary));
+  --module-scope-text-secondary: var(--module-chat-text-secondary, var(--semantic-text-secondary));
+  --module-scope-text-tertiary: var(--module-chat-text-tertiary, var(--semantic-text-tertiary));
+  --module-scope-text-disabled: var(--module-chat-text-disabled, var(--semantic-text-disabled));
+  --module-scope-border-subtle: var(--module-chat-border-subtle, var(--semantic-border-subtle));
+  --module-scope-border-strong: var(--module-chat-border-strong, var(--semantic-border-strong));
+  --module-scope-action-strong: var(--module-chat-action-strong, var(--semantic-action-strong));
+  --module-scope-action-base: var(--module-chat-action-base, var(--semantic-action-base));
+  --module-scope-action-soft: var(--module-chat-action-soft, var(--semantic-action-soft));
+  --module-scope-context-strong: var(--module-chat-context-strong, var(--semantic-context-strong));
+  --module-scope-context-soft: var(--module-chat-context-soft, var(--semantic-context-soft));
+  --module-scope-feedback-success: var(--module-chat-feedback-success, var(--semantic-feedback-success));
+  --module-scope-feedback-warning: var(--module-chat-feedback-warning, var(--semantic-feedback-warning));
+  --module-scope-feedback-danger: var(--module-chat-feedback-danger, var(--semantic-feedback-danger));
+}
+
+.theme-module-business {
+  --module-scope-background-canvas: var(--module-business-background-canvas, var(--semantic-background-canvas));
+  --module-scope-background-surface: var(--module-business-background-surface, var(--semantic-background-surface));
+  --module-scope-background-elevated: var(--module-business-background-elevated, var(--semantic-background-elevated));
+  --module-scope-text-primary: var(--module-business-text-primary, var(--semantic-text-primary));
+  --module-scope-text-secondary: var(--module-business-text-secondary, var(--semantic-text-secondary));
+  --module-scope-text-tertiary: var(--module-business-text-tertiary, var(--semantic-text-tertiary));
+  --module-scope-text-disabled: var(--module-business-text-disabled, var(--semantic-text-disabled));
+  --module-scope-border-subtle: var(--module-business-border-subtle, var(--semantic-border-subtle));
+  --module-scope-border-strong: var(--module-business-border-strong, var(--semantic-border-strong));
+  --module-scope-action-strong: var(--module-business-action-strong, var(--semantic-action-strong));
+  --module-scope-action-base: var(--module-business-action-base, var(--semantic-action-base));
+  --module-scope-action-soft: var(--module-business-action-soft, var(--semantic-action-soft));
+  --module-scope-context-strong: var(--module-business-context-strong, var(--semantic-context-strong));
+  --module-scope-context-soft: var(--module-business-context-soft, var(--semantic-context-soft));
+  --module-scope-feedback-success: var(--module-business-feedback-success, var(--semantic-feedback-success));
+  --module-scope-feedback-warning: var(--module-business-feedback-warning, var(--semantic-feedback-warning));
+  --module-scope-feedback-danger: var(--module-business-feedback-danger, var(--semantic-feedback-danger));
+}
+
+.theme-module-feedback {
+  --module-scope-background-canvas: var(--module-feedback-background-canvas, var(--semantic-background-canvas));
+  --module-scope-background-surface: var(--module-feedback-background-surface, var(--semantic-background-surface));
+  --module-scope-background-elevated: var(--module-feedback-background-elevated, var(--semantic-background-elevated));
+  --module-scope-text-primary: var(--module-feedback-text-primary, var(--semantic-text-primary));
+  --module-scope-text-secondary: var(--module-feedback-text-secondary, var(--semantic-text-secondary));
+  --module-scope-text-tertiary: var(--module-feedback-text-tertiary, var(--semantic-text-tertiary));
+  --module-scope-text-disabled: var(--module-feedback-text-disabled, var(--semantic-text-disabled));
+  --module-scope-border-subtle: var(--module-feedback-border-subtle, var(--semantic-border-subtle));
+  --module-scope-border-strong: var(--module-feedback-border-strong, var(--semantic-border-strong));
+  --module-scope-action-strong: var(--module-feedback-action-strong, var(--semantic-action-strong));
+  --module-scope-action-base: var(--module-feedback-action-base, var(--semantic-action-base));
+  --module-scope-action-soft: var(--module-feedback-action-soft, var(--semantic-action-soft));
+  --module-scope-context-strong: var(--module-feedback-context-strong, var(--semantic-context-strong));
+  --module-scope-context-soft: var(--module-feedback-context-soft, var(--semantic-context-soft));
+  --module-scope-feedback-success: var(--module-feedback-feedback-success, var(--semantic-feedback-success));
+  --module-scope-feedback-warning: var(--module-feedback-feedback-warning, var(--semantic-feedback-warning));
+  --module-scope-feedback-danger: var(--module-feedback-feedback-danger, var(--semantic-feedback-danger));
+}
+
+:where(.theme-module-topbar, .theme-module-board, .theme-module-detail, .theme-module-settings, .theme-module-chat, .theme-module-business, .theme-module-feedback) {
   --bg: var(--module-scope-background-canvas);
   --surface: var(--module-scope-background-surface);
   --surface-2: var(--module-scope-background-elevated);
@@ -169,8 +241,22 @@
   --accent-solid-fg: var(--module-scope-background-surface);
   --accent-selected: var(--module-scope-context-soft);
   --context-strong: var(--module-scope-context-strong);
+  --sev-p0: var(--module-scope-feedback-danger, var(--semantic-feedback-danger));
+  --sev-p0-soft: color-mix(in srgb, var(--sev-p0) 12%, var(--module-scope-background-surface));
+  --sev-p1: var(--module-scope-feedback-warning, var(--semantic-feedback-warning));
+  --sev-p1-soft: color-mix(in srgb, var(--sev-p1) 12%, var(--module-scope-background-surface));
+  --sev-p2: var(--module-scope-context-strong);
+  --sev-p2-soft: var(--module-scope-context-soft);
+  --st-todo: var(--module-scope-context-strong);
+  --st-todo-soft: var(--module-scope-context-soft);
+  --st-progress: var(--module-scope-action-base);
+  --st-progress-soft: var(--module-scope-action-soft);
+  --st-done: var(--module-scope-feedback-success, var(--semantic-feedback-success));
+  --st-done-soft: color-mix(in srgb, var(--st-done) 12%, var(--module-scope-background-surface));
+  --st-blocked: var(--module-scope-feedback-danger, var(--semantic-feedback-danger));
+  --st-blocked-soft: color-mix(in srgb, var(--st-blocked) 12%, var(--module-scope-background-surface));
 }
 
-:where(.theme-module-topbar, .theme-module-board, .theme-module-detail, .theme-module-settings) :disabled {
+:where(.theme-module-topbar, .theme-module-board, .theme-module-detail, .theme-module-settings, .theme-module-chat, .theme-module-business, .theme-module-feedback) :disabled {
   color: var(--module-scope-text-disabled);
 }

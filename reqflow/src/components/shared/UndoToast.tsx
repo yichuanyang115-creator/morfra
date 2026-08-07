@@ -6,5 +6,5 @@ interface UndoToastProps {
 }
 
 export function UndoToast({ summary, onDismiss }: UndoToastProps) {
-  return <Toast message={`已撤销：${summary}`} onDismiss={onDismiss} />;
+  return <Toast message={`已撤销：${summary}`} tone="success" onDismiss={onDismiss} />;
 }

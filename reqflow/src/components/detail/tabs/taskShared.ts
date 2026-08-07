@@ -12,9 +12,15 @@ export const TASK_STATUS_LABEL: Record<TaskStatus, string> = Object.fromEntries(
 ) as Record<TaskStatus, string>;
 
 export const STATUS_PILL_STYLE: Record<TaskStatus, string> = {
-  todo: "bg-(--st-todo-soft) text-(--muted)",
-  progress: "bg-(--st-progress-soft) text-(--st-progress)",
-  done: "bg-(--st-done-soft) text-(--st-done)",
+  todo: "text-(--st-todo) ring-1 ring-inset ring-current",
+  progress: "text-(--st-progress) ring-1 ring-inset ring-current",
+  done: "text-(--st-done) ring-1 ring-inset ring-current",
+};
+
+export const STATUS_DOT_STYLE: Record<TaskStatus, string> = {
+  todo: "bg-(--st-todo)",
+  progress: "bg-(--st-progress)",
+  done: "bg-(--st-done)",
 };
 
 export function fmtDate(iso: string): string {

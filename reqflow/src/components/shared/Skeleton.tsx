@@ -1,6 +1,6 @@
 export function Skeleton() {
   return (
-    <div className="flex flex-col gap-3 p-5.5">
+    <div className="theme-module-feedback min-h-full bg-(--bg) flex flex-col gap-3 p-5.5">
       {Array.from({ length: 3 }).map((_, sectionIndex) => (
         <div key={sectionIndex} className="flex flex-col gap-1.5">
           <div className="h-8 max-w-[776px] animate-pulse rounded-(--r-lg) bg-(--surface-2)" />

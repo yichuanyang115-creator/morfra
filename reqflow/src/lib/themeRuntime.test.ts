@@ -37,6 +37,20 @@ describe("themeRuntime", () => {
     expect(resolved.modules.detail.contextSoft).toBe("#F5EFF8");
   });
 
+  it("业务与反馈模块也能独立覆盖反馈色并生成对应 CSS 变量", () => {
+    const config = createDefaultTheme();
+    config.moduleOverrides.business = { feedbackSuccess: "green500" };
+    config.moduleOverrides.feedback = { feedbackDanger: "danger" };
+    const root = document.createElement("div").style;
+
+    const resolved = applyTheme(config, root);
+
+    expect(resolved.modules.business.feedbackSuccess).toBe("#5B9F00");
+    expect(resolved.modules.feedback.feedbackDanger).toBe("#B3261E");
+    expect(root.getPropertyValue("--module-business-feedback-success")).toBe("#5B9F00");
+    expect(root.getPropertyValue("--module-feedback-feedback-danger")).toBe("#B3261E");
+  });
+
   it("为每个模块写入独立 CSS 变量，清除覆盖后重新跟随语义层", () => {
     const config = createDefaultTheme();
     config.moduleOverrides.board = { contextSoft: "purple100" };

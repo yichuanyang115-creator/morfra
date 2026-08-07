@@ -40,10 +40,10 @@ export function TimelineNode({
   }
 
   return (
-    <div className="relative pb-5 last:pb-0">
+    <div className="theme-module-business relative pb-5 last:pb-0">
       <span
         className={`absolute top-0.5 -left-5 size-2.75 rounded-full border-2 ${
-          isCurrent ? "border-(--accent) bg-(--accent)" : "border-(--border-strong) bg-(--surface)"
+          isCurrent ? "border-(--st-progress) bg-(--st-progress)" : "border-(--context-strong) bg-(--surface)"
         }`}
       />
       <div className="mb-1.5 flex items-baseline gap-2">

@@ -4,6 +4,7 @@ import {
   ACCEPTANCE_RESULT_LABEL,
   ACCEPTANCE_RESULT_ORDER,
   RESULT_BTN_STYLE,
+  RESULT_DOT_STYLE,
   resultBtnBaseClass,
   type AcceptancePatch,
 } from "./acceptanceShared";
@@ -39,7 +40,7 @@ export function AcceptanceCard({
 
   return (
     <div
-      className={`relative mb-1.5 flex flex-col gap-1.5 rounded-(--r-md) border p-2.25 last:mb-0 ${
+      className={`theme-module-business relative mb-1.5 flex flex-col gap-1.5 rounded-(--r-md) border p-2.25 last:mb-0 ${
         criterion.result === "fail" ? "border-(--st-blocked)" : "border-(--border)"
       }`}
     >
@@ -83,8 +84,9 @@ export function AcceptanceCard({
               type="button"
               aria-pressed={criterion.result === result}
               onClick={() => onUpdate({ result })}
-              className={`${resultBtnBaseClass} ${criterion.result === result ? RESULT_BTN_STYLE[result] : ""}`}
+              className={`${resultBtnBaseClass} ${criterion.result === result ? `${RESULT_BTN_STYLE[result]} ring-1 ring-inset ring-current` : ""}`}
             >
+              <span aria-hidden="true" className={`size-1.5 rounded-full ${RESULT_DOT_STYLE[result]}`} />
               {ACCEPTANCE_RESULT_LABEL[result]}
             </button>
           ))}
@@ -115,7 +117,7 @@ export function AcceptanceCard({
                 setNoteOpen(false);
               }
             }}
-            className="min-h-11 w-full resize-y rounded-(--r-sm) border border-(--st-blocked) bg-(--st-blocked-soft) px-2 py-1.5 font-(family-name:--font-body) text-[12px] text-(--fg) outline-none"
+            className="min-h-11 w-full resize-y rounded-(--r-sm) border border-(--st-blocked) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[12px] text-(--fg) outline-none"
           />
         ) : (
           <button
