@@ -2,11 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAT_DEFAULT_WIDTH } from "../lib/boardWidth";
 
 const files = new Map<string, string>();
+let pendingWrite: Promise<void> | null = null;
+let releasePendingWrite: (() => void) | null = null;
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
   exists: vi.fn(async (path: string) => files.has(path)),
   readTextFile: vi.fn(async (path: string) => files.get(path) ?? ""),
   writeTextFile: vi.fn(async (path: string, content: string) => {
+    if (pendingWrite) await pendingWrite;
     files.set(path, content);
   }),
 }));
@@ -29,6 +32,8 @@ describe("chatStore（REQ-024 v2.8：独立对话框栏位，开关状态 + 拖�
   beforeEach(() => {
     vi.useFakeTimers();
     files.clear();
+    pendingWrite = null;
+    releasePendingWrite = null;
     useChatStore.setState({
       open: false,
       width: CHAT_DEFAULT_WIDTH,
@@ -158,5 +163,53 @@ describe("chatStore（REQ-024 v2.8：独立对话框栏位，开关状态 + 拖�
     // 此刻 store 展示的是项目 B 的状态，不应该被项目 A 的延迟回调污染
     expect(useChatStore.getState().loadedProjectId).toBe(PROJECT_B);
     expect(useChatStore.getState().messages).toHaveLength(0);
+  });
+
+  it("快速发送后清空时，按调用顺序串行落盘，最终文件保持为空", async () => {
+    await useChatStore.getState().loadForProject(PROJECT_A);
+    useChatStore.getState().sendMessage("发送后立即清空");
+
+    await useChatStore.getState().clearChat();
+    await vi.waitFor(() => expect(files.get(chatPath(PROJECT_A))).toContain("messages: []"));
+
+    expect(files.get(chatPath(PROJECT_A))).not.toContain("发送后立即清空");
+    useChatStore.setState({ open: false, messages: [], loadedProjectId: null });
+    await useChatStore.getState().loadForProject(PROJECT_A);
+    expect(useChatStore.getState().messages).toHaveLength(0);
+  });
+
+  it("清空尚未完成时切换项目再切回，会先等待清空落盘，不恢复旧消息", async () => {
+    await useChatStore.getState().loadForProject(PROJECT_A);
+    useChatStore.getState().sendMessage("切换前清空");
+    const clearPromise = useChatStore.getState().clearChat();
+
+    await useChatStore.getState().loadForProject(PROJECT_B);
+    await useChatStore.getState().loadForProject(PROJECT_A);
+    await clearPromise;
+
+    expect(useChatStore.getState().loadedProjectId).toBe(PROJECT_A);
+    expect(useChatStore.getState().messages).toHaveLength(0);
+  });
+
+  it("加载项目时等待该项目的慢写盘完成", async () => {
+    await useChatStore.getState().loadForProject(PROJECT_A);
+    pendingWrite = new Promise<void>((resolve) => {
+      releasePendingWrite = resolve;
+    });
+    useChatStore.getState().sendMessage("慢写盘消息");
+    await Promise.resolve();
+    await Promise.resolve();
+
+    let settled = false;
+    const loadPromise = useChatStore.getState().loadForProject(PROJECT_A).then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    releasePendingWrite?.();
+    pendingWrite = null;
+    await loadPromise;
+    expect(useChatStore.getState().messages[0].content).toBe("慢写盘消息");
   });
 });

@@ -30,6 +30,7 @@ interface ChatPanelProps {
 export function ChatPanel({ width }: ChatPanelProps) {
   const messages = useChatStore((s) => s.messages);
   const thinking = useChatStore((s) => s.thinking);
+  const persistenceError = useChatStore((s) => s.persistenceError);
   const sendMessage = useChatStore((s) => s.sendMessage);
   const clearChat = useChatStore((s) => s.clearChat);
   const [input, setInput] = useState("");
@@ -49,7 +50,8 @@ export function ChatPanel({ width }: ChatPanelProps) {
 
   return (
     <div
-      className="flex h-full min-w-0 flex-none flex-col border-l border-(--border) bg-(--surface)"
+      data-theme-module="chat"
+      className="theme-module-chat flex h-full min-w-0 flex-none flex-col border-l border-(--border) bg-(--surface)"
       style={{ width: `${width}px` }}
     >
       <div className="flex flex-none items-center justify-end border-b border-(--border) px-2.5 py-1.5">
@@ -62,8 +64,9 @@ export function ChatPanel({ width }: ChatPanelProps) {
           <TrashIcon />
         </button>
       </div>
+      {persistenceError && <p role="alert" className="m-0 border-b border-(--st-blocked) px-2.5 py-1 text-[11px] text-(--st-blocked)">{persistenceError}</p>}
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2">
+      <div ref={scrollRef} role="log" aria-live="polite" aria-label="对话消息" className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2">
         {messages.length === 0 && !thinking ? (
           <p className="m-0 px-1 py-3 text-center text-[12px] text-(--muted-2)">随便聊点什么…</p>
         ) : (
@@ -71,18 +74,25 @@ export function ChatPanel({ width }: ChatPanelProps) {
             {messages.map((m) => (
               <div
                 key={m.id}
+                data-role={m.role}
+                aria-label={m.role === "user" ? "用户消息" : "AI 消息"}
                 className={`max-w-full break-words rounded-(--r-md) px-2.5 py-1.5 text-[12.5px] ${
                   m.role === "user"
                     ? "self-end bg-(--accent-soft-strong) text-(--accent-text)"
-                    : "self-start bg-(--surface-2) text-(--fg)"
+                    : "self-start bg-transparent text-(--fg)"
                 }`}
               >
                 {m.content}
               </div>
             ))}
             {thinking && (
-              <div className="self-start rounded-(--r-md) bg-(--surface-2) px-2.5 py-1.5 text-[12.5px] text-(--muted-2)">
-                <span className="inline-block animate-pulse">思考中…</span>
+              <div aria-label="对话运行中" className="self-start rounded-(--r-md) bg-transparent px-2.5 py-1.5 text-[12.5px] text-(--context-strong)">
+                <span className="sr-only">思考中…</span>
+                <span aria-hidden="true" className="inline-flex items-center gap-1">
+                  <span className="size-1.5 animate-pulse rounded-full bg-(--context-strong)" />
+                  <span className="size-1.5 animate-pulse rounded-full bg-(--context-strong) [animation-delay:150ms]" />
+                  <span className="size-1.5 animate-pulse rounded-full bg-(--context-strong) [animation-delay:300ms]" />
+                </span>
               </div>
             )}
           </div>
@@ -112,7 +122,7 @@ export function ChatPanel({ width }: ChatPanelProps) {
         <button
           type="submit"
           aria-label="发送"
-          className="grid size-8 flex-none place-items-center rounded-(--r-sm) border-none bg-(--fg) text-(--surface) disabled:opacity-40"
+          className="grid size-8 flex-none place-items-center rounded-(--r-sm) border-none bg-(--accent-solid) text-(--accent-solid-fg) disabled:cursor-not-allowed disabled:opacity-40"
           disabled={!input.trim()}
         >
           <SendIcon />
