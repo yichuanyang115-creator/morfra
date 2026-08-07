@@ -7,7 +7,7 @@
   --palette-surface: #FFFFFF;
   --palette-ink: #2B2421;
   --palette-green-600: #3F7A02;
-  --palette-green-500: #5DA802;
+  --palette-green-500: #5B9F00;
   --palette-green-50: #F4FAEC;
   --palette-purple-700: #5D3A73;
   --palette-purple-500: #76558C;
@@ -54,9 +54,9 @@
   --accent-selected: var(--semantic-context-soft);
   --context-strong: var(--semantic-context-strong);
   --sev-p0: var(--semantic-feedback-danger);
-  --sev-p0-soft: #FBE9E7;
+  --sev-p0-soft: color-mix(in srgb, var(--semantic-feedback-danger) 12%, var(--semantic-background-surface));
   --sev-p1: var(--semantic-feedback-warning);
-  --sev-p1-soft: #FFF4D6;
+  --sev-p1-soft: color-mix(in srgb, var(--semantic-feedback-warning) 12%, var(--semantic-background-surface));
   --sev-p2: var(--semantic-context-strong);
   --sev-p2-soft: var(--semantic-context-soft);
   --st-todo: var(--semantic-context-strong);
@@ -64,9 +64,9 @@
   --st-progress: var(--semantic-action-base);
   --st-progress-soft: var(--semantic-action-soft);
   --st-done: var(--semantic-feedback-success);
-  --st-done-soft: #E8F4EE;
+  --st-done-soft: color-mix(in srgb, var(--semantic-feedback-success) 12%, var(--semantic-background-surface));
   --st-blocked: var(--semantic-feedback-danger);
-  --st-blocked-soft: #FBE9E7;
+  --st-blocked-soft: color-mix(in srgb, var(--semantic-feedback-danger) 12%, var(--semantic-background-surface));
 
   --font-display: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-body: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;

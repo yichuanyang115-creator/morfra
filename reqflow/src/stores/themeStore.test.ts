@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createDefaultTheme } from "../lib/themeDefaults";
 
-const files = new Map<string, string>();
+const { files, writeTextFileMock } = vi.hoisted(() => {
+  const fileStore = new Map<string, string>();
+  const writeMock = vi.fn(async (path: string, content: string) => {
+    fileStore.set(path, content);
+  });
+  return { files: fileStore, writeTextFileMock: writeMock };
+});
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
   exists: vi.fn(async (path: string) => files.has(path)),
   readTextFile: vi.fn(async (path: string) => files.get(path) ?? ""),
-  writeTextFile: vi.fn(async (path: string, content: string) => {
-    files.set(path, content);
-  }),
+  writeTextFile: writeTextFileMock,
 }));
 
 vi.mock("@tauri-apps/api/path", () => ({
@@ -22,8 +26,13 @@ const THEME_PATH = "/app-local-data/theme.json";
 describe("themeStore", () => {
   beforeEach(() => {
     files.clear();
+    writeTextFileMock.mockClear().mockImplementation(async (path: string, content: string) => {
+      files.set(path, content);
+    });
     useThemeStore.setState({
       appliedTheme: createDefaultTheme(),
+      draftTheme: null,
+      draftIssues: [],
       loaded: false,
       recoveryNotice: null,
     });
@@ -70,5 +79,46 @@ describe("themeStore", () => {
     expect(useThemeStore.getState().appliedTheme).toEqual(createDefaultTheme());
     expect(useThemeStore.getState().recoveryNotice).toBe("外观配置无效，已恢复默认主题");
     expect(files.get("/app-local-data/projects/project-a/schema.json")).toBe('{"version":1}');
+  });
+
+  it("进入设置后复制草稿，编辑草稿不提前改全局主题或磁盘", () => {
+    const before = useThemeStore.getState().appliedTheme.palette.green500;
+
+    useThemeStore.getState().beginDraft();
+    useThemeStore.getState().updateDraft((theme) => ({
+      ...theme,
+      semantic: { ...theme.semantic, actionBase: "#4F9200" },
+    }));
+
+    expect(useThemeStore.getState().draftTheme?.semantic.actionBase).toBe("#4F9200");
+    expect(useThemeStore.getState().appliedTheme.palette.green500).toBe(before);
+    expect(files.size).toBe(0);
+  });
+
+  it("非法草稿阻止应用并返回字段错误，恢复默认后才可应用", async () => {
+    useThemeStore.getState().beginDraft();
+    useThemeStore.getState().updateDraft((theme) => ({
+      ...theme,
+      semantic: { ...theme.semantic, textPrimary: "#FFFFFF" },
+    }));
+
+    expect(await useThemeStore.getState().applyDraft()).toBe(false);
+    expect(useThemeStore.getState().draftIssues.some((issue) => issue.field === "semantic.textPrimary")).toBe(true);
+    expect(files.size).toBe(0);
+
+    useThemeStore.getState().resetDraft();
+    expect(await useThemeStore.getState().applyDraft()).toBe(true);
+    expect(files.get(THEME_PATH)).toContain("\"version\": 1");
+  });
+
+  it("主题文件保存失败时保留草稿并返回可重试错误", async () => {
+    useThemeStore.getState().beginDraft();
+    writeTextFileMock.mockRejectedValueOnce(new Error("disk full"));
+
+    expect(await useThemeStore.getState().applyDraft()).toBe(false);
+    expect(useThemeStore.getState().draftTheme).not.toBeNull();
+    expect(useThemeStore.getState().draftIssues).toEqual([
+      { field: "theme", message: "主题保存失败，请重试" },
+    ]);
   });
 });

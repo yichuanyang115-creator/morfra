@@ -38,9 +38,9 @@ export async function checkForUpdate(currentVersion: string): Promise<CheckUpdat
     return { hasUpdate: false };
   }
 
-  const asset = data.assets.find((a) => a.name.endsWith(".dmg"));
+  const asset = data.assets.find((a) => /aarch64/i.test(a.name) && /\.dmg$/i.test(a.name));
   if (!asset) {
-    throw new Error("未找到可下载的 dmg 安装包");
+    throw new Error("未找到可下载的 Apple Silicon dmg 安装包");
   }
 
   return {

@@ -13,6 +13,8 @@ export type SettingsSection =
   | { kind: "attributes"; attributeId?: string }
   | { kind: "tab"; tabId: string };
 
+export type AppSettingsSection = "appearance" | "version";
+
 interface UiState {
   selectedRequirementId: string | null;
   detailMode: DetailMode;
@@ -20,6 +22,7 @@ interface UiState {
   boardWidth: number;
   /** null = 设置页未打开。非 null 时 App 用它整屏替换看板内容区（见 REQ-025）。 */
   settingsSection: SettingsSection | null;
+  appSettingsSection: AppSettingsSection | null;
   selectRequirement: (id: string) => void;
   toggleClosed: () => void;
   toggleFullscreen: () => void;
@@ -28,6 +31,9 @@ interface UiState {
   openSettings: (section?: SettingsSection) => void;
   setSettingsSection: (section: SettingsSection) => void;
   closeSettings: () => void;
+  openAppSettings: (section?: AppSettingsSection) => void;
+  setAppSettingsSection: (section: AppSettingsSection) => void;
+  closeAppSettings: () => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -36,6 +42,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   activeTab: "body",
   boardWidth: BOARD_DEFAULT_WIDTH,
   settingsSection: null,
+  appSettingsSection: null,
 
   selectRequirement: (id) => {
     const current = get().detailMode;
@@ -65,7 +72,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
 
   openSettings: (section) => {
-    set({ settingsSection: section ?? { kind: "stages" } });
+    set({ settingsSection: section ?? { kind: "stages" }, appSettingsSection: null });
   },
 
   setSettingsSection: (section) => {
@@ -75,4 +82,12 @@ export const useUiStore = create<UiState>((set, get) => ({
   closeSettings: () => {
     set({ settingsSection: null });
   },
+
+  openAppSettings: (section = "appearance") => {
+    set({ appSettingsSection: section, settingsSection: null });
+  },
+
+  setAppSettingsSection: (section) => set({ appSettingsSection: section }),
+
+  closeAppSettings: () => set({ appSettingsSection: null }),
 }));

@@ -6,7 +6,6 @@ import { useSchemaStore } from "../../stores/schemaStore";
 import { fieldAttributesFor } from "../../lib/schemaSelectors";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 import { SearchBox } from "./SearchBox";
-import { SettingsPanel } from "./SettingsPanel";
 import { FieldsPanel } from "./FieldsPanel";
 import { FilterPanel } from "./FilterPanel";
 import { GlobalSortPanel } from "./GlobalSortPanel";
@@ -74,7 +73,6 @@ function SchemaSettingsIcon() {
 
 export function Topbar() {
   const [switcherOpen, setSwitcherOpen] = useState(false);
-  const [appSettingsOpen, setAppSettingsOpen] = useState(false);
   const [fieldsOpen, setFieldsOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -83,7 +81,9 @@ export function Topbar() {
   const requirements = useRequirementStore((s) => s.requirements);
   const selectRequirement = useUiStore((s) => s.selectRequirement);
   const openSettings = useUiStore((s) => s.openSettings);
+  const openAppSettings = useUiStore((s) => s.openAppSettings);
   const settingsSection = useUiStore((s) => s.settingsSection);
+  const appSettingsSection = useUiStore((s) => s.appSettingsSection);
   const schema = useSchemaStore((s) => s.schema);
   const schemaLoaded = useSchemaStore((s) => s.schema !== null);
   const filters = schema?.viewPreferences.filters ?? [];
@@ -159,10 +159,9 @@ export function Topbar() {
         </button>
         <button
           type="button"
-          aria-label="版本"
-          aria-haspopup="true"
-          onClick={() => setAppSettingsOpen((v) => !v)}
-          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"
+          aria-label="应用设置"
+          onClick={() => openAppSettings()}
+          className={appSettingsSection ? "grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-(--accent-soft) text-(--accent-text)" : "grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--surface) hover:text-(--fg)"}
         >
           <AppSettingsIcon />
         </button>
@@ -184,13 +183,6 @@ export function Topbar() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setSwitcherOpen(false)} />
           <ProjectSwitcher onClose={() => setSwitcherOpen(false)} />
-        </>
-      )}
-
-      {appSettingsOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setAppSettingsOpen(false)} />
-          <SettingsPanel onClose={() => setAppSettingsOpen(false)} />
         </>
       )}
 

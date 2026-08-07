@@ -70,6 +70,23 @@ describe("checkForUpdate", () => {
     await expect(checkForUpdate("0.1.0")).rejects.toThrow();
   });
 
+  it("Release 同时有 Intel 和 Apple Silicon 包时只选择 aarch64 dmg", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        tag_name: "v0.2.0",
+        body: "",
+        assets: [
+          { name: "reqflow_0.2.0_x86_64.dmg", browser_download_url: "https://example.com/intel.dmg" },
+          { name: "reqflow_0.2.0_aarch64.dmg", browser_download_url: "https://example.com/arm.dmg" },
+        ],
+      }),
+    );
+
+    await expect(checkForUpdate("0.1.0")).resolves.toMatchObject({
+      release: { assetUrl: "https://example.com/arm.dmg" },
+    });
+  });
+
   it("fetch 本身抛错（断网）时错误原样向上抛出", async () => {
     fetchMock.mockRejectedValueOnce(new Error("network error"));
 

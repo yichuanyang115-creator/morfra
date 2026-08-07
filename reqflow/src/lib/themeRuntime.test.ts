@@ -13,7 +13,11 @@ describe("themeRuntime", () => {
     expect(resolved.semantic.actionBase).toBe("#4F9200");
     expect(root.getPropertyValue("--semantic-action-base")).toBe("#4F9200");
     expect(root.getPropertyValue("--accent")).toBe("#4F9200");
+    expect(root.getPropertyValue("--semantic-action-soft")).toBe("#F4FAEC");
+    expect(root.getPropertyValue("--semantic-context-soft")).toBe("#F5EFF8");
     expect(root.getPropertyValue("--accent-selected")).toBe("#F5EFF8");
+    expect(root.getPropertyValue("--sev-p0-soft")).toContain("var(--semantic-feedback-danger)");
+    expect(root.getPropertyValue("--st-done-soft")).toContain("var(--semantic-feedback-success)");
   });
 
   it("支持语义层使用显式合法色，而不是只限于调色板引用", () => {

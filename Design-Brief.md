@@ -84,7 +84,7 @@
 | `palette.surface` | `#FFFFFF` | 内容、卡片、表单 |
 | `palette.ink` | `#2B2421` | 主要文字；带暖调，不是灰色 |
 | `palette.green.600` | `#3F7A02` | 实心主操作、绿色文字；白字对比度 5.26:1 |
-| `palette.green.500` | `#5DA802` | 焦点环、进度、图标和短暂反馈 |
+| `palette.green.500` | `#5B9F00` | 焦点环、进度、图标和短暂反馈；对纯白对比度约 3.28:1 |
 | `palette.green.50` | `#F4FAEC` | 悬停、拖拽落点、新建草稿 |
 | `palette.purple.700` | `#5D3A73` | 次级文字、结构强标记 |
 | `palette.purple.500` | `#76558C` | 三级文字、普通图标 |

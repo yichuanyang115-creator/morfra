@@ -118,3 +118,26 @@ describe("uiStore Schema 设置页导航状态（Phase 18）", () => {
     expect(useUiStore.getState().settingsSection).toBeNull();
   });
 });
+
+describe("uiStore 应用设置页导航状态（Phase 28）", () => {
+  beforeEach(() => {
+    useUiStore.setState({ settingsSection: null, appSettingsSection: null });
+  });
+
+  it("打开应用设置默认进入外观，并关闭 Schema 设置状态", () => {
+    useUiStore.getState().openSettings();
+    useUiStore.getState().openAppSettings();
+
+    expect(useUiStore.getState().appSettingsSection).toBe("appearance");
+    expect(useUiStore.getState().settingsSection).toBeNull();
+  });
+
+  it("应用设置可切换版本并独立关闭", () => {
+    useUiStore.getState().openAppSettings("version");
+    useUiStore.getState().setAppSettingsSection("appearance");
+    expect(useUiStore.getState().appSettingsSection).toBe("appearance");
+
+    useUiStore.getState().closeAppSettings();
+    expect(useUiStore.getState().appSettingsSection).toBeNull();
+  });
+});

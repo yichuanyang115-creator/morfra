@@ -55,13 +55,13 @@ const LEGACY_VARIABLES: Record<string, SemanticToken> = {
 };
 
 const LEGACY_SOFT_VARIABLES: Record<string, string> = {
-  "--sev-p0-soft": "#FBE9E7",
-  "--sev-p1-soft": "#FFF4D6",
+  "--sev-p0-soft": "color-mix(in srgb, var(--semantic-feedback-danger) 12%, var(--semantic-background-surface))",
+  "--sev-p1-soft": "color-mix(in srgb, var(--semantic-feedback-warning) 12%, var(--semantic-background-surface))",
   "--sev-p2-soft": "var(--semantic-context-soft)",
   "--st-todo-soft": "var(--semantic-context-soft)",
   "--st-progress-soft": "var(--semantic-action-soft)",
-  "--st-done-soft": "#E8F4EE",
-  "--st-blocked-soft": "#FBE9E7",
+  "--st-done-soft": "color-mix(in srgb, var(--semantic-feedback-success) 12%, var(--semantic-background-surface))",
+  "--st-blocked-soft": "color-mix(in srgb, var(--semantic-feedback-danger) 12%, var(--semantic-background-surface))",
 };
 
 function resolveReference(reference: ThemeColorReference, palette: AppThemeConfig["palette"]): string {

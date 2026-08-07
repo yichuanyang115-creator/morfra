@@ -31,8 +31,12 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
   errorMessage: "",
 
   loadVersion: async () => {
-    const version = await getVersion();
-    set({ currentVersion: version });
+    try {
+      const version = await getVersion();
+      set({ currentVersion: version, status: "idle", errorMessage: "" });
+    } catch (e) {
+      set({ status: "error", errorMessage: e instanceof Error ? e.message : "无法读取当前版本，请重试" });
+    }
   },
 
   checkUpdate: async () => {
@@ -54,9 +58,10 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
     if (!release) return;
 
     set({ status: "downloading", downloadProgress: 0, errorMessage: "" });
-    const filePath = await downloadFilePath();
+    let filePath: string | null = null;
 
     try {
+      filePath = await downloadFilePath();
       await download(release.assetUrl, filePath, (progress) => {
         if (progress.total > 0) {
           set({ downloadProgress: Math.round((progress.progress / progress.total) * 100) });
@@ -65,7 +70,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => ({
       await openPath(filePath);
       set({ status: "up-to-date", release: null });
     } catch (e) {
-      if (await pathExists(filePath)) {
+      if (filePath && await pathExists(filePath)) {
         await removeFile(filePath);
       }
       set({ status: "error", errorMessage: e instanceof Error ? e.message : "下载失败，请重试" });

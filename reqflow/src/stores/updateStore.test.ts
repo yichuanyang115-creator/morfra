@@ -6,11 +6,12 @@ const downloadMock = vi.fn();
 const checkForUpdateMock = vi.fn();
 const pathExistsMock = vi.fn();
 const removeFileMock = vi.fn();
+const joinMock = vi.fn();
 
 vi.mock("@tauri-apps/api/app", () => ({ getVersion: getVersionMock }));
 vi.mock("@tauri-apps/api/path", () => ({
   appLocalDataDir: vi.fn().mockResolvedValue("/fake/appdata"),
-  join: (...parts: string[]) => Promise.resolve(parts.join("/")),
+  join: joinMock,
 }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openPath: openPathMock }));
 vi.mock("@tauri-apps/plugin-upload", () => ({ download: downloadMock }));
@@ -27,6 +28,7 @@ describe("updateStore", () => {
     checkForUpdateMock.mockReset();
     pathExistsMock.mockReset();
     removeFileMock.mockReset();
+    joinMock.mockReset().mockImplementation(async (...parts: string[]) => parts.join("/"));
     useUpdateStore.setState({
       status: "idle",
       currentVersion: "",
@@ -40,6 +42,15 @@ describe("updateStore", () => {
     getVersionMock.mockResolvedValueOnce("0.1.0");
     await useUpdateStore.getState().loadVersion();
     expect(useUpdateStore.getState().currentVersion).toBe("0.1.0");
+  });
+
+  it("loadVersion 失败时进入 error 状态并保留可重试错误", async () => {
+    getVersionMock.mockRejectedValueOnce(new Error("版本读取失败"));
+
+    await useUpdateStore.getState().loadVersion();
+
+    expect(useUpdateStore.getState().status).toBe("error");
+    expect(useUpdateStore.getState().errorMessage).toBe("版本读取失败");
   });
 
   it("checkUpdate 查到已是最新版本时状态变为 up-to-date，不带 release 信息", async () => {
@@ -110,5 +121,18 @@ describe("updateStore", () => {
 
     expect(removeFileMock).not.toHaveBeenCalled();
     expect(useUpdateStore.getState().status).toBe("error");
+  });
+
+  it("下载目标路径解析失败时也进入 error 状态并可重试", async () => {
+    useUpdateStore.setState({
+      release: { version: "v0.2.0", notes: "", assetUrl: "https://x/y.dmg" },
+    });
+    joinMock.mockRejectedValueOnce(new Error("路径解析失败"));
+
+    await useUpdateStore.getState().downloadUpdate();
+
+    expect(downloadMock).not.toHaveBeenCalled();
+    expect(useUpdateStore.getState().status).toBe("error");
+    expect(useUpdateStore.getState().errorMessage).toBe("路径解析失败");
   });
 });

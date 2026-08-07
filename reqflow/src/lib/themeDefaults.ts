@@ -6,7 +6,7 @@ export const DEFAULT_PALETTE: PrimitivePalette = {
   surface: "#FFFFFF",
   ink: "#2B2421",
   green600: "#3F7A02",
-  green500: "#5DA802",
+  green500: "#5B9F00",
   green50: "#F4FAEC",
   purple700: "#5D3A73",
   purple500: "#76558C",
