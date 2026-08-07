@@ -64,7 +64,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
 
   return (
     <>
-      <div className="fixed left-3 z-50 w-80 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-1.5 shadow-(--shadow-floating)"
+      <div className="fixed left-3 z-50 w-80 rounded-(--r-lg) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) p-1.5 shadow-(--shadow-floating)"
         style={{ top: "calc(var(--topbar-h) + 6px)" }}
       >
         {projects.map((project) => {
@@ -74,8 +74,8 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
           return (
             <div
               key={project.id}
-              className={`group flex w-full items-center gap-2.25 rounded-(--r-sm) px-2.25 py-2 text-[13px] text-(--fg) ${
-                isActive ? "bg-(--accent-selected) text-(--context-strong)" : "hover:bg-(--accent-soft) hover:text-(--accent-text)"
+              className={`group flex w-full items-center gap-2.25 rounded-(--r-sm) px-2.25 py-2 text-[13px] text-(--module-scope-text-primary) ${
+                isActive ? "bg-(--module-scope-context-soft) text-(--module-scope-context-strong)" : "hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)"
               } ${isRenaming ? "" : "cursor-pointer"}`}
               onClick={isRenaming ? undefined : () => handleSwitch(project.id)}
             >
@@ -95,7 +95,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
                       setRenamingId(null);
                     }
                   }}
-                  className="min-w-0 flex-1 rounded border border-(--accent) bg-(--surface) px-1.25 py-0.5 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none"
+                  className="min-w-0 flex-1 rounded border border-(--module-scope-action-base) bg-(--module-scope-background-surface) px-1.25 py-0.5 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none"
                 />
               ) : (
                 <>
@@ -108,7 +108,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
                         e.stopPropagation();
                         startRename(project.id, project.name);
                       }}
-                      className="grid size-5 flex-none place-items-center border-none bg-transparent text-(--muted-2) hover:text-(--accent-text)"
+                      className="grid size-5 flex-none place-items-center border-none bg-transparent text-(--module-scope-text-tertiary) hover:text-(--module-scope-action-strong)"
                     >
                       <RenameIcon />
                     </button>
@@ -120,7 +120,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
                           e.stopPropagation();
                           setDeleteTargetId(project.id);
                         }}
-                        className="grid size-5 flex-none place-items-center border-none bg-transparent text-(--muted-2) hover:text-(--st-blocked)"
+                        className="grid size-5 flex-none place-items-center border-none bg-transparent text-(--module-scope-text-tertiary) hover:text-(--module-scope-feedback-danger)"
                       >
                         <DeleteIcon />
                       </button>
@@ -132,7 +132,7 @@ export function ProjectSwitcher({ onClose }: ProjectSwitcherProps) {
           );
         })}
 
-        <div className="my-1.25 mx-1 h-px bg-(--border)" />
+        <div className="my-1.25 mx-1 h-px bg-(--module-scope-border-subtle)" />
 
         <CreateProjectForm onCreated={onClose} />
       </div>

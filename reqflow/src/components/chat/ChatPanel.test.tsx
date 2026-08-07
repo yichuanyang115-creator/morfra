@@ -60,9 +60,9 @@ describe("ChatPanel（REQ-024 详情面板对话框，假数据）", () => {
     expect(screen.getByText("你好")).toBeInTheDocument();
     const userMessage = screen.getByText("你好").closest("[data-role=\"user\"]");
     expect(userMessage).toHaveAttribute("aria-label", "用户消息");
-    expect(userMessage).toHaveClass("self-end", "bg-(--accent-soft-strong)", "text-(--accent-text)");
-    expect(screen.getByLabelText("对话运行中")).toHaveClass("self-start", "bg-transparent", "text-(--context-strong)");
-    expect(screen.getByLabelText("对话运行中").querySelectorAll(".bg-\\(--context-strong\\)")).toHaveLength(3);
+    expect(userMessage).toHaveClass("self-end", "bg-(--module-scope-context-soft)", "text-(--module-scope-action-strong)");
+    expect(screen.getByLabelText("对话运行中")).toHaveClass("self-start", "bg-transparent", "text-(--module-scope-context-strong)");
+    expect(screen.getByLabelText("对话运行中").querySelectorAll(".bg-\\(--module-scope-context-strong\\)")).toHaveLength(3);
     expect(screen.getByText("思考中…")).toBeInTheDocument();
 
     await act(async () => {
@@ -72,7 +72,7 @@ describe("ChatPanel（REQ-024 详情面板对话框，假数据）", () => {
     expect(screen.queryByText("思考中…")).not.toBeInTheDocument();
     expect(useChatStore.getState().messages).toHaveLength(2);
     expect(screen.getByText("这个功能还在开发中，暂时只能陪你聊聊。")).toHaveAttribute("aria-label", "AI 消息");
-    expect(screen.getByText("这个功能还在开发中，暂时只能陪你聊聊。")).toHaveClass("self-start", "bg-transparent", "text-(--fg)");
+    expect(screen.getByText("这个功能还在开发中，暂时只能陪你聊聊。")).toHaveClass("self-start", "bg-transparent", "text-(--module-scope-text-primary)");
   });
 
   it("点击发送按钮发送消息，效果与回车一致", () => {

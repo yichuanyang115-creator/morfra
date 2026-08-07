@@ -16,7 +16,7 @@ export function AcceptanceDraftRow({
   }
 
   return (
-    <div className="mb-1.5 rounded-(--r-md) border border-(--accent) bg-(--accent-soft) p-2.25">
+    <div className="mb-1.5 rounded-(--r-md) border border-(--module-scope-action-base) bg-(--module-scope-action-soft) p-2.25">
       <input
         type="text"
         autoFocus
@@ -31,7 +31,7 @@ export function AcceptanceDraftRow({
             resolve();
           }
         }}
-        className="w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2) focus:border-(--accent) focus:bg-(--accent-soft)"
+        className="w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none placeholder:text-(--module-scope-text-tertiary) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft)"
       />
     </div>
   );

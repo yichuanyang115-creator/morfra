@@ -128,7 +128,7 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
       className={`grid min-h-0 flex-1 ${isDragging ? "" : "transition-[grid-template-columns] duration-180 ease-in-out"}`}
       style={{ gridTemplateColumns: gridTemplate(detailMode, clampedBoardWidth, clampedChatWidth) }}
     >
-      <main className="flex min-h-0 min-w-0 flex-col border-r border-(--border) bg-(--surface)">
+      <main className="flex min-h-0 min-w-0 flex-col border-r border-(--module-scope-border-subtle) bg-(--module-scope-background-surface)">
         <div className="min-h-0 flex-1 overflow-y-auto">{boardContent}</div>
       </main>
 
@@ -140,15 +140,15 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
           onPointerDown={handleBoardPointerDown}
           onPointerMove={handleBoardPointerMove}
           onPointerUp={handleBoardPointerUp}
-          className="relative cursor-col-resize bg-(--border) transition-colors hover:bg-(--accent) active:bg-(--accent)"
+          className="relative cursor-col-resize bg-(--module-scope-border-subtle) transition-colors hover:bg-(--module-scope-action-base) active:bg-(--module-scope-action-base)"
         />
       ) : (
         <div />
       )}
 
       <aside
-        className={`flex min-h-0 min-w-0 flex-col overflow-hidden bg-(--surface) ${
-          detailMode === "expanded" ? "shadow-[-4px_0_16px_-4px_rgba(60,50,30,0.12)]" : ""
+        className={`flex min-h-0 min-w-0 flex-col overflow-hidden bg-(--module-scope-background-surface) ${
+          detailMode === "expanded" ? "shadow-(--shadow-panel)" : ""
         }`}
       >
         <div
@@ -167,7 +167,7 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
           onPointerDown={handleChatPointerDown}
           onPointerMove={handleChatPointerMove}
           onPointerUp={handleChatPointerUp}
-          className="relative cursor-col-resize bg-(--border) transition-colors hover:bg-(--accent) active:bg-(--accent)"
+          className="relative cursor-col-resize bg-(--module-scope-border-subtle) transition-colors hover:bg-(--module-scope-action-base) active:bg-(--module-scope-action-base)"
         />
       ) : (
         <div />

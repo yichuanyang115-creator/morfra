@@ -7,7 +7,7 @@ describe("Toast", () => {
     render(<Toast message="保存失败" tone="danger" onDismiss={vi.fn()} />);
 
     const toast = screen.getByRole("status");
-    expect(toast).toHaveClass("theme-module-feedback", "bg-(--surface)", "border-l-(--st-blocked)");
+    expect(toast).toHaveClass("theme-module-feedback", "bg-(--module-scope-background-surface)", "border-l-(--module-scope-feedback-danger)");
     expect(toast).toHaveTextContent("!");
     expect(toast).toHaveTextContent("保存失败");
   });

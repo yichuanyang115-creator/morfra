@@ -53,14 +53,14 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
               onChange(color);
             }}
             className={`grid size-6 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent ${
-              value.toUpperCase() === color.toUpperCase() ? "ring-1 ring-inset ring-(--fg)" : "hover:bg-(--accent-soft)"
+              value.toUpperCase() === color.toUpperCase() ? "ring-1 ring-inset ring-(--module-scope-text-primary)" : "hover:bg-(--module-scope-action-soft)"
             }`}
           >
             <span className="size-3.5 rounded-full" style={{ backgroundColor: color }} />
           </button>
         ))}
       </div>
-      <label className="flex items-center gap-2 text-[11.5px] text-(--muted-2)">
+      <label className="flex items-center gap-2 text-[11.5px] text-(--module-scope-text-tertiary)">
         <span className="flex-none">自定义颜色</span>
         <input
           aria-label="自定义颜色"
@@ -81,11 +81,11 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
             }
           }}
           aria-invalid={Boolean(error)}
-          className={`h-7 min-w-0 flex-1 rounded-(--r-sm) border bg-(--surface) px-2 font-(family-name:--font-mono) text-[11.5px] text-(--fg) outline-none focus:border-(--accent) ${error ? "border-(--st-blocked)" : "border-(--border)"}`}
+          className={`h-7 min-w-0 flex-1 rounded-(--r-sm) border bg-(--module-scope-background-surface) px-2 font-(family-name:--font-mono) text-[11.5px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base) ${error ? "border-(--module-scope-feedback-danger)" : "border-(--module-scope-border-subtle)"}`}
         />
       </label>
-      {error && <span role="alert" className="text-[11px] text-(--st-blocked)">{error}</span>}
-      {warning && <span role="status" aria-live="polite" className="text-[11px] text-(--sev-p1)">{warning}</span>}
+      {error && <span role="alert" className="text-[11px] text-(--module-scope-feedback-danger)">{error}</span>}
+      {warning && <span role="status" aria-live="polite" className="text-[11px] text-(--module-scope-feedback-warning)">{warning}</span>}
     </div>
   );
 }

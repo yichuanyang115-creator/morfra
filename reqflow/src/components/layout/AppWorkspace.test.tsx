@@ -31,7 +31,7 @@ describe("AppWorkspace Phase 30 系统反馈", () => {
 
     render(<AppWorkspace />);
 
-    expect(screen.getByRole("status")).toHaveClass("theme-module-feedback", "border-l-(--st-done)");
+    expect(screen.getByRole("status")).toHaveClass("theme-module-feedback", "border-l-(--module-scope-feedback-success)");
     expect(screen.getByText("项目已自动升级为动态 Schema")).toBeInTheDocument();
   });
 });

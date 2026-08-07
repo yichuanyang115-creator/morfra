@@ -67,21 +67,21 @@ function FieldRow({ attribute, onToggleBoard }: FieldRowProps) {
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`flex items-center gap-2 rounded-(--r-sm) px-1.5 py-1.5 ${isDragging ? "opacity-40" : ""}`}
     >
-      <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--accent-text)">
+      <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--module-scope-text-tertiary) hover:text-(--module-scope-action-strong)">
         <DragHandleIcon />
       </span>
       <button
         type="button"
         aria-label={attribute.showOnBoard ? `隐藏「${attribute.name}」看板列` : `显示「${attribute.name}」看板列`}
         onClick={() => onToggleBoard(attribute.id, !attribute.showOnBoard)}
-        className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--accent-soft) ${
-          attribute.showOnBoard ? "text-(--fg)" : "text-(--muted-2)"
+        className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--module-scope-action-soft) ${
+          attribute.showOnBoard ? "text-(--module-scope-text-primary)" : "text-(--module-scope-text-tertiary)"
         }`}
       >
         {attribute.showOnBoard ? <EyeIcon /> : <EyeOffIcon />}
       </button>
-      <span className="flex-1 truncate text-[12.5px] text-(--fg)">{attribute.name}</span>
-      <span className="flex-none rounded-(--r-sm) bg-(--surface-2) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--muted)">
+      <span className="flex-1 truncate text-[12.5px] text-(--module-scope-text-primary)">{attribute.name}</span>
+      <span className="flex-none rounded-(--r-sm) bg-(--module-scope-background-elevated) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--module-scope-text-secondary)">
         {ATTRIBUTE_TYPE_LABEL[attribute.type]}
       </span>
     </div>
@@ -143,17 +143,17 @@ export function FieldsPanel({ attributes, onToggleBoard, onReorder, onAdd, onClo
 
   return (
     <div
-      className="fixed right-3 z-50 w-72 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-3.5 shadow-(--shadow-floating)"
+      className="fixed right-3 z-50 w-72 rounded-(--r-lg) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) p-3.5 shadow-(--shadow-floating)"
       style={{ top: "calc(var(--topbar-h) + 6px)" }}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-(family-name:--font-display) text-[13px] font-[590] text-(--fg)">字段</span>
+        <span className="font-(family-name:--font-display) text-[13px] font-[590] text-(--module-scope-text-primary)">字段</span>
       </div>
 
       {attributes.length === 0 ? (
-        <p className="m-0 py-2 text-center text-[12px] text-(--muted-2)">还没有字段，在下方新建一个</p>
+        <p className="m-0 py-2 text-center text-[12px] text-(--module-scope-text-tertiary)">还没有字段，在下方新建一个</p>
       ) : (
-        <div className="max-h-56 overflow-y-auto border-t border-(--border) pt-1">
+        <div className="max-h-56 overflow-y-auto border-t border-(--module-scope-border-subtle) pt-1">
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <SortableContext items={attributes.map((a) => a.id)} strategy={verticalListSortingStrategy}>
               {attributes.map((attribute) => (
@@ -169,7 +169,7 @@ export function FieldsPanel({ attributes, onToggleBoard, onReorder, onAdd, onClo
           e.preventDefault();
           submitDraft();
         }}
-        className="mt-2 flex items-center gap-1.5 border-t border-(--border) pt-2.5"
+        className="mt-2 flex items-center gap-1.5 border-t border-(--module-scope-border-subtle) pt-2.5"
       >
         <input
           type="text"
@@ -179,13 +179,13 @@ export function FieldsPanel({ attributes, onToggleBoard, onReorder, onAdd, onClo
             setDraftName(e.target.value);
             setDraftError(null);
           }}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] text-(--fg) outline-none focus:border-(--accent)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)"
         />
         <select
           value={draftType}
           aria-label="新属性类型"
           onChange={(e) => setDraftType(e.target.value as AttributeType)}
-          className="flex-none rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-1.5 text-[12px] text-(--fg) outline-none"
+          className="flex-none rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-1.5 py-1.5 text-[12px] text-(--module-scope-text-primary) outline-none"
         >
           {USER_ASSIGNABLE_TYPES.map((type) => (
             <option key={type} value={type}>
@@ -196,13 +196,13 @@ export function FieldsPanel({ attributes, onToggleBoard, onReorder, onAdd, onClo
         <button
           type="submit"
           aria-label="新建属性"
-          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--accent-solid) px-2.5 py-1.5 text-[12.5px] text-(--accent-solid-fg) hover:opacity-90"
+          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--module-scope-action-strong) px-2.5 py-1.5 text-[12.5px] text-(--module-scope-background-surface) hover:opacity-90"
         >
           <PlusIcon />
           新建
         </button>
       </form>
-      {draftError && <p className="m-0 mt-1 text-[11.5px] text-(--st-blocked)">{draftError}</p>}
+      {draftError && <p className="m-0 mt-1 text-[11.5px] text-(--module-scope-feedback-danger)">{draftError}</p>}
     </div>
   );
 }

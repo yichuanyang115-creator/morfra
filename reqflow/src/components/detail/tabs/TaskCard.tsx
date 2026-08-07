@@ -65,10 +65,10 @@ export function TaskCard({
   return (
     <div
       className={`theme-module-business relative mb-1.5 flex flex-col gap-1.5 rounded-(--r-md) border p-2.25 last:mb-0 ${
-        task.blocked ? "border-(--st-blocked)" : "border-(--border)"
+        task.blocked ? "border-(--module-scope-feedback-danger)" : "border-(--module-scope-border-subtle)"
       }`}
     >
-      {task.blocked && <span className="absolute top-2 bottom-2 left-0 w-0.75 rounded-r-sm bg-(--st-blocked)" />}
+      {task.blocked && <span className="absolute top-2 bottom-2 left-0 w-0.75 rounded-r-sm bg-(--module-scope-feedback-danger)" />}
       <div className="flex items-center gap-2">
         <input
           type="text"
@@ -80,7 +80,7 @@ export function TaskCard({
             if (trimmed && trimmed !== task.name) onUpdate({ name: trimmed });
             else if (!trimmed) setName(task.name);
           }}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft) focus:border-(--accent) focus:bg-(--accent-soft)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft)"
         />
         <button
           type="button"
@@ -99,8 +99,8 @@ export function TaskCard({
           onClick={toggleBlocked}
           className={`grid size-6 flex-none place-items-center rounded-(--r-sm) ${
             task.blocked
-              ? "text-(--st-blocked) ring-1 ring-inset ring-(--st-blocked)"
-              : "text-(--muted-2) hover:bg-(--accent-soft) hover:text-(--accent-text)"
+              ? "text-(--module-scope-feedback-danger) ring-1 ring-inset ring-(--module-scope-feedback-danger)"
+              : "text-(--module-scope-text-tertiary) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)"
           }`}
         >
           <BlockIcon />
@@ -109,12 +109,12 @@ export function TaskCard({
           type="button"
           aria-label="删除任务"
           onClick={onRemove}
-          className="grid size-6 flex-none place-items-center rounded-(--r-sm) bg-(--surface-2) text-(--muted-2) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+          className="grid size-6 flex-none place-items-center rounded-(--r-sm) bg-(--module-scope-background-elevated) text-(--module-scope-text-tertiary) hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
         >
           <CloseIcon />
         </button>
       </div>
-      <div className="flex items-center gap-1.5 text-[11.5px] text-(--muted-2)">
+      <div className="flex items-center gap-1.5 text-[11.5px] text-(--module-scope-text-tertiary)">
         {editingField === "assignee" ? (
           <input
             type="text"
@@ -190,7 +190,7 @@ export function TaskCard({
             setProgressInput(clamped == null ? "" : String(clamped));
             if (clamped !== task.progress) onUpdate({ progress: clamped });
           }}
-          className="ml-auto w-8 flex-none rounded-(--r-sm) border border-transparent bg-transparent px-0.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text) focus:border-(--accent) focus:bg-(--accent-soft) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="ml-auto w-8 flex-none rounded-(--r-sm) border border-transparent bg-transparent px-0.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--module-scope-text-secondary) outline-none [appearance:textfield] hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft) focus:text-(--module-scope-text-primary) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <span>%</span>
       </div>
@@ -211,7 +211,7 @@ export function TaskCard({
                 setNoteOpen(false);
               }
             }}
-            className="min-h-11 w-full resize-y rounded-(--r-sm) border border-(--st-blocked) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[12px] text-(--fg) outline-none"
+            className="min-h-11 w-full resize-y rounded-(--r-sm) border border-(--module-scope-feedback-danger) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[12px] text-(--module-scope-text-primary) outline-none"
           />
         ) : (
           <button
@@ -220,7 +220,7 @@ export function TaskCard({
               setNoteValue(task.blockNote);
               setNoteOpen(true);
             }}
-            className="block max-w-full truncate rounded-(--r-sm) px-1 py-0.5 text-left font-(family-name:--font-body) text-[11.5px] text-(--st-blocked) hover:bg-(--st-blocked-soft)"
+            className="block max-w-full truncate rounded-(--r-sm) px-1 py-0.5 text-left font-(family-name:--font-body) text-[11.5px] text-(--module-scope-feedback-danger) hover:bg-(--module-scope-feedback-danger-soft)"
           >
             {task.blockNote || "点击说明阻塞原因…"}
           </button>

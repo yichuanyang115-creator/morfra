@@ -16,9 +16,9 @@ export function ArchiveSearch({ value, onChange }: ArchiveSearchProps) {
   return (
     <div
       onClick={(e) => e.stopPropagation()}
-      className="flex flex-none items-center gap-1.5 rounded-(--r-sm) border border-(--border) bg-(--surface-2) px-2 py-0.75"
+      className="flex flex-none items-center gap-1.5 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-elevated) px-2 py-0.75"
     >
-      <span className="flex-none text-(--muted-2)">
+      <span className="flex-none text-(--module-scope-text-tertiary)">
         <SearchIcon />
       </span>
       <input
@@ -27,7 +27,7 @@ export function ArchiveSearch({ value, onChange }: ArchiveSearchProps) {
         aria-label="搜索归档实体"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-37.5 border-none bg-transparent text-[12px] text-(--fg) outline-none placeholder:text-(--muted-2)"
+        className="w-37.5 border-none bg-transparent text-[12px] text-(--module-scope-text-primary) outline-none placeholder:text-(--module-scope-text-tertiary)"
       />
     </div>
   );

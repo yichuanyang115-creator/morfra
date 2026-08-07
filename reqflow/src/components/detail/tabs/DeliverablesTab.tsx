@@ -78,7 +78,7 @@ function DraftRow({ onCreate, onCancel }: { onCreate: (name: string) => void; on
   const [value, setValue] = useState("");
 
   return (
-    <div className="mb-1.5 rounded-(--r-md) border border-(--border) p-2.25">
+    <div className="mb-1.5 rounded-(--r-md) border border-(--module-scope-border-subtle) p-2.25">
       <input
         type="text"
         autoFocus
@@ -99,7 +99,7 @@ function DraftRow({ onCreate, onCancel }: { onCreate: (name: string) => void; on
             else onCancel();
           }
         }}
-        className="w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2) focus:border-(--accent) focus:bg-(--accent-soft)"
+        className="w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none placeholder:text-(--module-scope-text-tertiary) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft)"
       />
     </div>
   );
@@ -137,11 +137,11 @@ function DeliverableCard({
   return (
     <div
       className={`relative mb-1.5 flex flex-col gap-1.5 rounded-(--r-md) border p-2.25 last:mb-0 ${
-        deliverable.checked ? "border-(--accent) bg-(--accent-soft)" : "border-(--border)"
+        deliverable.checked ? "border-(--module-scope-action-base) bg-(--module-scope-action-soft)" : "border-(--module-scope-border-subtle)"
       }`}
     >
       {deliverable.checked && (
-        <span className="absolute top-2 bottom-2 left-0 w-0.75 rounded-r-sm bg-(--accent)" />
+        <span className="absolute top-2 bottom-2 left-0 w-0.75 rounded-r-sm bg-(--module-scope-action-base)" />
       )}
       <div className="flex items-center gap-2">
         <button
@@ -152,8 +152,8 @@ function DeliverableCard({
           onClick={() => onUpdate({ checked: !deliverable.checked })}
           className={`grid size-4 flex-none place-items-center rounded border-1.5 ${
             deliverable.checked
-              ? "border-(--accent) bg-(--accent) text-white"
-              : "border-(--border-strong) bg-(--surface) text-transparent"
+              ? "border-(--module-scope-action-base) bg-(--module-scope-action-base) text-(--module-scope-background-surface)"
+              : "border-(--module-scope-border-strong) bg-(--module-scope-background-surface) text-transparent"
           }`}
         >
           <CheckIcon />
@@ -168,13 +168,13 @@ function DeliverableCard({
             if (trimmed && trimmed !== deliverable.name) onUpdate({ name: trimmed });
             else if (!trimmed) setName(deliverable.name);
           }}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft) focus:border-(--accent) focus:bg-(--accent-soft)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft)"
         />
         <button
           type="button"
           aria-label="删除这条产出"
           onClick={onRemove}
-          className="grid size-6 flex-none place-items-center rounded-(--r-sm) bg-(--surface-2) text-(--muted-2) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+          className="grid size-6 flex-none place-items-center rounded-(--r-sm) bg-(--module-scope-background-elevated) text-(--module-scope-text-tertiary) hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
         >
           <CloseIcon />
         </button>
@@ -185,7 +185,7 @@ function DeliverableCard({
             <button
               type="button"
               onClick={() => void openAttachment(deliverable.attach as DeliverableAttach)}
-              className="flex min-w-0 flex-1 items-center gap-1.5 truncate rounded-(--r-sm) bg-(--surface-2) px-2.25 py-1.25 text-left text-[12px] text-(--muted) hover:text-(--accent-text)"
+              className="flex min-w-0 flex-1 items-center gap-1.5 truncate rounded-(--r-sm) bg-(--module-scope-background-elevated) px-2.25 py-1.25 text-left text-[12px] text-(--module-scope-text-secondary) hover:text-(--module-scope-action-strong)"
             >
               <AttachIcon type={deliverable.attach.type} />
               <span className="truncate">{deliverable.attach.label}</span>
@@ -194,7 +194,7 @@ function DeliverableCard({
               type="button"
               aria-label="移除附件（保留这条产出）"
               onClick={() => onUpdate({ attach: null })}
-              className="ml-1 grid size-5.5 flex-none place-items-center rounded-(--r-sm) text-(--muted-2) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+              className="ml-1 grid size-5.5 flex-none place-items-center rounded-(--r-sm) text-(--module-scope-text-tertiary) hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
             >
               <CloseIcon />
             </button>
@@ -211,14 +211,14 @@ function DeliverableCard({
                 if (e.key === "Enter") commitLink();
                 else if (e.key === "Escape") setAttachOpen(false);
               }}
-              className="min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--bg) px-2 py-1.5 text-[12px] text-(--fg) outline-none focus:border-(--accent)"
+              className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-canvas) px-2 py-1.5 text-[12px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)"
             />
             <button
               type="button"
               title="上传文件"
               aria-label="上传文件"
               onClick={() => void handleUploadFile()}
-              className="grid size-7 flex-none place-items-center rounded-(--r-sm) border border-(--border) bg-(--surface) text-(--muted) hover:border-(--accent) hover:text-(--accent-text)"
+              className="grid size-7 flex-none place-items-center rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) text-(--module-scope-text-secondary) hover:border-(--module-scope-action-base) hover:text-(--module-scope-action-strong)"
             >
               <UploadIcon />
             </button>
@@ -227,7 +227,7 @@ function DeliverableCard({
           <button
             type="button"
             onClick={() => setAttachOpen(true)}
-            className="flex w-full items-center gap-1.5 rounded-(--r-sm) border border-dashed border-(--border-strong) px-2 py-1.5 text-[12px] text-(--muted) hover:border-(--accent) hover:bg-(--accent-soft) hover:text-(--accent-text)"
+            className="flex w-full items-center gap-1.5 rounded-(--r-sm) border border-dashed border-(--module-scope-border-strong) px-2 py-1.5 text-[12px] text-(--module-scope-text-secondary) hover:border-(--module-scope-action-base) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)"
           >
             <PlusIcon />
             附加文件或链接

@@ -44,13 +44,13 @@ export function ColumnContextMenu({ position, canFreeze, onHide, onFreeze, onEdi
   }, [onClose]);
 
   const itemClass =
-    "w-full rounded-(--r-sm) border-none bg-transparent px-2.25 py-1.75 text-left text-[13px] text-(--fg) hover:bg-(--accent-soft)";
+    "w-full rounded-(--r-sm) border-none bg-transparent px-2.25 py-1.75 text-left text-[13px] text-(--module-scope-text-primary) hover:bg-(--module-scope-action-soft)";
 
   return (
     <div
       ref={rootRef}
       style={{ top: position.y, left: position.x }}
-      className="fixed z-50 w-40 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-1.25 shadow-(--shadow-floating)"
+      className="fixed z-50 w-40 rounded-(--r-lg) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) p-1.25 shadow-(--shadow-floating)"
     >
       <button type="button" onClick={onHide} className={itemClass}>
         隐藏此属性
@@ -60,7 +60,7 @@ export function ColumnContextMenu({ position, canFreeze, onHide, onFreeze, onEdi
           冻结至此列
         </button>
       )}
-      <div className="my-1 h-px bg-(--border)" />
+      <div className="my-1 h-px bg-(--module-scope-border-subtle)" />
       <button type="button" onClick={onEdit} className={itemClass}>
         编辑此属性
       </button>

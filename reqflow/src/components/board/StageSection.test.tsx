@@ -65,10 +65,10 @@ describe("StageSection", () => {
     );
 
     const section = container.querySelector("section");
-    expect(section).toHaveClass("bg-(--accent-soft)");
+    expect(section).toHaveClass("bg-(--module-scope-action-soft)");
     // 标题栏已提到 section 外（fragment 第一个子元素，sticky 钉在看板滚动层）
     const header = container.firstElementChild;
-    expect(header).toHaveClass("border-(--accent)");
+    expect(header).toHaveClass("border-(--module-scope-action-base)");
     spy.mockRestore();
   });
 
@@ -83,7 +83,7 @@ describe("StageSection", () => {
     );
 
     const section = container.querySelector("section");
-    expect(section).not.toHaveClass("bg-(--accent-soft)");
+    expect(section).not.toHaveClass("bg-(--module-scope-action-soft)");
     spy.mockRestore();
   });
 

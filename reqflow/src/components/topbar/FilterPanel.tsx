@@ -48,17 +48,17 @@ export function FilterPanel({ attributes, filters, onChange, onClose }: FilterPa
 
   return (
     <div
-      className="fixed right-3 z-50 w-72 rounded-(--r-lg) border border-(--border-strong) bg-(--surface) p-3.5 shadow-(--shadow-floating)"
+      className="fixed right-3 z-50 w-72 rounded-(--r-lg) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) p-3.5 shadow-(--shadow-floating)"
       style={{ top: "calc(var(--topbar-h) + 6px)" }}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-(family-name:--font-display) text-[13px] font-[590] text-(--fg)">筛选</span>
+        <span className="font-(family-name:--font-display) text-[13px] font-[590] text-(--module-scope-text-primary)">筛选</span>
       </div>
 
       {filters.length === 0 ? (
-        <p className="m-0 py-2 text-center text-[12px] text-(--muted-2)">还没有筛选条件</p>
+        <p className="m-0 py-2 text-center text-[12px] text-(--module-scope-text-tertiary)">还没有筛选条件</p>
       ) : (
-        <div className="flex max-h-56 flex-col gap-1.5 overflow-y-auto border-t border-(--border) pt-1.5">
+        <div className="flex max-h-56 flex-col gap-1.5 overflow-y-auto border-t border-(--module-scope-border-subtle) pt-1.5">
           {filters.map((condition, index) => (
             <FilterConditionRow
               key={index}
@@ -71,11 +71,11 @@ export function FilterPanel({ attributes, filters, onChange, onClose }: FilterPa
         </div>
       )}
 
-      <div className="mt-2.5 border-t border-(--border) pt-2">
+      <div className="mt-2.5 border-t border-(--module-scope-border-subtle) pt-2">
         <button
           type="button"
           onClick={addCondition}
-          className="inline-flex w-full items-center gap-1.5 rounded-(--r-sm) border-none bg-transparent px-1.5 py-1 text-[12px] font-[550] text-(--accent-text) hover:bg-(--accent-soft)"
+          className="inline-flex w-full items-center gap-1.5 rounded-(--r-sm) border-none bg-transparent px-1.5 py-1 text-[12px] font-[550] text-(--module-scope-action-strong) hover:bg-(--module-scope-action-soft)"
         >
           <PlusIcon />
           添加条件

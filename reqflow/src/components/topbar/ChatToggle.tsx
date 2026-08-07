@@ -23,8 +23,8 @@ export function ChatToggle() {
       aria-label={open ? "关闭对话框" : "打开对话框"}
       aria-pressed={open}
       onClick={() => void toggleOpen()}
-      className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none text-(--muted) ${
-        open ? "bg-(--accent-selected) text-(--context-strong)" : "bg-transparent hover:bg-(--accent-soft) hover:text-(--accent-text)"
+      className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) border-none text-(--module-scope-text-secondary) ${
+        open ? "bg-(--module-scope-context-soft) text-(--module-scope-context-strong)" : "bg-transparent hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)"
       }`}
     >
       <ChatIcon />

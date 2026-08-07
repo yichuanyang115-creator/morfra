@@ -21,7 +21,7 @@ interface AttributeGridProps {
 function AttrRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <>
-      <div className="text-[12px] whitespace-nowrap text-(--muted-2)">{label}</div>
+      <div className="text-[12px] whitespace-nowrap text-(--module-scope-text-tertiary)">{label}</div>
       <div className="min-w-0">{children}</div>
     </>
   );
@@ -35,7 +35,7 @@ export function AttributeGrid({ requirement, attributes, compact, isTerminal, on
 
   return (
     <div
-      className="mx-4 my-3 grid items-center gap-y-2 gap-x-2.5 rounded-(--r-lg) bg-(--accent-selected) p-3"
+      className="mx-4 my-3 grid items-center gap-y-2 gap-x-2.5 rounded-(--r-lg) bg-(--module-scope-context-soft) p-3"
       style={{ gridTemplateColumns: compact ? "58px minmax(0, 1fr)" : "58px minmax(0, 1fr) 58px minmax(0, 1fr)" }}
     >
       <AttrRow label="阶段">

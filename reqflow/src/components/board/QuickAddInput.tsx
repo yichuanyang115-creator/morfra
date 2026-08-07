@@ -22,7 +22,7 @@ export function QuickAddInput({ placeholder, attributes, columnWidths, onSubmit,
 
   return (
     <div
-      className="grid w-fit min-w-full items-center border-b border-(--border) bg-(--accent-soft) px-2 py-2"
+      className="grid w-fit min-w-full items-center border-b border-(--module-scope-border-subtle) bg-(--module-scope-action-soft) px-2 py-2"
       style={{ gridTemplateColumns: gridTemplateColumnsFor(attributes, columnWidths), columnGap: BOARD_COLUMN_GAP }}
     >
       <input
@@ -40,7 +40,7 @@ export function QuickAddInput({ placeholder, attributes, columnWidths, onSubmit,
             e.currentTarget.blur();
           }
         }}
-        className="sticky left-0 w-full border-none bg-transparent pl-5.5 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2)"
+        className="sticky left-0 w-full border-none bg-transparent pl-5.5 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none placeholder:text-(--module-scope-text-tertiary)"
       />
     </div>
   );

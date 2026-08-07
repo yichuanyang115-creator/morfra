@@ -17,9 +17,9 @@ const OPERATOR_LABEL: Record<FilterOperator, string> = {
 };
 
 const selectClass =
-  "min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-1 text-[12px] text-(--fg) outline-none";
+  "min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-1.5 py-1 text-[12px] text-(--module-scope-text-primary) outline-none";
 const inputClass =
-  "min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-1 font-(family-name:--font-body) text-[12px] text-(--fg) outline-none focus:border-(--accent)";
+  "min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-1.5 py-1 font-(family-name:--font-body) text-[12px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)";
 const disabledSelectClass = "disabled:cursor-not-allowed disabled:opacity-40";
 
 function CloseIcon() {
@@ -208,7 +208,7 @@ export function FilterConditionRow({ condition, attributes, onChange, onRemove }
         aria-label="筛选运算符"
         disabled={!attribute}
         onChange={(e) => selectOperator(e.target.value as FilterOperator)}
-        className="flex-none rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-1 text-[12px] text-(--fg) outline-none disabled:cursor-not-allowed disabled:opacity-40"
+        className="flex-none rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-1.5 py-1 text-[12px] text-(--module-scope-text-primary) outline-none disabled:cursor-not-allowed disabled:opacity-40"
       >
         {operators.map((op) => (
           <option key={op} value={op}>
@@ -221,7 +221,7 @@ export function FilterConditionRow({ condition, attributes, onChange, onRemove }
         type="button"
         aria-label="删除该筛选条件"
         onClick={onRemove}
-        className="grid size-6 flex-none place-items-center rounded-(--r-sm) text-(--muted-2) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+        className="grid size-6 flex-none place-items-center rounded-(--r-sm) text-(--module-scope-text-tertiary) hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
       >
         <CloseIcon />
       </button>

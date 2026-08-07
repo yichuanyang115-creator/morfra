@@ -121,7 +121,7 @@ export function DetailPanel({
 
   if (!requirement) {
     return (
-      <div data-theme-module="detail" className="theme-module-detail flex h-full flex-col items-center justify-center gap-2 p-5 text-center text-(--muted-2)">
+      <div data-theme-module="detail" className="theme-module-detail flex h-full flex-col items-center justify-center gap-2 p-5 text-center text-(--module-scope-text-tertiary)">
         <svg className="size-7.5" viewBox="0 0 20 20" fill="none">
           <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" strokeWidth="1.4" />
         </svg>
@@ -131,7 +131,7 @@ export function DetailPanel({
   }
 
   return (
-    <div key={requirement.id} data-theme-module="detail" className="theme-module-detail flex h-full min-w-0 flex-col bg-(--surface)">
+    <div key={requirement.id} data-theme-module="detail" className="theme-module-detail flex h-full min-w-0 flex-col bg-(--module-scope-background-surface)">
       <DetailHeader
         requirement={requirement}
         fullscreen={fullscreen}
@@ -165,7 +165,7 @@ export function DetailPanel({
               title="新建产出"
               aria-label="新建产出"
               onClick={() => setProduceDraftOpen(true)}
-              className="grid size-6.5 place-items-center rounded-full border border-(--border-strong) bg-(--surface) text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
+              className="grid size-6.5 place-items-center rounded-full border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) text-(--module-scope-text-tertiary) hover:border-(--module-scope-action-base) hover:text-(--module-scope-action-strong)"
             >
               <PlusIcon />
             </button>
@@ -175,7 +175,7 @@ export function DetailPanel({
               title="新建任务"
               aria-label="新建任务"
               onClick={() => setTaskDraftOpen(true)}
-              className="grid size-6.5 place-items-center rounded-full border border-(--border-strong) bg-(--surface) text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
+              className="grid size-6.5 place-items-center rounded-full border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) text-(--module-scope-text-tertiary) hover:border-(--module-scope-action-base) hover:text-(--module-scope-action-strong)"
             >
               <PlusIcon />
             </button>
@@ -185,7 +185,7 @@ export function DetailPanel({
               title="新建验收标准"
               aria-label="新建验收标准"
               onClick={() => setAcceptanceDraftOpen(true)}
-              className="grid size-6.5 place-items-center rounded-full border border-(--border-strong) bg-(--surface) text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
+              className="grid size-6.5 place-items-center rounded-full border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) text-(--module-scope-text-tertiary) hover:border-(--module-scope-action-base) hover:text-(--module-scope-action-strong)"
             >
               <PlusIcon />
             </button>
@@ -195,7 +195,7 @@ export function DetailPanel({
               title={`新建${activeDefinition.name}记录`}
               aria-label={`新建${activeDefinition.name}记录`}
               onClick={() => setGenericDraftTabId(activeDefinition.id)}
-              className="grid size-6.5 place-items-center rounded-full border border-(--border-strong) bg-(--surface) text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
+              className="grid size-6.5 place-items-center rounded-full border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) text-(--module-scope-text-tertiary) hover:border-(--module-scope-action-base) hover:text-(--module-scope-action-strong)"
             >
               <PlusIcon />
             </button>

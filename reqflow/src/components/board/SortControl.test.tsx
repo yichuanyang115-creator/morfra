@@ -50,7 +50,7 @@ describe("SortControl", () => {
 
   it("已配置状态使用紫色上下文，未配置状态使用绿色悬停", () => {
     const { rerender } = renderControl();
-    expect(screen.getByLabelText("排序")).toHaveClass("hover:bg-(--accent-soft)", "hover:text-(--accent-text)");
+    expect(screen.getByLabelText("排序")).toHaveClass("hover:bg-(--module-scope-action-soft)", "hover:text-(--module-scope-action-strong)");
 
     rerender(
       <SortControl
@@ -63,6 +63,6 @@ describe("SortControl", () => {
         onRestore={vi.fn()}
       />,
     );
-    expect(screen.getByLabelText("排序")).toHaveClass("bg-(--accent-selected)", "text-(--context-strong)");
+    expect(screen.getByLabelText("排序")).toHaveClass("bg-(--module-scope-context-soft)", "text-(--module-scope-context-strong)");
   });
 });

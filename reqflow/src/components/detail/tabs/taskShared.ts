@@ -12,15 +12,15 @@ export const TASK_STATUS_LABEL: Record<TaskStatus, string> = Object.fromEntries(
 ) as Record<TaskStatus, string>;
 
 export const STATUS_PILL_STYLE: Record<TaskStatus, string> = {
-  todo: "text-(--st-todo) ring-1 ring-inset ring-current",
-  progress: "text-(--st-progress) ring-1 ring-inset ring-current",
-  done: "text-(--st-done) ring-1 ring-inset ring-current",
+  todo: "text-(--module-scope-context-strong) ring-1 ring-inset ring-current",
+  progress: "text-(--module-scope-action-base) ring-1 ring-inset ring-current",
+  done: "text-(--module-scope-feedback-success) ring-1 ring-inset ring-current",
 };
 
 export const STATUS_DOT_STYLE: Record<TaskStatus, string> = {
-  todo: "bg-(--st-todo)",
-  progress: "bg-(--st-progress)",
-  done: "bg-(--st-done)",
+  todo: "bg-(--module-scope-context-strong)",
+  progress: "bg-(--module-scope-action-base)",
+  done: "bg-(--module-scope-feedback-success)",
 };
 
 export function fmtDate(iso: string): string {
@@ -37,7 +37,7 @@ export function clampProgress(value: string): number | null {
 }
 
 export const metaInputClass =
-  "w-27.5 rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--fg) outline-none focus:border-(--accent)";
+  "w-27.5 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-1.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)";
 
 export const metaBtnClass =
-  "max-w-30 truncate rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--muted-2) hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text)";
+  "max-w-30 truncate rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--module-scope-text-tertiary) hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)";

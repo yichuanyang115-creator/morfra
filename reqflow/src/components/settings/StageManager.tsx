@@ -77,22 +77,22 @@ function StageRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`mb-1.5 rounded-(--r-md) border border-(--border) ${isDragging ? "opacity-40" : ""}`}
+      className={`mb-1.5 rounded-(--r-md) border border-(--module-scope-border-subtle) ${isDragging ? "opacity-40" : ""}`}
     >
       <div className="flex items-center gap-2 px-2.5 py-2">
-        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--accent-text)">
+        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--module-scope-text-tertiary) hover:text-(--module-scope-action-strong)">
           <DragHandleIcon />
         </span>
         <button type="button" onClick={onToggleExpand} className="flex flex-1 items-center gap-2 border-none bg-transparent p-0 text-left">
           <span className="flex-none size-3 rounded-full" style={{ backgroundColor: stageOption.color }} />
-          <span className="flex-1 truncate font-(family-name:--font-body) text-[13px] text-(--fg)">{stageOption.label}</span>
+          <span className="flex-1 truncate font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary)">{stageOption.label}</span>
           {stageOption.isTerminal && (
-            <span className="flex-none rounded-(--r-sm) bg-(--accent-selected) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--context-strong)">
+            <span className="flex-none rounded-(--r-sm) bg-(--module-scope-context-soft) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--module-scope-context-strong)">
               终态
             </span>
           )}
-          <span className="flex-none font-(family-name:--font-mono) text-[11px] text-(--muted-2)">{entityCount}</span>
-          <span className={`flex-none text-(--muted-2) transition-transform ${expanded ? "rotate-90" : ""}`}>
+          <span className="flex-none font-(family-name:--font-mono) text-[11px] text-(--module-scope-text-tertiary)">{entityCount}</span>
+          <span className={`flex-none text-(--module-scope-text-tertiary) transition-transform ${expanded ? "rotate-90" : ""}`}>
             <ChevronIcon />
           </span>
         </button>
@@ -102,13 +102,13 @@ function StageRow({
           disabled={deleteDisabled}
           title={deleteDisabledReason}
           onClick={onRequestDelete}
-          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) text-(--muted-2) disabled:cursor-not-allowed disabled:opacity-40 hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) text-(--module-scope-text-tertiary) disabled:cursor-not-allowed disabled:opacity-40 hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
         >
           <DeleteIcon />
         </button>
       </div>
       {expanded && (
-        <div className="border-t border-(--border) p-2.5">
+        <div className="border-t border-(--module-scope-border-subtle) p-2.5">
           <StageEditor stageOption={stageOption} availableAttributes={availableAttributes} onUpdate={onUpdate} />
         </div>
       )}
@@ -195,12 +195,12 @@ export function StageManager({
           placeholder="新阶段名称"
           value={draftLabel}
           onChange={(e) => setDraftLabel(e.target.value)}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] text-(--fg) outline-none focus:border-(--accent)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)"
         />
         <button
           type="submit"
           aria-label="新建阶段"
-          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--accent-solid) px-2.5 py-1.5 text-[12.5px] text-(--accent-solid-fg) hover:opacity-90"
+          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--module-scope-action-strong) px-2.5 py-1.5 text-[12.5px] text-(--module-scope-background-surface) hover:opacity-90"
         >
           <PlusIcon />
           新建阶段

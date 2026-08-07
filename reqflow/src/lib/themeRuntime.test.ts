@@ -3,7 +3,7 @@ import { createDefaultTheme } from "./themeDefaults";
 import { applyTheme, resolveTheme } from "./themeRuntime";
 
 describe("themeRuntime", () => {
-  it("解析 Primitive → Semantic 引用，并桥接已有 CSS 变量", () => {
+  it("解析 Primitive → Semantic 引用，并写入最终三层 CSS 变量", () => {
     const config = createDefaultTheme();
     config.palette.green500 = "#4F9200";
     const root = document.createElement("div").style;
@@ -12,12 +12,11 @@ describe("themeRuntime", () => {
 
     expect(resolved.semantic.actionBase).toBe("#4F9200");
     expect(root.getPropertyValue("--semantic-action-base")).toBe("#4F9200");
-    expect(root.getPropertyValue("--accent")).toBe("#4F9200");
     expect(root.getPropertyValue("--semantic-action-soft")).toBe("#F4FAEC");
     expect(root.getPropertyValue("--semantic-context-soft")).toBe("#F5EFF8");
-    expect(root.getPropertyValue("--accent-selected")).toBe("#F5EFF8");
-    expect(root.getPropertyValue("--sev-p0-soft")).toContain("var(--semantic-feedback-danger)");
-    expect(root.getPropertyValue("--st-done-soft")).toContain("var(--semantic-feedback-success)");
+    expect(root.getPropertyValue("--module-topbar-action-base")).toBe("#4F9200");
+    expect(root.getPropertyValue("--accent")).toBe("");
+    expect(root.getPropertyValue("--st-done-soft")).toBe("");
   });
 
   it("支持语义层使用显式合法色，而不是只限于调色板引用", () => {
@@ -33,6 +32,23 @@ describe("themeRuntime", () => {
 
     const resolved = resolveTheme(config);
 
+    expect(resolved.modules.board.contextSoft).toBe("#E8DDF0");
+    expect(resolved.modules.detail.contextSoft).toBe("#F5EFF8");
+  });
+
+  it("应用全局操作色时所有模块同步，显式选中色覆盖继续保留", () => {
+    const config = createDefaultTheme();
+    config.semantic.actionStrong = "#3E7A02";
+    config.moduleOverrides.board = { contextSoft: "purple100" };
+    const root = document.createElement("div").style;
+
+    const resolved = applyTheme(config, root);
+    const modules = ["topbar", "board", "detail", "settings", "chat", "business", "feedback"] as const;
+
+    for (const moduleName of modules) {
+      expect(resolved.modules[moduleName].actionStrong).toBe("#3E7A02");
+      expect(root.getPropertyValue(`--module-${moduleName}-action-strong`)).toBe("#3E7A02");
+    }
     expect(resolved.modules.board.contextSoft).toBe("#E8DDF0");
     expect(resolved.modules.detail.contextSoft).toBe("#F5EFF8");
   });

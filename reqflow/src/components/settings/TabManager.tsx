@@ -92,12 +92,12 @@ export function TabManager({ tabs, selectedTabId, onReorder, onAdd, onUpdate, on
           placeholder="新 Tab 名称"
           value={draftName}
           onChange={(e) => setDraftName(e.target.value)}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] text-(--fg) outline-none focus:border-(--accent)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)"
         />
         <button
           type="submit"
           aria-label="新建 Tab"
-          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--accent-solid) px-2.5 py-1.5 text-[12.5px] text-(--accent-solid-fg) hover:opacity-90"
+          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--module-scope-action-strong) px-2.5 py-1.5 text-[12.5px] text-(--module-scope-background-surface) hover:opacity-90"
         >
           <PlusIcon />
           新建 Tab

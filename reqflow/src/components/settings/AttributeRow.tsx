@@ -85,10 +85,10 @@ export function AttributeRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`mb-1.5 rounded-(--r-md) border border-(--border) ${isDragging ? "opacity-40" : ""}`}
+      className={`mb-1.5 rounded-(--r-md) border border-(--module-scope-border-subtle) ${isDragging ? "opacity-40" : ""}`}
     >
       <div className="flex items-center gap-2 px-2.5 py-2">
-        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--muted-2) hover:text-(--accent-text)">
+        <span {...listeners} {...sortableAttributes} className="flex-none cursor-grab text-(--module-scope-text-tertiary) hover:text-(--module-scope-action-strong)">
           <DragHandleIcon />
         </span>
         <button
@@ -96,8 +96,8 @@ export function AttributeRow({
           aria-label={attribute.showOnBoard ? `隐藏「${attribute.name}」看板列` : `显示「${attribute.name}」看板列`}
           title="看板显示"
           onClick={onToggleBoard}
-          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--accent-soft) ${
-            attribute.showOnBoard ? "text-(--fg)" : "text-(--muted-2)"
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--module-scope-action-soft) ${
+            attribute.showOnBoard ? "text-(--module-scope-text-primary)" : "text-(--module-scope-text-tertiary)"
           }`}
         >
           {attribute.showOnBoard ? <EyeIcon /> : <EyeOffIcon />}
@@ -107,18 +107,18 @@ export function AttributeRow({
           aria-label={attribute.showOnDetail ? `隐藏「${attribute.name}」详情页属性` : `显示「${attribute.name}」详情页属性`}
           title="详情页显示"
           onClick={onToggleDetail}
-          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--accent-soft) ${
-            attribute.showOnDetail ? "text-(--fg)" : "text-(--muted-2)"
+          className={`grid size-6.5 flex-none place-items-center rounded-(--r-sm) hover:bg-(--module-scope-action-soft) ${
+            attribute.showOnDetail ? "text-(--module-scope-text-primary)" : "text-(--module-scope-text-tertiary)"
           }`}
         >
           {attribute.showOnDetail ? <EyeIcon /> : <EyeOffIcon />}
         </button>
         <button type="button" onClick={onToggleExpand} className="flex flex-1 items-center gap-2 border-none bg-transparent p-0 text-left">
-          <span className="flex-1 truncate font-(family-name:--font-body) text-[13px] text-(--fg)">{attribute.name}</span>
-          <span className="flex-none rounded-(--r-sm) bg-(--surface-2) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--muted)">
+          <span className="flex-1 truncate font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary)">{attribute.name}</span>
+          <span className="flex-none rounded-(--r-sm) bg-(--module-scope-background-elevated) px-1.5 py-0.5 font-(family-name:--font-mono) text-[10.5px] text-(--module-scope-text-secondary)">
             {ATTRIBUTE_TYPE_LABEL[attribute.type]}
           </span>
-          <span className={`flex-none text-(--muted-2) transition-transform ${expanded ? "rotate-90" : ""}`}>
+          <span className={`flex-none text-(--module-scope-text-tertiary) transition-transform ${expanded ? "rotate-90" : ""}`}>
             <ChevronIcon />
           </span>
         </button>
@@ -126,13 +126,13 @@ export function AttributeRow({
           type="button"
           aria-label={`删除属性「${attribute.name}」`}
           onClick={onRequestDelete}
-          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) text-(--muted-2) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+          className="grid size-6.5 flex-none place-items-center rounded-(--r-sm) text-(--module-scope-text-tertiary) hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
         >
           <DeleteIcon />
         </button>
       </div>
       {expanded && (
-        <div className="border-t border-(--border) p-2.5">
+        <div className="border-t border-(--module-scope-border-subtle) p-2.5">
           <AttributeEditor
             attribute={attribute}
             availableAttributes={availableAttributes}

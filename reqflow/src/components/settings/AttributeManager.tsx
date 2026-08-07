@@ -143,13 +143,13 @@ export function AttributeManager({
             setDraftName(e.target.value);
             setDraftError(null);
           }}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] text-(--fg) outline-none focus:border-(--accent)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)"
         />
         <select
           value={draftType}
           aria-label="新属性类型"
           onChange={(e) => setDraftType(e.target.value as AttributeType)}
-          className="flex-none rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-1.5 text-[12px] text-(--fg) outline-none"
+          className="flex-none rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-1.5 py-1.5 text-[12px] text-(--module-scope-text-primary) outline-none"
         >
           {USER_ASSIGNABLE_TYPES.map((type) => (
             <option key={type} value={type}>
@@ -160,13 +160,13 @@ export function AttributeManager({
         <button
           type="submit"
           aria-label="新建属性"
-          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--accent-solid) px-2.5 py-1.5 text-[12.5px] text-(--accent-solid-fg) hover:opacity-90"
+          className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-(--module-scope-action-strong) px-2.5 py-1.5 text-[12.5px] text-(--module-scope-background-surface) hover:opacity-90"
         >
           <PlusIcon />
           新建属性
         </button>
       </form>
-      {draftError && <p className="m-0 mt-1 text-[11.5px] text-(--st-blocked)">{draftError}</p>}
+      {draftError && <p className="m-0 mt-1 text-[11.5px] text-(--module-scope-feedback-danger)">{draftError}</p>}
 
       {deleteTarget && (
         <ConfirmDialog

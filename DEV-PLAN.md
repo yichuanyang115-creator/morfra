@@ -890,6 +890,7 @@ Phase 27 主题模型、持久化与运行时
 - `reqflow/src/lib/themeAudit.test.ts` — 扫描组件源码中的固定颜色与禁用 Token 用法
 - `reqflow/src/components/app-settings/ThemePreview.tsx` — 补齐全部验收状态样本
 - `reqflow/src/App.tsx` — 启动、回退提示和设置页/主界面路由最终接线
+- `reqflow/scripts/build-macos-release.sh` — macOS 发布构建时动态脱敏 Rust 编译路径
 
 **验收标准**：
 - `rg` 扫描 `reqflow/src/components` 不存在组件内固定 Hex/HSL/RGB 或 Tailwind 灰色系颜色类；业务组件只能通过语义或模块 Token 取色
@@ -897,3 +898,12 @@ Phase 27 主题模型、持久化与运行时
 - 灰色输入、灰色预设、灰色禁用态和灰色加载态均不存在；红色只用于危险/错误/阻塞，黄色只用于警告/等待
 - AC-030~AC-035 全部通过，现有项目、Schema、检查更新、看板、详情、Tab 和对话功能无回归
 - `pnpm test --run`、`pnpm exec tsc --noEmit`、`pnpm build` 与 `pnpm tauri build` 全部通过，可运行产物中完成一次真实窗口视觉验收
+
+**完成情况（2026-08-07）：**
+- Code Review：完成两阶段审查并修复操作色在 `contextSoft/backgroundElevated` 上的 WCAG 校验缺口、pressed 预览语义和回归覆盖缺口
+- 测试完整性：`pnpm test --run` 通过 69 个测试文件、693 个测试；主题应用、取消、模块继承、配置损坏回退、灰色/保留色和自定义颜色隔离均有覆盖
+- 编译验证：`pnpm exec tsc --noEmit` 与 `pnpm build` 通过
+- 功能测试：从实际 macOS `.app` 打开主界面和应用设置页，视觉与可访问性树确认九类主题状态样本；`ThemePreview` 的 pressed 控件为 `aria-pressed=true`
+- 发布验证：`pnpm build:macos` 在授权环境生成 `.app` 和 `.dmg`；DMG 镜像可由 `hdiutil imageinfo` 读取，产物隐私审计未发现 `/Users/` 路径、密钥、凭据或用户数据文件
+
+**完成状态：** Phase 31 已完成，代码、自动化验证、真实窗口验收和 macOS 打包验收闭环。

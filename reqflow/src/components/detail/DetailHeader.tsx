@@ -60,20 +60,20 @@ export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullsc
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   return (
-    <div className="flex flex-none items-center gap-2 border-b border-(--border) px-4.5 pt-4 pb-3.5">
+    <div className="flex flex-none items-center gap-2 border-b border-(--module-scope-border-subtle) px-4.5 pt-4 pb-3.5">
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         onBlur={() => {
           if (name !== requirement.name) onRename(name);
         }}
-        className="min-w-0 flex-1 rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 font-(family-name:--font-display) text-[20px] font-[590] tracking-[-0.01em] text-(--fg) outline-none hover:bg-(--accent-soft) focus:bg-(--accent-soft)"
+        className="min-w-0 flex-1 rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 font-(family-name:--font-display) text-[20px] font-[590] tracking-[-0.01em] text-(--module-scope-text-primary) outline-none hover:bg-(--module-scope-action-soft) focus:bg-(--module-scope-action-soft)"
       />
       <button
         type="button"
         onClick={() => setDeleteOpen(true)}
         aria-label="永久删除实体"
-        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--context-strong) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--module-scope-context-strong) hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
       >
         <DeleteIcon />
       </button>
@@ -81,7 +81,7 @@ export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullsc
         type="button"
         onClick={onToggleFullscreen}
         aria-label={fullscreen ? "退出全屏" : "全屏"}
-        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
+        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)"
       >
         {fullscreen ? <FullscreenExitIcon /> : <FullscreenEnterIcon />}
       </button>
@@ -89,7 +89,7 @@ export function DetailHeader({ requirement, fullscreen, onRename, onToggleFullsc
         type="button"
         onClick={onClose}
         aria-label="关闭"
-        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
+        className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)"
       >
         <CloseIcon />
       </button>

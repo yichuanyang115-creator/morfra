@@ -96,6 +96,16 @@ export function contrastRatio(first: string, second: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function mixColor(foreground: string, background: string, foregroundRatio: number): string | null {
+  if (!isHexColor(foreground) || !isHexColor(background)) return null;
+  const channels = [1, 3, 5].map((offset) => {
+    const foregroundChannel = Number.parseInt(foreground.slice(offset, offset + 2), 16);
+    const backgroundChannel = Number.parseInt(background.slice(offset, offset + 2), 16);
+    return Math.round(foregroundChannel * foregroundRatio + backgroundChannel * (1 - foregroundRatio));
+  });
+  return "#" + channels.map((channel) => channel.toString(16).padStart(2, "0")).join("");
+}
+
 function collectContrastIssues(config: AppThemeConfig): ThemeValidationIssue[] {
   const pairs: Array<[keyof AppThemeConfig["semantic"], keyof AppThemeConfig["semantic"], number]> = [
     ["textPrimary", "backgroundCanvas", 4.5],
@@ -109,6 +119,8 @@ function collectContrastIssues(config: AppThemeConfig): ThemeValidationIssue[] {
     ["textDisabled", "backgroundSurface", 3],
     ["actionStrong", "backgroundSurface", 4.5],
     ["actionStrong", "backgroundCanvas", 4.5],
+    ["actionStrong", "backgroundElevated", 4.5],
+    ["actionStrong", "contextSoft", 4.5],
     ["contextStrong", "backgroundSurface", 4.5],
     ["contextStrong", "contextSoft", 4.5],
     ["feedbackSuccess", "backgroundSurface", 4.5],
@@ -131,6 +143,25 @@ function collectContrastIssues(config: AppThemeConfig): ThemeValidationIssue[] {
       field: "semantic.actionBase",
       message: "actionBase 与 backgroundSurface 对比度不足（需 ≥3:1）",
     });
+  }
+
+  const actionColor = resolveColor(config.semantic.actionStrong, config.palette);
+  const actionSoftColor = resolveColor(config.semantic.actionSoft, config.palette);
+  if (contrastRatio(actionColor, actionSoftColor) < 4.5) {
+    contrastIssues.push({
+      field: "semantic.actionStrong",
+      message: "actionStrong 与 actionSoft 对比度不足（需 ≥4.5:1）",
+    });
+  }
+  for (const token of ["feedbackSuccess", "feedbackWarning", "feedbackDanger"] as const) {
+    const foregroundColor = resolveColor(config.semantic[token], config.palette);
+    const softColor = mixColor(foregroundColor, surfaceColor, 0.08);
+    if (softColor && contrastRatio(foregroundColor, softColor) < 4.5) {
+      contrastIssues.push({
+        field: "semantic." + token,
+        message: token + " 与 " + token + "Soft 对比度不足（需 ≥4.5:1）",
+      });
+    }
   }
   return contrastIssues;
 }

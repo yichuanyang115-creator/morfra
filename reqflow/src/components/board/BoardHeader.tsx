@@ -83,7 +83,7 @@ function HeaderCell({
         transition,
         ...(frozen ? { left: leftOffset, position: "sticky" as const } : {}),
       }}
-      className={`${frozen ? "sticky z-1 bg-(--surface)" : "relative"} cursor-grab text-center font-(family-name:--font-mono) ${
+      className={`${frozen ? "sticky z-1 bg-(--module-scope-background-surface)" : "relative"} cursor-grab text-center font-(family-name:--font-mono) ${
         isDragging ? "opacity-40" : ""
       }`}
     >
@@ -178,10 +178,10 @@ export function BoardHeader({
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div
-        className="sticky top-0 z-4 grid h-(--board-header-h) w-fit min-w-full items-center bg-(--surface) px-2 text-[11.5px] tracking-[0.02em] text-(--muted)"
+        className="sticky top-0 z-4 grid h-(--board-header-h) w-fit min-w-full items-center bg-(--module-scope-background-surface) px-2 text-[11.5px] tracking-[0.02em] text-(--module-scope-text-secondary)"
         style={{ gridTemplateColumns: gridTemplateColumnsFor(attributes, columnWidths), columnGap: BOARD_COLUMN_GAP }}
       >
-        <div className="sticky left-0 z-1 bg-(--surface) pl-5.5 pr-2 font-(family-name:--font-body) font-[550]">名称</div>
+        <div className="sticky left-0 z-1 bg-(--module-scope-background-surface) pl-5.5 pr-2 font-(family-name:--font-body) font-[550]">名称</div>
         <SortableContext items={attributes.map((a) => a.id)} strategy={horizontalListSortingStrategy}>
           {attributes.map((a, index) => (
             <HeaderCell

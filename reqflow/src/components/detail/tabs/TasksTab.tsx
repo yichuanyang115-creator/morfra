@@ -23,7 +23,7 @@ export function TasksTab({ tasks, draftOpen, onCreate, onCancelDraft, onUpdate, 
   return (
     <div>
       {tasks.length > 0 && (
-        <div className="mb-2.5 font-(family-name:--font-mono) text-[11.5px] text-(--muted-2)">
+        <div className="mb-2.5 font-(family-name:--font-mono) text-[11.5px] text-(--module-scope-text-tertiary)">
           {doneCount}/{tasks.length} 已完成
         </div>
       )}

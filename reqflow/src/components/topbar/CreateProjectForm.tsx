@@ -64,21 +64,21 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
             placeholder="新建项目名称"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="min-w-0 flex-1 rounded-(--r-sm) border border-(--border) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] outline-none focus:border-(--accent)"
+            className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] outline-none focus:border-(--module-scope-action-base)"
           />
-          <button type="submit" aria-label="创建" className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-(--accent-solid) text-(--accent-solid-fg)">
+          <button type="submit" aria-label="创建" className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-(--module-scope-action-strong) text-(--module-scope-background-surface)">
             <PlusIcon />
           </button>
         </div>
 
         <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
-          <legend className="px-0.5 text-[11px] text-(--muted-2)">选择模板</legend>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-(--r-sm) px-1.5 py-1 text-[12px] text-(--fg) hover:bg-(--accent-soft)">
+          <legend className="px-0.5 text-[11px] text-(--module-scope-text-tertiary)">选择模板</legend>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-(--r-sm) px-1.5 py-1 text-[12px] text-(--module-scope-text-primary) hover:bg-(--module-scope-action-soft)">
             <input type="radio" name="project-template" checked={selectedTemplateId === null} onChange={() => setSelectedTemplateId(null)} />
             不使用模板（空白项目）
           </label>
           {templates.map((template) => (
-            <div key={template.id} className="flex items-center gap-1 rounded-(--r-sm) px-1.5 py-1 hover:bg-(--accent-soft)">
+            <div key={template.id} className="flex items-center gap-1 rounded-(--r-sm) px-1.5 py-1 hover:bg-(--module-scope-action-soft)">
               {renamingTemplateId === template.id ? (
                 <input
                   autoFocus
@@ -93,10 +93,10 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
                     }
                     if (event.key === "Escape") setRenamingTemplateId(null);
                   }}
-                  className="min-w-0 flex-1 rounded border border-(--accent) px-1 py-0.5 text-[12px] outline-none"
+                  className="min-w-0 flex-1 rounded border border-(--module-scope-action-base) px-1 py-0.5 text-[12px] outline-none"
                 />
               ) : (
-                <label className="min-w-0 flex-1 cursor-pointer truncate text-[12px] text-(--fg)">
+                <label className="min-w-0 flex-1 cursor-pointer truncate text-[12px] text-(--module-scope-text-primary)">
                   <input
                     type="radio"
                     name="project-template"
@@ -114,19 +114,19 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
                   setRenamingTemplateId(template.id);
                   setTemplateName(template.name);
                 }}
-                className="text-[11px] text-(--muted-2) hover:text-(--accent-text)"
+                className="text-[11px] text-(--module-scope-text-tertiary) hover:text-(--module-scope-action-strong)"
               >
                 改名
               </button>
-              <button type="button" aria-label={`删除模板 ${template.name}`} onClick={() => setDeleteTarget(template)} className="text-[11px] text-(--muted-2) hover:text-(--st-blocked)">
+              <button type="button" aria-label={`删除模板 ${template.name}`} onClick={() => setDeleteTarget(template)} className="text-[11px] text-(--module-scope-text-tertiary) hover:text-(--module-scope-feedback-danger)">
                 删除
               </button>
             </div>
           ))}
-          {loading && <p className="m-0 px-1.5 text-[11px] text-(--muted-2)">模板加载中…</p>}
-          {templateError && <p className="m-0 px-1.5 text-[11px] text-(--st-blocked)">{templateError}</p>}
+          {loading && <p className="m-0 px-1.5 text-[11px] text-(--module-scope-text-tertiary)">模板加载中…</p>}
+          {templateError && <p className="m-0 px-1.5 text-[11px] text-(--module-scope-feedback-danger)">{templateError}</p>}
         </fieldset>
-        {submitError && <p className="m-0 text-[11px] text-(--st-blocked)">{submitError}</p>}
+        {submitError && <p className="m-0 text-[11px] text-(--module-scope-feedback-danger)">{submitError}</p>}
       </form>
 
       {deleteTarget && (

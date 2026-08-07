@@ -5,18 +5,18 @@ import { lastTransitionTimestamp, stayDays as computeStayDays, totalDays as comp
 import { paletteColorAt } from "../../lib/stagePalette";
 
 const PRIORITY_STYLE: Record<string, string> = {
-  P0: "text-(--sev-p0)",
-  P1: "text-(--sev-p1)",
-  P2: "text-(--sev-p2)",
+  P0: "text-(--module-scope-feedback-danger)",
+  P1: "text-(--module-scope-feedback-warning)",
+  P2: "text-(--module-scope-context-strong)",
 };
 
 const PRIORITY_DOT_STYLE: Record<string, string> = {
-  P0: "bg-(--sev-p0)",
-  P1: "bg-(--sev-p1)",
-  P2: "bg-(--sev-p2)",
+  P0: "bg-(--module-scope-feedback-danger)",
+  P1: "bg-(--module-scope-feedback-warning)",
+  P2: "bg-(--module-scope-context-strong)",
 };
 
-const cellTextClass = "overflow-hidden text-ellipsis text-center font-(family-name:--font-mono) text-[12px] whitespace-nowrap text-(--muted)";
+const cellTextClass = "overflow-hidden text-ellipsis text-center font-(family-name:--font-mono) text-[12px] whitespace-nowrap text-(--module-scope-text-secondary)";
 
 function clampPercent(value: string): number | null {
   const n = Number.parseInt(value, 10);
@@ -42,7 +42,7 @@ function SelectMarker({ label, color }: { label: string; color?: string }) {
 function PriorityMarker({ value, color }: { value: string; color?: string }) {
   return (
     <span
-      className={`mr-1.5 size-1.5 rounded-full ${color ? "" : PRIORITY_DOT_STYLE[value] ?? "bg-(--context-strong)"}`}
+      className={`mr-1.5 size-1.5 rounded-full ${color ? "" : PRIORITY_DOT_STYLE[value] ?? "bg-(--module-scope-context-strong)"}`}
       style={color ? { backgroundColor: color } : undefined}
       aria-hidden="true"
     />
@@ -183,7 +183,7 @@ function MultiSelectCell({
             key={o.id}
             type="button"
             onClick={() => toggle(o.id)}
-            className="inline-flex h-5 w-fit items-center justify-center rounded-(--r-sm) px-1.75 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.05em] text-(--fg) hover:bg-(--accent-soft)"
+            className="inline-flex h-5 w-fit items-center justify-center rounded-(--r-sm) px-1.75 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.05em] text-(--module-scope-text-primary) hover:bg-(--module-scope-action-soft)"
           >
             <span className="mr-1.5 size-1.5 rounded-full" style={{ backgroundColor: o.color ?? paletteColorAt(options.findIndex((opt) => opt.id === o.id)) }} aria-hidden="true" />
             {o.label}
@@ -206,14 +206,14 @@ function NumberCell({ value, onChange }: { value: number | null; onChange: (valu
         const n = trimmed === "" ? null : Number.parseFloat(trimmed);
         onChange(n === null || Number.isNaN(n) ? null : n);
       }}
-      className="w-full rounded border border-transparent bg-transparent px-0.5 py-px text-center font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text) focus:border-(--accent) focus:bg-(--accent-soft) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      className="w-full rounded border border-transparent bg-transparent px-0.5 py-px text-center font-(family-name:--font-mono) text-[12px] text-(--module-scope-text-secondary) outline-none [appearance:textfield] hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft) focus:text-(--module-scope-text-primary) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
     />
   );
 }
 
 function PercentCell({ value, onChange }: { value: number | null; onChange: (value: unknown) => void }) {
   return (
-    <div className="flex items-center justify-center font-(family-name:--font-mono) text-[12px] text-(--muted)">
+    <div className="flex items-center justify-center font-(family-name:--font-mono) text-[12px] text-(--module-scope-text-secondary)">
       <input
         type="number"
         min={0}
@@ -225,7 +225,7 @@ function PercentCell({ value, onChange }: { value: number | null; onChange: (val
           const clamped = clampPercent(e.target.value);
           onChange(clamped);
         }}
-        className="w-7 rounded border border-transparent bg-transparent px-0.5 py-px text-right font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none [appearance:textfield] hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text) focus:border-(--accent) focus:bg-(--accent-soft) focus:text-(--fg) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="w-7 rounded border border-transparent bg-transparent px-0.5 py-px text-right font-(family-name:--font-mono) text-[12px] text-(--module-scope-text-secondary) outline-none [appearance:textfield] hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft) focus:text-(--module-scope-text-primary) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       %
     </div>
@@ -235,7 +235,7 @@ function PercentCell({ value, onChange }: { value: number | null; onChange: (val
 function DateCell({ value, onChange }: { value: string; onChange: (value: unknown) => void }) {
   return (
     <div className="relative" onClick={(e) => e.stopPropagation()}>
-      <span className="pointer-events-none block overflow-hidden text-ellipsis text-center font-(family-name:--font-mono) text-[12px] whitespace-nowrap text-(--muted)">
+      <span className="pointer-events-none block overflow-hidden text-ellipsis text-center font-(family-name:--font-mono) text-[12px] whitespace-nowrap text-(--module-scope-text-secondary)">
         {fmtDate(value)}
       </span>
       <input
@@ -256,7 +256,7 @@ function TextCell({ value, onChange }: { value: string; onChange: (value: unknow
       placeholder="—"
       onClick={(e) => e.stopPropagation()}
       onBlur={(e) => onChange(e.target.value)}
-      className="w-full overflow-hidden rounded border border-transparent bg-transparent px-0.5 text-center font-(family-name:--font-mono) text-[12px] text-(--muted) outline-none hover:border-(--border) hover:bg-(--accent-soft) hover:text-(--accent-text) focus:border-(--accent) focus:bg-(--accent-soft) focus:text-(--fg)"
+      className="w-full overflow-hidden rounded border border-transparent bg-transparent px-0.5 text-center font-(family-name:--font-mono) text-[12px] text-(--module-scope-text-secondary) outline-none hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft) focus:text-(--module-scope-text-primary)"
     />
   );
 }
@@ -270,7 +270,7 @@ function CheckboxCell({ value, onChange }: { value: boolean; onChange: (value: u
         aria-checked={value}
         onClick={() => onChange(!value)}
         className={`grid size-4 flex-none place-items-center rounded border-1.5 ${
-          value ? "border-(--accent) bg-(--accent) text-white" : "border-(--border-strong) bg-(--surface) text-transparent"
+          value ? "border-(--module-scope-action-base) bg-(--module-scope-action-base) text-(--module-scope-background-surface)" : "border-(--module-scope-border-strong) bg-(--module-scope-background-surface) text-transparent"
         }`}
       >
         <svg viewBox="0 0 20 20" fill="none" className="size-2.5">

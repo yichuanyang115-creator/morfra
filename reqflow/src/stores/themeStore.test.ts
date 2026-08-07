@@ -95,6 +95,21 @@ describe("themeStore", () => {
     expect(files.size).toBe(0);
   });
 
+  it("取消草稿时丢弃修改，不改变已应用主题或磁盘", () => {
+    const before = useThemeStore.getState().appliedTheme;
+
+    useThemeStore.getState().beginDraft();
+    useThemeStore.getState().updateDraft((theme) => ({
+      ...theme,
+      semantic: { ...theme.semantic, actionStrong: "#3E7A02" },
+    }));
+    useThemeStore.getState().cancelDraft();
+
+    expect(useThemeStore.getState().draftTheme).toBeNull();
+    expect(useThemeStore.getState().appliedTheme).toEqual(before);
+    expect(files.size).toBe(0);
+  });
+
   it("非法草稿阻止应用并返回字段错误，恢复默认后才可应用", async () => {
     useThemeStore.getState().beginDraft();
     useThemeStore.getState().updateDraft((theme) => ({
@@ -124,21 +139,25 @@ describe("themeStore", () => {
 
   it("模块默认不落盘，启用后只保存显式覆盖，恢复跟随后删除整个模块键", async () => {
     useThemeStore.getState().beginDraft();
-    useThemeStore.getState().enableModuleOverride("board", ["contextSoft", "actionBase"]);
+    useThemeStore.getState().enableModuleOverride("board");
+    expect(useThemeStore.getState().draftTheme?.moduleOverrides).toEqual({ board: {} });
+    useThemeStore.getState().updateDraft((theme) => ({
+      ...theme,
+      semantic: { ...theme.semantic, actionStrong: "#2F6E02" },
+    }));
     useThemeStore.getState().updateModuleOverride("board", "contextSoft", "purple100");
 
     expect(useThemeStore.getState().draftTheme?.moduleOverrides).toEqual({
-      board: { contextSoft: "purple100", actionBase: "green500" },
+      board: { contextSoft: "purple100" },
     });
     expect(await useThemeStore.getState().applyDraft()).toBe(true);
     const persisted = JSON.parse(files.get(THEME_PATH) ?? "{}") as { moduleOverrides?: unknown };
-    expect(persisted.moduleOverrides).toEqual({ board: { contextSoft: "purple100", actionBase: "green500" } });
+    expect(persisted.moduleOverrides).toEqual({ board: { contextSoft: "purple100" } });
 
     useThemeStore.setState({ appliedTheme: createDefaultTheme(), draftTheme: null, loaded: false });
     await useThemeStore.getState().load();
     expect(useThemeStore.getState().appliedTheme.moduleOverrides.board).toEqual({
       contextSoft: "purple100",
-      actionBase: "green500",
     });
     useThemeStore.getState().beginDraft();
 

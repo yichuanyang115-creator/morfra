@@ -59,8 +59,8 @@ describe("ProjectSwitcher（REQ-018/FLOW-009 多项目管理）", () => {
     await createProject("项目乙");
     render(<ProjectSwitcher onClose={vi.fn()} />);
 
-    expect(screen.getByText("项目乙").closest("div.group")).toHaveClass("bg-(--accent-selected)", "text-(--context-strong)");
-    expect(screen.getByText("项目甲").closest("div.group")).toHaveClass("hover:bg-(--accent-soft)", "hover:text-(--accent-text)");
+    expect(screen.getByText("项目乙").closest("div.group")).toHaveClass("bg-(--module-scope-context-soft)", "text-(--module-scope-context-strong)");
+    expect(screen.getByText("项目甲").closest("div.group")).toHaveClass("hover:bg-(--module-scope-action-soft)", "hover:text-(--module-scope-action-strong)");
   });
 
   it("只有一个项目时不显示删除按钮（FLOW-009 边界情况）", async () => {

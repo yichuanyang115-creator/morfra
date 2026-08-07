@@ -19,11 +19,11 @@ interface AttributeEditorProps {
   onRequestTypeChange: (toType: AttributeType) => void;
 }
 
-const fieldLabelClass = "block mb-1 text-[11.5px] text-(--muted-2)";
+const fieldLabelClass = "block mb-1 text-[11.5px] text-(--module-scope-text-tertiary)";
 const textInputClass =
-  "w-full rounded-(--r-sm) border border-(--border) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none focus:border-(--accent)";
+  "w-full rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)";
 const selectClass =
-  "min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-1 text-[12px] text-(--fg) outline-none";
+  "min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-1.5 py-1 text-[12px] text-(--module-scope-text-primary) outline-none";
 
 function CloseIcon() {
   return (
@@ -74,7 +74,7 @@ function OptionRow({
         type="button"
         aria-label={`删除选项「${option.label}」`}
         onClick={onRemove}
-        className="grid size-6 flex-none place-items-center rounded-(--r-sm) text-(--muted-2) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+        className="grid size-6 flex-none place-items-center rounded-(--r-sm) text-(--module-scope-text-tertiary) hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
       >
         <CloseIcon />
       </button>
@@ -121,7 +121,7 @@ export function AttributeEditor({ attribute, availableAttributes, typeChangeLock
   const dependencySource = availableAttributes.find((a) => a.id === attribute.dependsOn?.attributeId);
 
   return (
-    <div className="flex flex-col gap-3 rounded-(--r-md) bg-(--surface-2) p-3">
+    <div className="flex flex-col gap-3 rounded-(--r-md) bg-(--module-scope-background-elevated) p-3">
       <div>
         <label className={fieldLabelClass}>显示名</label>
         <input
@@ -135,13 +135,13 @@ export function AttributeEditor({ attribute, availableAttributes, typeChangeLock
           }}
           className={textInputClass}
         />
-        {nameError && <p className="m-0 mt-1 text-[11.5px] text-(--st-blocked)">{nameError}</p>}
+        {nameError && <p className="m-0 mt-1 text-[11.5px] text-(--module-scope-feedback-danger)">{nameError}</p>}
       </div>
 
       <div>
         <label className={fieldLabelClass}>类型</label>
         {typeChangeLocked ? (
-          <p className="m-0 text-[12.5px] text-(--muted)">{ATTRIBUTE_TYPE_LABEL[attribute.type]}（系统属性，不可改类型）</p>
+          <p className="m-0 text-[12.5px] text-(--module-scope-text-secondary)">{ATTRIBUTE_TYPE_LABEL[attribute.type]}（系统属性，不可改类型）</p>
         ) : (
           <select
             value={attribute.type}
@@ -164,13 +164,13 @@ export function AttributeEditor({ attribute, availableAttributes, typeChangeLock
             <button
               type="button"
               onClick={addOption}
-              className="flex-none rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 text-[11.5px] font-[550] text-(--accent-text) hover:bg-(--accent-soft)"
+              className="flex-none rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 text-[11.5px] font-[550] text-(--module-scope-action-strong) hover:bg-(--module-scope-action-soft)"
             >
               + 添加选项
             </button>
           </div>
           {options.length === 0 ? (
-            <p className="m-0 text-[12px] text-(--muted-2)">暂无选项</p>
+            <p className="m-0 text-[12px] text-(--module-scope-text-tertiary)">暂无选项</p>
           ) : (
             <div className="flex flex-col gap-1.5">
               {options.map((option, i) => (
@@ -206,7 +206,7 @@ export function AttributeEditor({ attribute, availableAttributes, typeChangeLock
               </option>
             ))}
           </select>
-          <span className="flex-none text-(--muted-2)">=</span>
+          <span className="flex-none text-(--module-scope-text-tertiary)">=</span>
           <DependencyValueControl
             key={attribute.dependsOn?.attributeId ?? "none"}
             source={dependencySource}
@@ -220,11 +220,11 @@ export function AttributeEditor({ attribute, availableAttributes, typeChangeLock
       </div>
 
       <div className="flex items-center gap-4">
-        <label className="flex items-center gap-2 text-[12.5px] text-(--fg)">
+        <label className="flex items-center gap-2 text-[12.5px] text-(--module-scope-text-primary)">
           <input type="checkbox" checked={attribute.showOnBoard} onChange={(e) => onUpdate({ showOnBoard: e.target.checked })} />
           看板显示
         </label>
-        <label className="flex items-center gap-2 text-[12.5px] text-(--fg)">
+        <label className="flex items-center gap-2 text-[12.5px] text-(--module-scope-text-primary)">
           <input type="checkbox" checked={attribute.showOnDetail} onChange={(e) => onUpdate({ showOnDetail: e.target.checked })} />
           详情页显示
         </label>

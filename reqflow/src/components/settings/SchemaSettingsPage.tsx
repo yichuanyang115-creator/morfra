@@ -126,14 +126,14 @@ export function SchemaSettingsPage({
 }: SchemaSettingsPageProps) {
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
   return (
-    <div data-theme-module="settings" className="theme-module-settings flex h-full min-h-0 flex-col bg-(--surface)">
-      <div className="flex flex-none items-center justify-between border-b border-(--border) px-4.5 py-3">
-        <span className="font-(family-name:--font-display) text-[15px] font-[590] text-(--fg)">Schema 设置</span>
+    <div data-theme-module="settings" className="theme-module-settings flex h-full min-h-0 flex-col bg-(--module-scope-background-surface)">
+      <div className="flex flex-none items-center justify-between border-b border-(--module-scope-border-subtle) px-4.5 py-3">
+        <span className="font-(family-name:--font-display) text-[15px] font-[590] text-(--module-scope-text-primary)">Schema 设置</span>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setSaveTemplateOpen(true)}
-            className="rounded-(--r-sm) border border-(--border-strong) bg-(--surface) px-3 py-1.5 text-[12.5px] text-(--muted-2) hover:border-(--accent) hover:text-(--accent-text)"
+            className="rounded-(--r-sm) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) px-3 py-1.5 text-[12.5px] text-(--module-scope-text-tertiary) hover:border-(--module-scope-action-base) hover:text-(--module-scope-action-strong)"
           >
             保存为模板
           </button>
@@ -141,7 +141,7 @@ export function SchemaSettingsPage({
             type="button"
             onClick={onClose}
             aria-label="关闭设置"
-            className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
+            className="grid size-7 flex-none place-items-center rounded-(--r-sm) border-none bg-transparent text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)"
           >
             <CloseIcon />
           </button>

@@ -125,7 +125,7 @@ export function Board({
 
   if (error) {
     return (
-      <div data-theme-module="board" className="theme-module-board px-5.5 py-15 text-center text-[13px] text-(--muted)">
+      <div data-theme-module="board" className="theme-module-board px-5.5 py-15 text-center text-[13px] text-(--module-scope-text-secondary)">
         数据读取失败，请检查项目文件夹
       </div>
     );

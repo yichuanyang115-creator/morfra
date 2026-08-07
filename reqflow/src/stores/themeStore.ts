@@ -16,7 +16,7 @@ interface ThemeState {
   save: (config: AppThemeConfig) => Promise<boolean>;
   beginDraft: () => void;
   updateDraft: (update: (theme: AppThemeConfig) => AppThemeConfig) => void;
-  enableModuleOverride: (moduleName: ThemeModule, tokens: SemanticToken[]) => void;
+  enableModuleOverride: (moduleName: ThemeModule) => void;
   updateModuleOverride: (moduleName: ThemeModule, token: SemanticToken, value: ThemeColorReference) => void;
   clearModuleOverride: (moduleName: ThemeModule) => void;
   resetDraft: () => void;
@@ -38,6 +38,14 @@ function cloneTheme(config: AppThemeConfig): AppThemeConfig {
       Object.entries(config.moduleOverrides).map(([moduleName, overrides]) => [moduleName, overrides ? { ...overrides } : {}]),
     ),
   };
+}
+
+function compactTheme(config: AppThemeConfig): AppThemeConfig {
+  const cloned = cloneTheme(config);
+  cloned.moduleOverrides = Object.fromEntries(
+    Object.entries(cloned.moduleOverrides).filter(([, overrides]) => Object.keys(overrides ?? {}).length > 0),
+  );
+  return cloned;
 }
 
 function issuesFor(config: AppThemeConfig): ThemeValidationIssue[] {
@@ -69,8 +77,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
         return;
       }
 
-      applyTheme(validation.config);
-      set({ appliedTheme: validation.config, draftTheme: null, draftIssues: [], loaded: true, recoveryNotice: null });
+      const config = compactTheme(validation.config);
+      applyTheme(config);
+      set({ appliedTheme: config, draftTheme: null, draftIssues: [], loaded: true, recoveryNotice: null });
     } catch {
       applyTheme(fallback);
       set({ appliedTheme: fallback, draftTheme: null, draftIssues: [], loaded: true, recoveryNotice: "外观配置读取失败，已恢复默认主题" });
@@ -80,9 +89,10 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   save: async (config) => {
     const validation = validateThemeConfig(config);
     if (!validation.valid) return false;
-    await writeFile(await themePath(), JSON.stringify(validation.config, null, 2));
-    applyTheme(validation.config);
-    set({ appliedTheme: validation.config, draftTheme: null, draftIssues: [], recoveryNotice: null });
+    const normalized = compactTheme(validation.config);
+    await writeFile(await themePath(), JSON.stringify(normalized, null, 2));
+    applyTheme(normalized);
+    set({ appliedTheme: normalized, draftTheme: null, draftIssues: [], recoveryNotice: null });
     return true;
   },
 
@@ -96,12 +106,12 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     set({ draftTheme: next, draftIssues: issuesFor(next) });
   },
 
-  enableModuleOverride: (moduleName, tokens) => {
+  enableModuleOverride: (moduleName) => {
     get().updateDraft((theme) => ({
       ...theme,
       moduleOverrides: {
         ...theme.moduleOverrides,
-        [moduleName]: Object.fromEntries(tokens.map((token) => [token, theme.semantic[token]])),
+        [moduleName]: {},
       },
     }));
   },
@@ -139,10 +149,11 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       set({ draftIssues: validation.issues ?? [{ field: "theme", message: validation.reason }] });
       return false;
     }
+    const normalized = compactTheme(validation.config);
     try {
-      await writeFile(await themePath(), JSON.stringify(validation.config, null, 2));
-      applyTheme(validation.config);
-      set({ appliedTheme: cloneTheme(validation.config), draftTheme: cloneTheme(validation.config), draftIssues: [], recoveryNotice: null });
+      await writeFile(await themePath(), JSON.stringify(normalized, null, 2));
+      applyTheme(normalized);
+      set({ appliedTheme: normalized, draftTheme: normalized, draftIssues: [], recoveryNotice: null });
       return true;
     } catch {
       set({ draftIssues: [{ field: "theme", message: "主题保存失败，请重试" }] });

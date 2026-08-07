@@ -78,6 +78,30 @@ describe("themeValidation", () => {
     }
   });
 
+  it("覆盖真实弱背景上的操作与反馈文字对比度", () => {
+    const invalidTheme = createDefaultTheme();
+    invalidTheme.semantic.actionSoft = "green600";
+
+    const result = validateThemeConfig(invalidTheme);
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.issues?.some((issue) => issue.field === "semantic.actionStrong" && issue.message.includes("actionSoft"))).toBe(true);
+    }
+  });
+
+  it("校验操作文字在选中与浮层背景上的对比度", () => {
+    const invalidTheme = createDefaultTheme();
+    invalidTheme.semantic.actionStrong = "#007E5A";
+
+    const result = validateThemeConfig(invalidTheme);
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.issues?.some((issue) => issue.field === "semantic.actionStrong" && issue.message.includes("contextSoft"))).toBe(true);
+    }
+  });
+
   it("拒绝用紫色覆盖操作与焦点角色，也拒绝用绿色覆盖结构与选中角色", () => {
     const purpleFocus = createDefaultTheme();
     purpleFocus.moduleOverrides.board = { actionBase: "purple700" };
@@ -92,5 +116,18 @@ describe("themeValidation", () => {
       valid: false,
       issues: [{ field: "moduleOverrides.topbar.contextSoft", message: "结构与选中状态只能使用紫色" }],
     });
+  });
+
+  it("对模块覆盖重复执行 WCAG 门禁并定位到模块字段", () => {
+    const invalidModuleTheme = createDefaultTheme();
+    invalidModuleTheme.moduleOverrides.board = { textPrimary: "#FFFFFF" };
+
+    const result = validateThemeConfig(invalidModuleTheme);
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.issues?.some((issue) => issue.field === "moduleOverrides.board.textPrimary")).toBe(true);
+      expect(result.reason).toContain("对比度不足");
+    }
   });
 });

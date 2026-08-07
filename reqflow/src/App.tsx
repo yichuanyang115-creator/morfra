@@ -79,12 +79,12 @@ function App() {
   }, [loadedProjectId, currentProjectId, requirements, selectedRequirementId, selectRequirement]);
 
   if (!themeLoaded) {
-    return <div className="flex h-screen w-screen items-center justify-center text-(--muted) text-[13px]">加载外观…</div>;
+    return <div className="flex h-screen w-screen items-center justify-center text-(--semantic-text-secondary) text-[13px]">加载外观…</div>;
   }
 
   if (projectsError) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center text-(--muted) text-[13px]">
+      <div className="flex h-screen w-screen items-center justify-center text-(--semantic-text-secondary) text-[13px]">
         数据读取失败，请检查项目文件夹
       </div>
     );
@@ -92,7 +92,7 @@ function App() {
 
   if (!projectsLoaded) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center text-(--muted) text-[13px]">
+      <div className="flex h-screen w-screen items-center justify-center text-(--semantic-text-secondary) text-[13px]">
         加载中…
       </div>
     );

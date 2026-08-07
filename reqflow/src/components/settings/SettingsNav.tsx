@@ -15,14 +15,14 @@ function isActive(section: SettingsSection, candidate: SettingsSection): boolean
 
 const navItemClass = (active: boolean) =>
   `block w-full rounded-(--r-sm) px-2.5 py-1.75 text-left font-(family-name:--font-body) text-[13px] ${
-    active ? "bg-(--accent-selected) text-(--context-strong) font-[550]" : "text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
+    active ? "bg-(--module-scope-context-soft) text-(--module-scope-context-strong) font-[550]" : "text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)"
   }`;
 
 export function SettingsNav({ schema, section, onSelect }: SettingsNavProps) {
   return (
-    <nav className="flex w-48 flex-none flex-col gap-3 border-r border-(--border) p-3">
+    <nav className="flex w-48 flex-none flex-col gap-3 border-r border-(--module-scope-border-subtle) p-3">
       <div className="flex flex-col gap-0.5">
-        <span className="px-2.5 py-1 font-(family-name:--font-mono) text-[11px] tracking-[0.04em] text-(--muted-2)">结构</span>
+        <span className="px-2.5 py-1 font-(family-name:--font-mono) text-[11px] tracking-[0.04em] text-(--module-scope-text-tertiary)">结构</span>
         <button type="button" onClick={() => onSelect({ kind: "stages" })} className={navItemClass(isActive(section, { kind: "stages" }))}>
           阶段
         </button>
@@ -37,7 +37,7 @@ export function SettingsNav({ schema, section, onSelect }: SettingsNavProps) {
 
       {schema.tabs.length > 0 && (
         <div className="flex flex-col gap-0.5">
-          <span className="px-2.5 py-1 font-(family-name:--font-mono) text-[11px] tracking-[0.04em] text-(--muted-2)">Tab</span>
+          <span className="px-2.5 py-1 font-(family-name:--font-mono) text-[11px] tracking-[0.04em] text-(--module-scope-text-tertiary)">Tab</span>
           {schema.tabs.map((tab) => (
             <button
               key={tab.id}

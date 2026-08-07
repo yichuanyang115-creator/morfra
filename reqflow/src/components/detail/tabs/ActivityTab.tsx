@@ -44,7 +44,7 @@ export function ActivityTab({
 
   return (
     <>
-      <div className="relative pl-5 before:absolute before:top-1.5 before:bottom-1.5 before:left-1 before:w-px before:bg-(--border)">
+      <div className="relative pl-5 before:absolute before:top-1.5 before:bottom-1.5 before:left-1 before:w-px before:bg-(--module-scope-border-subtle)">
         {transitions.map((transition, idx) => (
           <TimelineNode
             key={transition.id}

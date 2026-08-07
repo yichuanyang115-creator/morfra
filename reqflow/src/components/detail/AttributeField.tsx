@@ -6,7 +6,7 @@ import { lastTransitionTimestamp, stayDays as computeStayDays, totalDays as comp
 import { paletteColorAt } from "../../lib/stagePalette";
 
 export const inputClass =
-  "block h-7 w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft) focus:border-(--accent) focus:bg-(--accent-soft)";
+  "block h-7 w-full rounded-(--r-sm) border border-transparent bg-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--module-scope-text-primary) outline-none hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft)";
 
 const SELECT_ARROW_URL =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%235D3A73' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")";
@@ -18,24 +18,24 @@ export const selectStyle: React.CSSProperties = {
   backgroundSize: "16px",
 };
 
-const readonlyClass = "block h-7 w-full rounded-(--r-sm) border border-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--muted)";
+const readonlyClass = "block h-7 w-full rounded-(--r-sm) border border-transparent px-1.5 font-(family-name:--font-body) text-[12.5px] leading-6.5 text-(--module-scope-text-secondary)";
 
 const PRIORITY_BADGE_STYLE: Record<string, string> = {
-  P0: "text-(--sev-p0)",
-  P1: "text-(--sev-p1)",
-  P2: "text-(--sev-p2)",
+  P0: "text-(--module-scope-feedback-danger)",
+  P1: "text-(--module-scope-feedback-warning)",
+  P2: "text-(--module-scope-context-strong)",
 };
 
 const PRIORITY_DOT_STYLE: Record<string, string> = {
-  P0: "bg-(--sev-p0)",
-  P1: "bg-(--sev-p1)",
-  P2: "bg-(--sev-p2)",
+  P0: "bg-(--module-scope-feedback-danger)",
+  P1: "bg-(--module-scope-feedback-warning)",
+  P2: "bg-(--module-scope-context-strong)",
 };
 
 function PriorityMarker({ value, color }: { value: string; color?: string }) {
   return (
     <span
-      className={`mr-1.5 size-1.5 rounded-full ${color ? "" : PRIORITY_DOT_STYLE[value] ?? "bg-(--context-strong)"}`}
+      className={`mr-1.5 size-1.5 rounded-full ${color ? "" : PRIORITY_DOT_STYLE[value] ?? "bg-(--module-scope-context-strong)"}`}
       style={color ? { backgroundColor: color } : undefined}
       aria-hidden="true"
     />
@@ -67,7 +67,7 @@ function SingleSelectField({
     <div className="flex min-w-0 items-center gap-1.5">
       {selected && (
         <span
-          className={`size-1.5 flex-none rounded-full ${markerColor ? "" : PRIORITY_DOT_STYLE[value] ?? "bg-(--context-strong)"}`}
+          className={`size-1.5 flex-none rounded-full ${markerColor ? "" : PRIORITY_DOT_STYLE[value] ?? "bg-(--module-scope-context-strong)"}`}
           style={markerColor ? { backgroundColor: markerColor } : undefined}
           aria-hidden="true"
         />
@@ -133,7 +133,7 @@ function MultiSelectField({
   return (
     <div className="flex min-h-7 flex-wrap items-center gap-1 px-1.5 py-1">
       {options.length === 0 && selectedOptions.length === 0 ? (
-        <span className="text-[12.5px] text-(--muted-2)">未设置</span>
+        <span className="text-[12.5px] text-(--module-scope-text-tertiary)">未设置</span>
       ) : (
         options.map((o) => {
           const active = value.includes(o.id);
@@ -143,7 +143,7 @@ function MultiSelectField({
               type="button"
               onClick={() => toggle(o.id)}
               className={`inline-flex h-6 w-fit items-center rounded-(--r-sm) px-1.75 font-(family-name:--font-body) text-[12px] ${
-                active ? "text-(--fg)" : "border border-(--border) text-(--muted-2)"
+                active ? "text-(--module-scope-text-primary)" : "border border-(--module-scope-border-subtle) text-(--module-scope-text-tertiary)"
               }`}
             >
               {active && <span className="mr-1.5 size-1.5 rounded-full" style={{ backgroundColor: o.color ?? paletteColorAt(options.findIndex((opt) => opt.id === o.id)) }} aria-hidden="true" />}
@@ -226,7 +226,7 @@ function CheckboxField({ attribute, value, onChange }: { attribute: Attribute; v
         aria-label={attribute.name}
         onClick={() => onChange(!value)}
         className={`grid size-4 flex-none place-items-center rounded border-1.5 ${
-          value ? "border-(--accent) bg-(--accent) text-white" : "border-(--border-strong) bg-(--surface) text-transparent"
+          value ? "border-(--module-scope-action-base) bg-(--module-scope-action-base) text-(--module-scope-background-surface)" : "border-(--module-scope-border-strong) bg-(--module-scope-background-surface) text-transparent"
         }`}
       >
         <svg viewBox="0 0 20 20" fill="none" className="size-2.5">

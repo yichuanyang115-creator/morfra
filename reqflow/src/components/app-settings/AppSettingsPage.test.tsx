@@ -11,7 +11,7 @@ describe("AppSettingsNav", () => {
   it("提供外观和版本两个独立导航项并标记当前项", () => {
     render(<AppSettingsNav section="appearance" onSelect={vi.fn()} />);
 
-    expect(screen.getByRole("button", { name: "外观" })).toHaveClass("bg-(--accent-selected)");
+    expect(screen.getByRole("button", { name: "外观" })).toHaveClass("bg-(--module-scope-context-soft)");
     expect(screen.getByRole("button", { name: "版本" })).toBeInTheDocument();
   });
 });
@@ -68,6 +68,7 @@ describe("AppSettingsPage 外观草稿", () => {
     expect(await screen.findByText("对比度通过")).toBeInTheDocument();
     const preview = screen.getByTestId("theme-preview-surface");
     expect(preview.getAttribute("style")).toContain("--semantic-action-base");
+    expect(screen.getByRole("button", { name: "按下" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("可单独自定义看板模块并恢复跟随，其他模块保持缺省继承", async () => {

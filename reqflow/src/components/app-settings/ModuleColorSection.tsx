@@ -60,20 +60,20 @@ export function ModuleColorSection({ moduleName, label, issuesByField, onChange 
   const isCustom = overrides !== undefined;
 
   return (
-    <section className="rounded-(--r-md) border border-(--border) bg-(--surface) p-3">
+    <section className="rounded-(--r-md) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) p-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="m-0 text-[12.5px] font-[590] text-(--fg)">{label}</h3>
-          <span className="text-[11px] text-(--muted-2)">{isCustom ? "自定义" : "跟随主题"}</span>
+          <h3 className="m-0 text-[12.5px] font-[590] text-(--module-scope-text-primary)">{label}</h3>
+          <span className="text-[11px] text-(--module-scope-text-tertiary)">{isCustom ? "自定义" : "跟随主题"}</span>
         </div>
-        <label className="inline-flex items-center gap-2 text-[12px] text-(--context-strong)">
+        <label className="inline-flex items-center gap-2 text-[12px] text-(--module-scope-context-strong)">
           <input
             type="checkbox"
             aria-label={`${label}：自定义此模块`}
             checked={isCustom}
             onChange={(event) => {
               onChange();
-              if (event.target.checked) enableModuleOverride(moduleName, MODULE_EDIT_TOKENS);
+              if (event.target.checked) enableModuleOverride(moduleName);
               else clearModuleOverride(moduleName);
             }}
           />
@@ -81,7 +81,7 @@ export function ModuleColorSection({ moduleName, label, issuesByField, onChange 
         </label>
       </div>
       {isCustom && (
-        <div className="mt-3 border-t border-(--border) pt-3">
+        <div className="mt-3 border-t border-(--module-scope-border-subtle) pt-3">
           <div className="grid grid-cols-2 gap-x-4 gap-y-3">
             {MODULE_EDIT_TOKENS.map((token) => (
               <ThemeColorField
@@ -104,7 +104,7 @@ export function ModuleColorSection({ moduleName, label, issuesByField, onChange 
               onChange();
               clearModuleOverride(moduleName);
             }}
-            className="mt-3 rounded-(--r-sm) border-none bg-transparent px-0 py-1 text-[12px] text-(--context-strong) hover:text-(--accent-text)"
+            className="mt-3 rounded-(--r-sm) border-none bg-transparent px-0 py-1 text-[12px] text-(--module-scope-context-strong) hover:text-(--module-scope-action-strong)"
           >
             恢复跟随主题
           </button>

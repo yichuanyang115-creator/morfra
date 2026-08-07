@@ -55,7 +55,7 @@ export function AppearanceSettings({ onClose }: { onClose: () => void }) {
     [draftIssues],
   );
 
-  if (!draftTheme) return <div className="p-6 text-[13px] text-(--muted)">准备外观草稿…</div>;
+  if (!draftTheme) return <div className="p-6 text-[13px] text-(--module-scope-text-secondary)">准备外观草稿…</div>;
 
   const updateSemantic = (token: SemanticToken, value: string) => {
     setAppliedNotice(false);
@@ -82,20 +82,20 @@ export function AppearanceSettings({ onClose }: { onClose: () => void }) {
       <main className="min-w-0 flex-1 overflow-y-auto p-5">
         <div className="mx-auto max-w-2xl">
           <div className="mb-5">
-            <h1 className="m-0 text-[16px] font-[590] text-(--fg)">外观</h1>
-            <p className="m-0 mt-1 text-[12.5px] text-(--muted)">调整语义色。灰色不会进入可选颜色，应用前会执行可读性门禁。</p>
+            <h1 className="m-0 text-[16px] font-[590] text-(--module-scope-text-primary)">外观</h1>
+            <p className="m-0 mt-1 text-[12.5px] text-(--module-scope-text-secondary)">调整语义色。灰色不会进入可选颜色，应用前会执行可读性门禁。</p>
           </div>
           {draftIssues.length > 0 && (
-            <div role="alert" className="mb-4 rounded-(--r-md) border border-(--st-blocked) bg-(--st-blocked-soft) p-3">
-              <p className="m-0 text-[12.5px] font-[550] text-(--st-blocked)">当前草稿不能应用</p>
-              <ul className="m-0 mt-1.5 list-disc pl-5 text-[12px] text-(--st-blocked)">
+            <div role="alert" className="mb-4 rounded-(--r-md) border border-(--module-scope-feedback-danger) bg-(--module-scope-feedback-danger-soft) p-3">
+              <p className="m-0 text-[12.5px] font-[550] text-(--module-scope-feedback-danger)">当前草稿不能应用</p>
+              <ul className="m-0 mt-1.5 list-disc pl-5 text-[12px] text-(--module-scope-feedback-danger)">
                 {draftIssues.map((issue) => <li key={issue.field}>{issue.message}</li>)}
               </ul>
             </div>
           )}
           {SEMANTIC_GROUPS.map((group) => (
             <section key={group.title} className="mb-5">
-              <h2 className="m-0 border-b border-(--border) pb-2 text-[12.5px] font-[590] text-(--context-strong)">{group.title}</h2>
+              <h2 className="m-0 border-b border-(--module-scope-border-subtle) pb-2 text-[12.5px] font-[590] text-(--module-scope-context-strong)">{group.title}</h2>
               <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
                 {group.tokens.map((token) => (
                   <ThemeColorField
@@ -111,8 +111,8 @@ export function AppearanceSettings({ onClose }: { onClose: () => void }) {
             </section>
           ))}
           <section className="mb-24">
-            <h2 className="m-0 border-b border-(--border) pb-2 text-[12.5px] font-[590] text-(--context-strong)">模块覆盖</h2>
-            <p className="m-0 mt-2 text-[12px] text-(--muted)">默认跟随主题；仅开启自定义的模块会写入配置。</p>
+            <h2 className="m-0 border-b border-(--module-scope-border-subtle) pb-2 text-[12.5px] font-[590] text-(--module-scope-context-strong)">模块覆盖</h2>
+            <p className="m-0 mt-2 text-[12px] text-(--module-scope-text-secondary)">默认跟随主题；仅开启自定义的模块会写入配置。</p>
             <div className="mt-3 grid gap-3">
               <ModuleColorSection moduleName="topbar" label="顶栏与导航" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
               <ModuleColorSection moduleName="board" label="看板" issuesByField={issuesByField} onChange={() => setAppliedNotice(false)} />
@@ -126,20 +126,20 @@ export function AppearanceSettings({ onClose }: { onClose: () => void }) {
         </div>
       </main>
       <ThemePreview theme={draftTheme} hasValidationErrors={draftIssues.length > 0} />
-      <footer className="fixed bottom-0 left-48 right-0 flex items-center justify-between border-t border-(--border) bg-(--surface) px-5 py-3">
-        <button type="button" onClick={handleReset} className="rounded-(--r-sm) border-none bg-transparent px-3 py-1.5 text-[12.5px] text-(--context-strong) hover:bg-(--accent-soft)">
+      <footer className="fixed bottom-0 left-48 right-0 flex items-center justify-between border-t border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-5 py-3">
+        <button type="button" onClick={handleReset} className="rounded-(--r-sm) border-none bg-transparent px-3 py-1.5 text-[12.5px] text-(--module-scope-context-strong) hover:bg-(--module-scope-action-soft)">
           恢复默认
         </button>
         <div className="flex items-center gap-2">
-          {appliedNotice && <span className="text-[12px] text-(--st-done)">已应用</span>}
-          <button type="button" onClick={handleCancel} className="rounded-(--r-sm) border border-(--border-strong) bg-(--surface) px-3 py-1.5 text-[12.5px] text-(--context-strong) hover:bg-(--accent-soft)">
+          {appliedNotice && <span className="text-[12px] text-(--module-scope-feedback-success)">已应用</span>}
+          <button type="button" onClick={handleCancel} className="rounded-(--r-sm) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) px-3 py-1.5 text-[12.5px] text-(--module-scope-context-strong) hover:bg-(--module-scope-action-soft)">
             取消
           </button>
           <button
             type="button"
             disabled={draftIssues.length > 0}
             onClick={() => void handleApply()}
-            className="rounded-(--r-sm) border-none bg-(--accent-solid) px-3 py-1.5 text-[12.5px] text-(--accent-solid-fg) hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-(--r-sm) border-none bg-(--module-scope-action-strong) px-3 py-1.5 text-[12.5px] text-(--module-scope-background-surface) hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             应用
           </button>

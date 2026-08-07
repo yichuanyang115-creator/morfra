@@ -18,7 +18,7 @@ export function TaskDraftRow({ onCreate, onCancel }: { onCreate: (task: NewTaskI
 
   return (
     <div
-      className="mb-1.5 flex flex-col gap-1.5 rounded-(--r-md) border border-(--accent) bg-(--accent-soft) p-2.25"
+      className="mb-1.5 flex flex-col gap-1.5 rounded-(--r-md) border border-(--module-scope-action-base) bg-(--module-scope-action-soft) p-2.25"
       onBlur={(e) => {
         if (e.currentTarget.contains(e.relatedTarget)) return;
         resolve();
@@ -39,7 +39,7 @@ export function TaskDraftRow({ onCreate, onCancel }: { onCreate: (task: NewTaskI
           placeholder="任务名称（必填），填完点其他地方或回车即创建"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none placeholder:text-(--muted-2) focus:border-(--accent) focus:bg-(--accent-soft)"
+          className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none placeholder:text-(--module-scope-text-tertiary) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft)"
         />
       </div>
       <div className="flex items-center gap-1.5">
@@ -58,9 +58,9 @@ export function TaskDraftRow({ onCreate, onCancel }: { onCreate: (task: NewTaskI
           placeholder="—"
           value={progress}
           onChange={(e) => setProgress(e.target.value)}
-          className="w-8 rounded-(--r-sm) border border-(--border) bg-(--surface) px-0.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--fg) outline-none [appearance:textfield] focus:border-(--accent) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="w-8 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-0.5 py-0.75 font-(family-name:--font-mono) text-[11.5px] text-(--module-scope-text-primary) outline-none [appearance:textfield] focus:border-(--module-scope-action-base) [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
-        <span className="font-(family-name:--font-mono) text-[11.5px] text-(--muted-2)">%</span>
+        <span className="font-(family-name:--font-mono) text-[11.5px] text-(--module-scope-text-tertiary)">%</span>
       </div>
     </div>
   );

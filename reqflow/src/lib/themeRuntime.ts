@@ -27,43 +27,6 @@ const SEMANTIC_CSS_VARIABLES: Record<SemanticToken, string> = {
   feedbackDanger: "--semantic-feedback-danger",
 };
 
-const LEGACY_VARIABLES: Record<string, SemanticToken> = {
-  "--bg": "backgroundCanvas",
-  "--surface": "backgroundSurface",
-  "--surface-2": "backgroundElevated",
-  "--topbar": "backgroundCanvas",
-  "--fg": "textPrimary",
-  "--muted": "textSecondary",
-  "--muted-2": "textTertiary",
-  "--border": "borderSubtle",
-  "--border-strong": "borderStrong",
-  "--accent": "actionBase",
-  "--accent-text": "actionStrong",
-  "--accent-soft": "actionSoft",
-  "--accent-soft-strong": "contextSoft",
-  "--accent-solid": "actionStrong",
-  "--accent-solid-fg": "backgroundSurface",
-  "--accent-selected": "contextSoft",
-  "--context-strong": "contextStrong",
-  "--sev-p0": "feedbackDanger",
-  "--sev-p1": "feedbackWarning",
-  "--sev-p2": "contextStrong",
-  "--st-todo": "contextStrong",
-  "--st-progress": "actionBase",
-  "--st-done": "feedbackSuccess",
-  "--st-blocked": "feedbackDanger",
-};
-
-const LEGACY_SOFT_VARIABLES: Record<string, string> = {
-  "--sev-p0-soft": "color-mix(in srgb, var(--semantic-feedback-danger) 12%, var(--semantic-background-surface))",
-  "--sev-p1-soft": "color-mix(in srgb, var(--semantic-feedback-warning) 12%, var(--semantic-background-surface))",
-  "--sev-p2-soft": "var(--semantic-context-soft)",
-  "--st-todo-soft": "var(--semantic-context-soft)",
-  "--st-progress-soft": "var(--semantic-action-soft)",
-  "--st-done-soft": "color-mix(in srgb, var(--semantic-feedback-success) 12%, var(--semantic-background-surface))",
-  "--st-blocked-soft": "color-mix(in srgb, var(--semantic-feedback-danger) 12%, var(--semantic-background-surface))",
-};
-
 function resolveReference(reference: ThemeColorReference, palette: AppThemeConfig["palette"]): string {
   return reference in palette ? palette[reference as PaletteKey] : reference;
 }
@@ -97,8 +60,5 @@ export function applyTheme(config: AppThemeConfig, root: CSSStyleDeclaration = d
       root.setProperty(`--module-${moduleName}-${token.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`, value);
     }
   }
-  for (const [cssVariable, token] of Object.entries(LEGACY_VARIABLES)) root.setProperty(cssVariable, resolved.semantic[token]);
-  for (const [cssVariable, value] of Object.entries(LEGACY_SOFT_VARIABLES)) root.setProperty(cssVariable, value);
-
   return resolved;
 }

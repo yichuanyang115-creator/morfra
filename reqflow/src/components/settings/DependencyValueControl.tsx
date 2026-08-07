@@ -1,9 +1,9 @@
 import type { Attribute } from "../../types/schema";
 
 const textInputClass =
-  "w-full rounded-(--r-sm) border border-(--border) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none focus:border-(--accent)";
+  "w-full rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)";
 const selectClass =
-  "min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-1 text-[12px] text-(--fg) outline-none";
+  "min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-1.5 py-1 text-[12px] text-(--module-scope-text-primary) outline-none";
 
 /**
  * 依赖取值控件：按依赖源属性类型渲染对应输入，写入与属性值类型一致的 value——

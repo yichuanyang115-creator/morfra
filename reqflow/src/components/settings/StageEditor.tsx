@@ -9,11 +9,11 @@ interface StageEditorProps {
   onUpdate: (patch: Partial<StageOption>) => void;
 }
 
-const fieldLabelClass = "block mb-1 text-[11.5px] text-(--muted-2)";
+const fieldLabelClass = "block mb-1 text-[11.5px] text-(--module-scope-text-tertiary)";
 const textInputClass =
-  "w-full rounded-(--r-sm) border border-(--border) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none focus:border-(--accent)";
+  "w-full rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)";
 const selectClass =
-  "min-w-0 flex-1 rounded-(--r-sm) border border-(--border) bg-(--surface) px-1.5 py-1 text-[12px] text-(--fg) outline-none";
+  "min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-1.5 py-1 text-[12px] text-(--module-scope-text-primary) outline-none";
 
 function CloseIcon() {
   return (
@@ -49,7 +49,7 @@ function AttributeOverrideRow({
           </option>
         ))}
       </select>
-      <span className="flex-none text-(--muted-2)">→</span>
+      <span className="flex-none text-(--module-scope-text-tertiary)">→</span>
       <select
         value={override.toAttributeId}
         aria-label="替换为的属性"
@@ -67,7 +67,7 @@ function AttributeOverrideRow({
         type="button"
         aria-label="删除该覆盖规则"
         onClick={onRemove}
-        className="grid size-6 flex-none place-items-center rounded-(--r-sm) text-(--muted-2) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+        className="grid size-6 flex-none place-items-center rounded-(--r-sm) text-(--module-scope-text-tertiary) hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
       >
         <CloseIcon />
       </button>
@@ -100,7 +100,7 @@ export function StageEditor({ stageOption, availableAttributes, onUpdate }: Stag
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-(--r-md) bg-(--surface-2) p-3">
+    <div className="flex flex-col gap-3 rounded-(--r-md) bg-(--module-scope-background-elevated) p-3">
       <div>
         <label className={fieldLabelClass}>显示名</label>
         <input
@@ -121,18 +121,18 @@ export function StageEditor({ stageOption, availableAttributes, onUpdate }: Stag
         <ColorPicker value={stageOption.color} onChange={(color) => onUpdate({ color })} />
       </div>
 
-      <label className="flex items-center gap-2 text-[12.5px] text-(--fg)">
+      <label className="flex items-center gap-2 text-[12.5px] text-(--module-scope-text-primary)">
         <button
           type="button"
           role="switch"
           aria-checked={stageOption.isTerminal}
           onClick={() => onUpdate({ isTerminal: !stageOption.isTerminal })}
           className={`relative h-5 w-9 flex-none rounded-full transition-colors ${
-            stageOption.isTerminal ? "bg-(--accent)" : "bg-(--border-strong)"
+            stageOption.isTerminal ? "bg-(--module-scope-action-base)" : "bg-(--module-scope-border-strong)"
           }`}
         >
           <span
-            className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${
+            className={`absolute top-0.5 size-4 rounded-full bg-(--module-scope-background-surface) transition-transform ${
               stageOption.isTerminal ? "translate-x-4.5" : "translate-x-0.5"
             }`}
           />
@@ -146,13 +146,13 @@ export function StageEditor({ stageOption, availableAttributes, onUpdate }: Stag
           <button
             type="button"
             onClick={addOverride}
-            className="flex-none rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 text-[11.5px] font-[550] text-(--accent-text) hover:bg-(--accent-soft)"
+            className="flex-none rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 text-[11.5px] font-[550] text-(--module-scope-action-strong) hover:bg-(--module-scope-action-soft)"
           >
             + 添加覆盖
           </button>
         </div>
         {overrides.length === 0 ? (
-          <p className="m-0 text-[12px] text-(--muted-2)">暂无覆盖规则</p>
+          <p className="m-0 text-[12px] text-(--module-scope-text-tertiary)">暂无覆盖规则</p>
         ) : (
           <div className="flex flex-col gap-1.5">
             {overrides.map((override, i) => (

@@ -11,8 +11,8 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--bg);
-  color: var(--fg);
+  background: var(--semantic-background-canvas);
+  color: var(--semantic-text-primary);
   font-family: var(--font-body);
   font-size: 14px;
   line-height: 1.5;
@@ -29,7 +29,7 @@ button {
 }
 
 ::selection {
-  background: var(--accent-soft-strong);
+  background: var(--semantic-context-soft);
 }
 
 ::-webkit-scrollbar {
@@ -40,11 +40,11 @@ button {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
+  background: var(--semantic-border-strong);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-2);
+  background: var(--semantic-text-tertiary);
 }
 
 /* 线性图标标准尺寸：icon-sm 全局统一 14px。此前该类从未定义，无尺寸 SVG
@@ -56,7 +56,7 @@ button {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--semantic-action-base);
   outline-offset: 1px;
   border-radius: 4px;
 }
@@ -74,7 +74,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [contenteditable]:focus-visible {
-  outline: 2px solid var(--accent) !important;
+  outline: 2px solid var(--semantic-action-base) !important;
   outline-offset: 1px;
 }
 
@@ -83,7 +83,7 @@ textarea:focus-visible,
   min-height: 220px;
   font-size: 13.5px;
   line-height: 1.7;
-  color: var(--fg);
+  color: var(--semantic-text-primary);
   outline: none;
 }
 .block-editor h1,
@@ -113,7 +113,7 @@ textarea:focus-visible,
 }
 .block-editor pre {
   font-family: var(--font-mono);
-  background: var(--surface-2);
+  background: var(--semantic-background-elevated);
   padding: 10px 12px;
   border-radius: var(--r-sm);
   font-size: 12.5px;
@@ -126,16 +126,16 @@ textarea:focus-visible,
 }
 .block-editor code {
   font-family: var(--font-mono);
-  background: var(--surface-2);
+  background: var(--semantic-background-elevated);
   padding: 1px 5px;
   border-radius: 4px;
   font-size: 12.5px;
 }
 .block-editor blockquote {
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--semantic-action-base);
   margin: 10px 0;
   padding: 2px 0 2px 12px;
-  color: var(--muted);
+  color: var(--semantic-text-secondary);
 }
 .block-editor img {
   max-width: 100%;
@@ -143,8 +143,19 @@ textarea:focus-visible,
 }
 .block-editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  color: var(--muted-2);
+  color: var(--semantic-text-tertiary);
   float: left;
   height: 0;
   pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

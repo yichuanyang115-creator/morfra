@@ -41,11 +41,11 @@ export function AcceptanceCard({
   return (
     <div
       className={`theme-module-business relative mb-1.5 flex flex-col gap-1.5 rounded-(--r-md) border p-2.25 last:mb-0 ${
-        criterion.result === "fail" ? "border-(--st-blocked)" : "border-(--border)"
+        criterion.result === "fail" ? "border-(--module-scope-feedback-danger)" : "border-(--module-scope-border-subtle)"
       }`}
     >
       {criterion.result === "fail" && (
-        <span className="absolute top-2 bottom-2 left-0 w-0.75 rounded-r-sm bg-(--st-blocked)" />
+        <span className="absolute top-2 bottom-2 left-0 w-0.75 rounded-r-sm bg-(--module-scope-feedback-danger)" />
       )}
       <div className="flex items-center gap-2">
         {editingDesc ? (
@@ -63,7 +63,7 @@ export function AcceptanceCard({
                 setEditingDesc(false);
               }
             }}
-            className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft) focus:border-(--accent) focus:bg-(--accent-soft)"
+            className="min-w-0 flex-1 rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft) focus:border-(--module-scope-action-base) focus:bg-(--module-scope-action-soft)"
           />
         ) : (
           <button
@@ -72,7 +72,7 @@ export function AcceptanceCard({
               setDescValue(criterion.desc);
               setEditingDesc(true);
             }}
-            className="min-w-0 flex-1 truncate rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 text-left font-(family-name:--font-body) text-[13px] text-(--fg) outline-none hover:border-(--border) hover:bg-(--accent-soft)"
+            className="min-w-0 flex-1 truncate rounded-(--r-sm) border border-transparent bg-transparent px-1.5 py-1 text-left font-(family-name:--font-body) text-[13px] text-(--module-scope-text-primary) outline-none hover:border-(--module-scope-border-subtle) hover:bg-(--module-scope-action-soft)"
           >
             {criterion.desc}
           </button>
@@ -95,7 +95,7 @@ export function AcceptanceCard({
           type="button"
           aria-label="删除验收标准"
           onClick={onRemove}
-          className="grid size-6 flex-none place-items-center rounded-(--r-sm) bg-(--surface-2) text-(--muted-2) hover:bg-(--st-blocked-soft) hover:text-(--st-blocked)"
+          className="grid size-6 flex-none place-items-center rounded-(--r-sm) bg-(--module-scope-background-elevated) text-(--module-scope-text-tertiary) hover:bg-(--module-scope-feedback-danger-soft) hover:text-(--module-scope-feedback-danger)"
         >
           <CloseIcon />
         </button>
@@ -117,7 +117,7 @@ export function AcceptanceCard({
                 setNoteOpen(false);
               }
             }}
-            className="min-h-11 w-full resize-y rounded-(--r-sm) border border-(--st-blocked) bg-(--surface) px-2 py-1.5 font-(family-name:--font-body) text-[12px] text-(--fg) outline-none"
+            className="min-h-11 w-full resize-y rounded-(--r-sm) border border-(--module-scope-feedback-danger) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[12px] text-(--module-scope-text-primary) outline-none"
           />
         ) : (
           <button
@@ -126,7 +126,7 @@ export function AcceptanceCard({
               setNoteValue(criterion.failNote);
               setNoteOpen(true);
             }}
-            className="block max-w-full truncate rounded-(--r-sm) px-1 py-0.5 text-left font-(family-name:--font-body) text-[11.5px] text-(--st-blocked) hover:bg-(--st-blocked-soft)"
+            className="block max-w-full truncate rounded-(--r-sm) px-1 py-0.5 text-left font-(family-name:--font-body) text-[11.5px] text-(--module-scope-feedback-danger) hover:bg-(--module-scope-feedback-danger-soft)"
           >
             {criterion.failNote || "点击说明不通过原因…"}
           </button>

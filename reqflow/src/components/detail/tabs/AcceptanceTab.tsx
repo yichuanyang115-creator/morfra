@@ -23,7 +23,7 @@ export function AcceptanceTab({ acceptance, draftOpen, onCreate, onCancelDraft, 
   return (
     <div>
       {acceptance.length > 0 && (
-        <div className="mb-2.5 font-(family-name:--font-mono) text-[11.5px] text-(--muted-2)">
+        <div className="mb-2.5 font-(family-name:--font-mono) text-[11.5px] text-(--module-scope-text-tertiary)">
           {passCount}/{acceptance.length} 通过
         </div>
       )}

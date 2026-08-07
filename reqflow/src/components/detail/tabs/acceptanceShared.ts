@@ -10,16 +10,16 @@ export const ACCEPTANCE_RESULT_LABEL: Record<AcceptanceResult, string> = Object.
 export const ACCEPTANCE_RESULT_ORDER: AcceptanceResult[] = ["pass", "fail", "unverified"];
 
 export const RESULT_BTN_STYLE: Record<AcceptanceResult, string> = {
-  pass: "text-(--st-done)",
-  fail: "text-(--st-blocked)",
-  unverified: "text-(--st-todo)",
+  pass: "text-(--module-scope-feedback-success)",
+  fail: "text-(--module-scope-feedback-danger)",
+  unverified: "text-(--module-scope-context-strong)",
 };
 
 export const RESULT_DOT_STYLE: Record<AcceptanceResult, string> = {
-  pass: "bg-(--st-done)",
-  fail: "bg-(--st-blocked)",
-  unverified: "bg-(--st-todo)",
+  pass: "bg-(--module-scope-feedback-success)",
+  fail: "bg-(--module-scope-feedback-danger)",
+  unverified: "bg-(--module-scope-context-strong)",
 };
 
 export const resultBtnBaseClass =
-  "inline-flex items-center gap-1 rounded-full px-1.75 py-0.5 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.03em] text-(--muted-2) hover:bg-(--accent-soft) hover:text-(--accent-text)";
+  "inline-flex items-center gap-1 rounded-full px-1.75 py-0.5 font-(family-name:--font-mono) text-[10.5px] font-[590] tracking-[0.03em] text-(--module-scope-text-tertiary) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)";

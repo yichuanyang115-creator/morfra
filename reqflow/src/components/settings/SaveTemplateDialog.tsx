@@ -30,9 +30,9 @@ export function SaveTemplateDialog({ onCancel, onSave }: SaveTemplateDialogProps
         aria-label="模板名称"
         value={name}
         onChange={(event) => setName(event.target.value)}
-        className="mt-3 w-full rounded-(--r-sm) border border-(--border) px-2 py-1.5 text-[13px] outline-none focus:border-(--accent)"
+        className="mt-3 w-full rounded-(--r-sm) border border-(--module-scope-border-subtle) px-2 py-1.5 text-[13px] outline-none focus:border-(--module-scope-action-base)"
       />
-      {error && <p className="mb-0 text-[12px] text-(--st-blocked)">{error}</p>}
+      {error && <p className="mb-0 text-[12px] text-(--module-scope-feedback-danger)">{error}</p>}
     </ConfirmDialog>
   );
 }

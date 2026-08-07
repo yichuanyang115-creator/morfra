@@ -35,40 +35,27 @@
   --semantic-feedback-warning: var(--palette-warning);
   --semantic-feedback-danger: var(--palette-danger);
 
-  /* 兼容既有组件变量；Phase 29 起会按模块逐步收口。 */
-  --bg: var(--semantic-background-canvas);
-  --surface: var(--semantic-background-surface);
-  --surface-2: var(--semantic-background-elevated);
-  --topbar: var(--semantic-background-canvas);
-  --fg: var(--semantic-text-primary);
-  --muted: var(--semantic-text-secondary);
-  --muted-2: var(--semantic-text-tertiary);
-  --border: var(--semantic-border-subtle);
-  --border-strong: var(--semantic-border-strong);
-  --accent: var(--semantic-action-base);
-  --accent-text: var(--semantic-action-strong);
-  --accent-soft: var(--semantic-action-soft);
-  --accent-soft-strong: var(--semantic-context-soft);
-  --accent-solid: var(--semantic-action-strong);
-  --accent-solid-fg: var(--semantic-background-surface);
-  --accent-selected: var(--semantic-context-soft);
-  --context-strong: var(--semantic-context-strong);
-  --sev-p0: var(--semantic-feedback-danger);
-  --sev-p0-soft: color-mix(in srgb, var(--semantic-feedback-danger) 12%, var(--semantic-background-surface));
-  --sev-p1: var(--semantic-feedback-warning);
-  --sev-p1-soft: color-mix(in srgb, var(--semantic-feedback-warning) 12%, var(--semantic-background-surface));
-  --sev-p2: var(--semantic-context-strong);
-  --sev-p2-soft: var(--semantic-context-soft);
-  --st-todo: var(--semantic-context-strong);
-  --st-todo-soft: var(--semantic-context-soft);
-  --st-progress: var(--semantic-action-base);
-  --st-progress-soft: var(--semantic-action-soft);
-  --st-done: var(--semantic-feedback-success);
-  --st-done-soft: color-mix(in srgb, var(--semantic-feedback-success) 12%, var(--semantic-background-surface));
-  --st-blocked: var(--semantic-feedback-danger);
-  --st-blocked-soft: color-mix(in srgb, var(--semantic-feedback-danger) 12%, var(--semantic-background-surface));
-
-  /* 结构模块在自己的边界内把组件变量指向局部 Token；未覆盖时由运行时写入继承值。 */
+  /* 模块 Token 的根级回退，实际模块边界会覆盖这些值。 */
+  --module-scope-background-canvas: var(--semantic-background-canvas);
+  --module-scope-background-surface: var(--semantic-background-surface);
+  --module-scope-background-elevated: var(--semantic-background-elevated);
+  --module-scope-text-primary: var(--semantic-text-primary);
+  --module-scope-text-secondary: var(--semantic-text-secondary);
+  --module-scope-text-tertiary: var(--semantic-text-tertiary);
+  --module-scope-text-disabled: var(--semantic-text-disabled);
+  --module-scope-border-subtle: var(--semantic-border-subtle);
+  --module-scope-border-strong: var(--semantic-border-strong);
+  --module-scope-action-strong: var(--semantic-action-strong);
+  --module-scope-action-base: var(--semantic-action-base);
+  --module-scope-action-soft: var(--semantic-action-soft);
+  --module-scope-context-strong: var(--semantic-context-strong);
+  --module-scope-context-soft: var(--semantic-context-soft);
+  --module-scope-feedback-success: var(--semantic-feedback-success);
+  --module-scope-feedback-warning: var(--semantic-feedback-warning);
+  --module-scope-feedback-danger: var(--semantic-feedback-danger);
+  --module-scope-feedback-success-soft: color-mix(in srgb, var(--module-scope-feedback-success) 8%, var(--module-scope-background-surface));
+  --module-scope-feedback-warning-soft: color-mix(in srgb, var(--module-scope-feedback-warning) 8%, var(--module-scope-background-surface));
+  --module-scope-feedback-danger-soft: color-mix(in srgb, var(--module-scope-feedback-danger) 8%, var(--module-scope-background-surface));
 
   --font-display: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-body: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
@@ -78,6 +65,9 @@
   --r-md: 8px;
   --r-lg: 12px;
   --shadow-floating: 0 12px 30px -10px color-mix(in srgb, var(--semantic-text-primary) 22%, transparent);
+  --shadow-panel: -4px 0 16px -4px color-mix(in srgb, var(--semantic-text-primary) 12%, transparent);
+  --shadow-dialog: 0 24px 60px -12px color-mix(in srgb, var(--semantic-context-strong) 28%, transparent);
+  --overlay-scrim: color-mix(in srgb, var(--semantic-context-strong) 28%, transparent);
   --topbar-h: 34px;
   --detail-max-w: 960px;
   --board-header-h: 34px;
@@ -224,37 +214,9 @@
 }
 
 :where(.theme-module-topbar, .theme-module-board, .theme-module-detail, .theme-module-settings, .theme-module-chat, .theme-module-business, .theme-module-feedback) {
-  --bg: var(--module-scope-background-canvas);
-  --surface: var(--module-scope-background-surface);
-  --surface-2: var(--module-scope-background-elevated);
-  --topbar: var(--module-scope-background-canvas);
-  --fg: var(--module-scope-text-primary);
-  --muted: var(--module-scope-text-secondary);
-  --muted-2: var(--module-scope-text-tertiary);
-  --border: var(--module-scope-border-subtle);
-  --border-strong: var(--module-scope-border-strong);
-  --accent: var(--module-scope-action-base);
-  --accent-text: var(--module-scope-action-strong);
-  --accent-soft: var(--module-scope-action-soft);
-  --accent-soft-strong: var(--module-scope-context-soft);
-  --accent-solid: var(--module-scope-action-strong);
-  --accent-solid-fg: var(--module-scope-background-surface);
-  --accent-selected: var(--module-scope-context-soft);
-  --context-strong: var(--module-scope-context-strong);
-  --sev-p0: var(--module-scope-feedback-danger, var(--semantic-feedback-danger));
-  --sev-p0-soft: color-mix(in srgb, var(--sev-p0) 12%, var(--module-scope-background-surface));
-  --sev-p1: var(--module-scope-feedback-warning, var(--semantic-feedback-warning));
-  --sev-p1-soft: color-mix(in srgb, var(--sev-p1) 12%, var(--module-scope-background-surface));
-  --sev-p2: var(--module-scope-context-strong);
-  --sev-p2-soft: var(--module-scope-context-soft);
-  --st-todo: var(--module-scope-context-strong);
-  --st-todo-soft: var(--module-scope-context-soft);
-  --st-progress: var(--module-scope-action-base);
-  --st-progress-soft: var(--module-scope-action-soft);
-  --st-done: var(--module-scope-feedback-success, var(--semantic-feedback-success));
-  --st-done-soft: color-mix(in srgb, var(--st-done) 12%, var(--module-scope-background-surface));
-  --st-blocked: var(--module-scope-feedback-danger, var(--semantic-feedback-danger));
-  --st-blocked-soft: color-mix(in srgb, var(--st-blocked) 12%, var(--module-scope-background-surface));
+  --module-scope-feedback-success-soft: color-mix(in srgb, var(--module-scope-feedback-success) 8%, var(--module-scope-background-surface));
+  --module-scope-feedback-warning-soft: color-mix(in srgb, var(--module-scope-feedback-warning) 8%, var(--module-scope-background-surface));
+  --module-scope-feedback-danger-soft: color-mix(in srgb, var(--module-scope-feedback-danger) 8%, var(--module-scope-background-surface));
 }
 
 :where(.theme-module-topbar, .theme-module-board, .theme-module-detail, .theme-module-settings, .theme-module-chat, .theme-module-business, .theme-module-feedback) :disabled {

@@ -48,8 +48,8 @@ export function SearchBox({ requirements, onJumpToRequirement }: SearchBoxProps)
 
   return (
     <div ref={rootRef} className="absolute top-1/2 left-1/2 w-[380px] max-w-[40vw] -translate-x-1/2 -translate-y-1/2">
-      <div className="relative flex w-full items-center gap-1.5 rounded-(--r-md) border border-(--border) bg-(--surface) px-2.5 py-[5px] focus-within:border-(--accent)">
-        <span className="flex-none text-(--muted-2)">
+      <div className="relative flex w-full items-center gap-1.5 rounded-(--r-md) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2.5 py-[5px] focus-within:border-(--module-scope-action-base)">
+        <span className="flex-none text-(--module-scope-text-tertiary)">
           <SearchIcon />
         </span>
         <input
@@ -61,23 +61,23 @@ export function SearchBox({ requirements, onJumpToRequirement }: SearchBoxProps)
             setQuery(e.target.value);
             setOpen(true);
           }}
-          className="min-w-0 flex-1 border-none bg-transparent font-(family-name:--font-body) text-[12.5px] text-(--fg) outline-none placeholder:text-(--muted-2)"
+          className="min-w-0 flex-1 border-none bg-transparent font-(family-name:--font-body) text-[12.5px] text-(--module-scope-text-primary) outline-none placeholder:text-(--module-scope-text-tertiary)"
         />
       </div>
 
       {open && trimmed && (
-        <div className="absolute top-[calc(100%+6px)] left-0 z-50 max-h-80 w-full overflow-y-auto rounded-(--r-md) border border-(--border-strong) bg-(--surface) p-1.25 shadow-(--shadow-floating)">
+        <div className="absolute top-[calc(100%+6px)] left-0 z-50 max-h-80 w-full overflow-y-auto rounded-(--r-md) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) p-1.25 shadow-(--shadow-floating)">
           {matches.length === 0 ? (
-            <div className="p-5 text-center text-[12.5px] text-(--muted-2)">没有匹配的实体</div>
+            <div className="p-5 text-center text-[12.5px] text-(--module-scope-text-tertiary)">没有匹配的实体</div>
           ) : (
             matches.map((r) => (
               <div
                 key={r.id}
                 onClick={() => jump(r.id)}
-                className="flex cursor-pointer items-center gap-2 rounded-(--r-sm) px-2.25 py-1.75 text-[13px] text-(--fg) hover:bg-(--accent-soft)"
+                className="flex cursor-pointer items-center gap-2 rounded-(--r-sm) px-2.25 py-1.75 text-[13px] text-(--module-scope-text-primary) hover:bg-(--module-scope-action-soft)"
               >
                 <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{r.name}</span>
-                <span className="flex-none font-(family-name:--font-mono) text-[11px] text-(--muted-2)">{STAGE_LABEL[r.stage]}</span>
+                <span className="flex-none font-(family-name:--font-mono) text-[11px] text-(--module-scope-text-tertiary)">{STAGE_LABEL[r.stage]}</span>
               </div>
             ))
           )}

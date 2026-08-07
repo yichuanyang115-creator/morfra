@@ -91,8 +91,8 @@ export function StageSection({
   return (
     <>
       <div
-        className={`sticky left-0 ${sortOpen ? "z-10" : "z-1"} my-1.5 flex w-full items-center gap-2 rounded-(--r-lg) border bg-(--surface) pl-5.5 py-1.75 pr-2.5 ${
-          isOver ? "border-(--accent) bg-(--accent-soft)" : "border-(--accent-selected)"
+        className={`sticky left-0 ${sortOpen ? "z-10" : "z-1"} my-1.5 flex w-full items-center gap-2 rounded-(--r-lg) border bg-(--module-scope-background-surface) pl-5.5 py-1.75 pr-2.5 ${
+          isOver ? "border-(--module-scope-action-base) bg-(--module-scope-action-soft)" : "border-(--module-scope-context-soft)"
         }`}
       >
         <button
@@ -100,14 +100,14 @@ export function StageSection({
           onClick={() => setCollapsed((v) => !v)}
           className="inline-flex flex-none items-center gap-1.5 border-none bg-transparent p-0 select-none"
         >
-          <span className={`flex-none text-(--muted-2) transition-transform duration-150 ${collapsed ? "-rotate-90" : ""}`}>
+          <span className={`flex-none text-(--module-scope-text-tertiary) transition-transform duration-150 ${collapsed ? "-rotate-90" : ""}`}>
             <ChevronIcon />
           </span>
           <span aria-hidden="true" className="size-1.5 flex-none rounded-full" style={{ backgroundColor: stageOption.color }} />
-          <span className="font-(family-name:--font-display) text-[13px] font-[590] tracking-[-0.005em] text-(--fg)">
+          <span className="font-(family-name:--font-display) text-[13px] font-[590] tracking-[-0.005em] text-(--module-scope-text-primary)">
             {stageOption.label}
           </span>
-          <span className="font-(family-name:--font-mono) text-[11px] text-(--muted-2) [font-variant-numeric:tabular-nums]">
+          <span className="font-(family-name:--font-mono) text-[11px] text-(--module-scope-text-tertiary) [font-variant-numeric:tabular-nums]">
             {requirements.length}
           </span>
         </button>
@@ -137,7 +137,7 @@ export function StageSection({
               type="button"
               onClick={() => setDraftOpen(true)}
               aria-label="新建实体"
-              className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-transparent px-1.75 py-1 text-[12px] text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent-text)"
+              className="inline-flex flex-none items-center gap-1 rounded-(--r-sm) border-none bg-transparent px-1.75 py-1 text-[12px] text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)"
             >
               <PlusIcon />
               新建
@@ -147,7 +147,7 @@ export function StageSection({
       </div>
       <section
         ref={setNodeRef}
-        className={`mb-1 rounded-(--r-lg) ${isOver ? "bg-(--accent-soft)" : ""}`}
+        className={`mb-1 rounded-(--r-lg) ${isOver ? "bg-(--module-scope-action-soft)" : ""}`}
       >
       {!collapsed && (
         <>
@@ -164,7 +164,7 @@ export function StageSection({
             />
           )}
           {visibleRequirements.length === 0 && !draftOpen ? (
-            <div className="px-1 py-3.5 text-[12.5px] text-(--muted-2)">{emptyText}</div>
+            <div className="px-1 py-3.5 text-[12.5px] text-(--module-scope-text-tertiary)">{emptyText}</div>
           ) : (
             <SortableContext
               items={visibleRequirements.map((r) => r.id)}

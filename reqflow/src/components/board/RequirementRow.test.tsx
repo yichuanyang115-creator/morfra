@@ -100,7 +100,7 @@ describe("RequirementRow", () => {
 
   it("选中态使用紫色背景和深紫细条，未选中态使用绿色悬停", () => {
     const { container, rerender } = renderRow();
-    expect(container.firstChild).toHaveClass("border-l-transparent", "hover:bg-(--accent-soft)");
+    expect(container.firstChild).toHaveClass("border-l-transparent", "hover:bg-(--module-scope-action-soft)");
 
     rerender(
       <RequirementRow
@@ -114,7 +114,7 @@ describe("RequirementRow", () => {
         onAttributeChange={vi.fn()}
       />,
     );
-    expect(container.firstChild).toHaveClass("border-l-(--context-strong)", "bg-(--accent-selected)");
+    expect(container.firstChild).toHaveClass("border-l-(--module-scope-context-strong)", "bg-(--module-scope-context-soft)");
   });
 
   it("useSortable 用需求 id 作为拖拽/排序标识注册", () => {
@@ -209,7 +209,7 @@ describe("RequirementRow", () => {
 
   it("selected 为 true 时行元素带选中态样式", () => {
     const { container } = renderRow({ selected: true });
-    expect(container.firstChild).toHaveClass("bg-(--accent-selected)");
+    expect(container.firstChild).toHaveClass("bg-(--module-scope-context-soft)");
   });
 
   it("终态阶段下'结果'属性只读，不渲染可交互的下拉", () => {
@@ -271,7 +271,7 @@ describe("RequirementRow", () => {
       const spy = mockSortable();
       const { container } = renderRow({ attributes: [PRIORITY_ATTR], frozenCount: 1 });
       const frozenAttribute = Array.from(container.querySelectorAll(".sticky")).find((element) => (element as HTMLElement).style.left !== "");
-      expect(frozenAttribute).toHaveClass("group-hover:bg-(--accent-soft)");
+      expect(frozenAttribute).toHaveClass("group-hover:bg-(--module-scope-action-soft)");
       spy.mockRestore();
     });
 
