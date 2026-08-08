@@ -1,6 +1,7 @@
 import type { AppSettingsSection } from "../../stores/uiStore";
 import { AppSettingsNav } from "./AppSettingsNav";
 import { AppearanceSettings } from "./AppearanceSettings";
+import { AIServiceSettings } from "./AIServiceSettings";
 import { VersionSettings } from "./VersionSettings";
 
 interface AppSettingsPageProps {
@@ -28,7 +29,7 @@ export function AppSettingsPage({ section, onSelectSection, onClose }: AppSettin
       </div>
       <div className="flex min-h-0 flex-1">
         <AppSettingsNav section={section} onSelect={onSelectSection} />
-        {section === "appearance" ? <AppearanceSettings onClose={onClose} /> : <VersionSettings />}
+        {section === "appearance" ? <AppearanceSettings onClose={onClose} /> : section === "ai-service" ? <AIServiceSettings /> : <VersionSettings />}
       </div>
     </div>
   );

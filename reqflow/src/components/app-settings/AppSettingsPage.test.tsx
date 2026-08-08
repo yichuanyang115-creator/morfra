@@ -8,10 +8,11 @@ import { AppSettingsNav } from "./AppSettingsNav";
 import { AppSettingsPage } from "./AppSettingsPage";
 
 describe("AppSettingsNav", () => {
-  it("提供外观和版本两个独立导航项并标记当前项", () => {
+  it("提供外观、AI 服务和版本三个独立导航项并标记当前项", () => {
     render(<AppSettingsNav section="appearance" onSelect={vi.fn()} />);
 
     expect(screen.getByRole("button", { name: "外观" })).toHaveClass("bg-(--module-scope-context-soft)");
+    expect(screen.getByRole("button", { name: "AI 服务" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "版本" })).toBeInTheDocument();
   });
 });

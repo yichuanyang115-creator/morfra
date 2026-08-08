@@ -13,7 +13,7 @@ export type SettingsSection =
   | { kind: "attributes"; attributeId?: string }
   | { kind: "tab"; tabId: string };
 
-export type AppSettingsSection = "appearance" | "version";
+export type AppSettingsSection = "appearance" | "ai-service" | "version";
 
 interface UiState {
   selectedRequirementId: string | null;

@@ -17,6 +17,9 @@ export function AppSettingsNav({ section, onSelect }: AppSettingsNavProps) {
       <button type="button" className={navItemClass(section === "appearance")} onClick={() => onSelect("appearance")}>
         外观
       </button>
+      <button type="button" className={navItemClass(section === "ai-service")} onClick={() => onSelect("ai-service")}>
+        AI 服务
+      </button>
       <button type="button" className={navItemClass(section === "version")} onClick={() => onSelect("version")}>
         版本
       </button>
