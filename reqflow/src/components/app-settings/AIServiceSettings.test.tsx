@@ -14,9 +14,16 @@ const keychainMocks = vi.hoisted(() => ({
   hasAIProviderSecret: vi.fn(),
   deleteAIProviderSecret: vi.fn(),
 }));
+const providerMocks = vi.hoisted(() => ({
+  testAIProvider: vi.fn(),
+  listAIModels: vi.fn(),
+  startAIChat: vi.fn(),
+  toAIProviderError: vi.fn(),
+}));
 
 vi.mock("../../lib/ai/persistence", () => persistenceMocks);
 vi.mock("../../lib/ai/keychainClient", () => keychainMocks);
+vi.mock("../../lib/ai/providerClient", () => providerMocks);
 
 const { useAIProviderStore } = await import("../../stores/aiProviderStore");
 const { AIServiceSettings } = await import("./AIServiceSettings");
@@ -41,6 +48,12 @@ describe("AIServiceSettings", () => {
     persistenceMocks.saveAIPanelPreference.mockResolvedValue(undefined);
     keychainMocks.setAIProviderSecret.mockResolvedValue(undefined);
     keychainMocks.deleteAIProviderSecret.mockResolvedValue(undefined);
+    providerMocks.listAIModels.mockResolvedValue({ modelIds: ["model-a", "model-b"], source: "remote" });
+    providerMocks.testAIProvider.mockResolvedValue({ modelId: "model-a", chatAvailable: true, models: "unknown", streaming: "supported", structuredOutput: "unknown", toolCalls: "unknown" });
+    providerMocks.toAIProviderError.mockImplementation((value: unknown) => {
+      const code = typeof value === "object" && value !== null && "code" in value && typeof value.code === "string" ? value.code : "provider_error";
+      return { code, message: "AI 服务请求失败", retryable: true };
+    });
     useAIProviderStore.setState({
       configs: [],
       secretStatus: {},
@@ -114,6 +127,20 @@ describe("AIServiceSettings", () => {
     expect(screen.getByLabelText(/API Key/)).toHaveValue(transientSecret);
   });
 
+  it("模型列表成功后提供可选模型，同时保留手填回退", async () => {
+    const user = userEvent.setup();
+    render(<AIServiceSettings />);
+    await user.click(screen.getByRole("button", { name: "新建 AI 服务" }));
+    await user.type(screen.getByLabelText("配置名称"), "新服务");
+    await user.type(screen.getByLabelText("HTTPS Base URL"), "https://new.example/v1");
+    await user.type(screen.getByLabelText(/API Key/), "transient-key");
+    await user.click(screen.getByRole("button", { name: "我已了解，确认继续" }));
+    await user.click(screen.getByRole("button", { name: "加载模型" }));
+    expect(await screen.findByRole("option", { name: "model-a" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("可选模型"), "model-b");
+    expect(screen.getByLabelText("默认模型 ID")).toHaveValue("model-b");
+  });
+
   it("校验输入并保存新配置，页面只显示密钥状态", async () => {
     const user = userEvent.setup();
     render(<AIServiceSettings />);
@@ -122,12 +149,13 @@ describe("AIServiceSettings", () => {
     await user.type(screen.getByLabelText("HTTPS Base URL"), "http://new.example");
     await user.type(screen.getByLabelText("默认模型 ID"), "new-model");
     await user.type(screen.getByLabelText(/API Key/), ["one", "time", "input"].join("-"));
-    await user.click(screen.getByRole("button", { name: "保存服务" }));
+    await user.click(screen.getByRole("button", { name: "测试连接并保存" }));
     expect(screen.getByText("Base URL 必须使用 HTTPS")).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText(/HTTPS Base URL/));
     await user.type(screen.getByLabelText(/HTTPS Base URL/), "https://new.example");
-    await user.click(screen.getByRole("button", { name: "保存服务" }));
+    await user.click(screen.getByRole("button", { name: "我已了解，确认继续" }));
+    await user.click(screen.getByRole("button", { name: "测试连接并保存" }));
     expect(await screen.findByText("新服务")).toBeInTheDocument();
     expect(screen.getByText("密钥已配置")).toBeInTheDocument();
     expect(screen.queryByText(["one", "time", "input"].join("-"))).not.toBeInTheDocument();
@@ -137,11 +165,12 @@ describe("AIServiceSettings", () => {
     const user = userEvent.setup();
     useAIProviderStore.setState({ configs: [CONFIG_A, CONFIG_B], secretStatus: { "provider-a": true, "provider-b": true }, defaultProviderConfigId: "provider-a" });
     render(<AIServiceSettings />);
+    await user.click(screen.getByRole("button", { name: "我已了解，确认继续" }));
     await user.click(screen.getAllByRole("button", { name: "编辑" })[0]);
     expect(screen.getByDisplayValue("服务 A")).toBeInTheDocument();
     await user.clear(screen.getByLabelText("配置名称"));
     await user.type(screen.getByLabelText("配置名称"), "服务 A（已改）");
-    await user.click(screen.getByRole("button", { name: "保存服务" }));
+    await user.click(screen.getByRole("button", { name: "测试连接并保存" }));
     expect(await screen.findByText("服务 A（已改）")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "设为默认" }));
     expect(useAIProviderStore.getState().defaultProviderConfigId).toBe("provider-b");

@@ -12,9 +12,16 @@ const keychainMocks = vi.hoisted(() => ({
   hasAIProviderSecret: vi.fn(),
   deleteAIProviderSecret: vi.fn(),
 }));
+const providerMocks = vi.hoisted(() => ({
+  listAIModels: vi.fn(),
+  testAIProvider: vi.fn(),
+  startAIChat: vi.fn(),
+  toAIProviderError: vi.fn(),
+}));
 
 vi.mock("../lib/ai/persistence", () => persistenceMocks);
 vi.mock("../lib/ai/keychainClient", () => keychainMocks);
+vi.mock("../lib/ai/providerClient", () => providerMocks);
 
 const { useAIProviderStore } = await import("./aiProviderStore");
 
@@ -52,6 +59,12 @@ describe("aiProviderStore", () => {
     keychainMocks.setAIProviderSecret.mockResolvedValue(undefined);
     keychainMocks.hasAIProviderSecret.mockResolvedValue(false);
     keychainMocks.deleteAIProviderSecret.mockResolvedValue(undefined);
+    providerMocks.listAIModels.mockResolvedValue({ modelIds: ["model-a"], source: "remote" });
+    providerMocks.testAIProvider.mockResolvedValue({ modelId: "model-a", chatAvailable: true, models: "unknown", streaming: "supported", structuredOutput: "unknown", toolCalls: "unknown" });
+    providerMocks.toAIProviderError.mockImplementation((value: unknown) => {
+      const code = typeof value === "object" && value !== null && "code" in value && typeof value.code === "string" ? value.code : "provider_error";
+      return { code, message: code === "rate_limited" ? "AI 服务当前限流，请稍后重试" : "AI 服务请求失败", retryable: true };
+    });
     useAIProviderStore.setState({
       configs: [],
       secretStatus: {},
@@ -203,4 +216,5 @@ describe("aiProviderStore", () => {
     expect(persistenceMocks.saveAIProviderConfigs).not.toHaveBeenCalled();
     expect(keychainMocks.setAIProviderSecret).not.toHaveBeenCalled();
   });
+
 });

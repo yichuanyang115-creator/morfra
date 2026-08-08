@@ -53,6 +53,7 @@ export function getAIProviderModelIssue(modelId: string): string | undefined {
 export function validateAIProviderDraft(
   draft: AIProviderDraft,
   hasExistingSecret: boolean,
+  options: { requireModel?: boolean } = {},
 ): { valid: true; value: NormalizedAIProviderDraft } | { valid: false; issues: AIProviderValidationIssues } {
   const name = draft.name.trim();
   const baseUrl = normalizeAIProviderBaseUrl(draft.baseUrl);
@@ -67,7 +68,7 @@ export function validateAIProviderDraft(
   if (baseUrlIssue) issues.baseUrl = baseUrlIssue;
 
   const modelIssue = getAIProviderModelIssue(defaultModelId);
-  if (modelIssue) issues.defaultModelId = modelIssue;
+  if (options.requireModel !== false && modelIssue) issues.defaultModelId = modelIssue;
 
   if (!draft.id && !secret.trim()) issues.secret = "新建服务必须填写 API Key";
   else if (secret.includes("\n") || secret.includes("\r")) issues.secret = "API Key 不能包含换行";

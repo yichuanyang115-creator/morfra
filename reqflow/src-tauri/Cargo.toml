@@ -27,3 +27,4 @@ tauri-plugin-dialog = "2"
 tauri-plugin-http = "2.5.9"
 tauri-plugin-upload = "2.4.0"
 keyring = "4.1.6"
+reqwest = { version = "0.13.4", default-features = true }

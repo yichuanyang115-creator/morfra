@@ -12,12 +12,21 @@ export function AIServiceSettings() {
   const loaded = useAIProviderStore((state) => state.loaded);
   const busy = useAIProviderStore((state) => state.busy);
   const errorMessage = useAIProviderStore((state) => state.errorMessage);
+  const modelIds = useAIProviderStore((state) => state.modelIds);
+  const modelLoadStatus = useAIProviderStore((state) => state.modelLoadStatus);
+  const modelLoadErrors = useAIProviderStore((state) => state.modelLoadErrors);
+  const capabilities = useAIProviderStore((state) => state.capabilities);
+  const connectionStatus = useAIProviderStore((state) => state.connectionStatus);
   const load = useAIProviderStore((state) => state.load);
   const saveProvider = useAIProviderStore((state) => state.saveProvider);
+  const saveProviderAfterConnectionTest = useAIProviderStore((state) => state.saveProviderAfterConnectionTest);
+  const loadModelsForDraft = useAIProviderStore((state) => state.loadModelsForDraft);
   const setDefaultProvider = useAIProviderStore((state) => state.setDefaultProvider);
   const confirmDataExfiltration = useAIProviderStore((state) => state.confirmDataExfiltration);
   const deleteProvider = useAIProviderStore((state) => state.deleteProvider);
   const clearError = useAIProviderStore((state) => state.clearError);
+  const loadModels = useAIProviderStore((state) => state.loadModels);
+  const testProvider = useAIProviderStore((state) => state.testProvider);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AIProviderConfig | null>(null);
 
@@ -40,7 +49,7 @@ export function AIServiceSettings() {
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h1 className="m-0 text-[16px] font-[590] text-(--module-scope-text-primary)">AI 服务</h1>
-            <p className="m-0 mt-1 text-[12.5px] text-(--module-scope-text-secondary)">管理兼容服务配置。当前 Phase 不会调用模型接口。</p>
+            <p className="m-0 mt-1 text-[12.5px] text-(--module-scope-text-secondary)">管理兼容服务配置，加载模型或测试连接前会明确提示数据外传边界。</p>
           </div>
           {!editingId && <button type="button" onClick={() => { clearError(); setEditingId("new"); }} className="rounded-(--r-sm) border-none bg-(--module-scope-action-strong) px-3 py-1.75 text-[12.5px] text-(--module-scope-background-surface)">新建 AI 服务</button>}
         </div>
@@ -59,7 +68,10 @@ export function AIServiceSettings() {
           <AIProviderEditor
             config={editingConfig}
             hasSecret={editingConfig ? secretStatus[editingConfig.id] === true : false}
+            modelIds={editingConfig ? modelIds[editingConfig.id] ?? editingConfig.cachedModelIds : undefined}
             onSave={saveProvider}
+            onTestAndSave={saveProviderAfterConnectionTest}
+            onLoadModels={loadModelsForDraft}
             onCancel={() => setEditingId(null)}
             onSaved={() => setEditingId(null)}
           />
@@ -81,10 +93,18 @@ export function AIServiceSettings() {
                 <div className="mt-3 flex items-center justify-between gap-3 border-t border-(--module-scope-border-subtle) pt-3">
                   <span className="text-[12px] text-(--module-scope-text-secondary)">默认模型：<span className="font-(family-name:--font-mono) text-(--module-scope-text-primary)">{config.defaultModelId}</span></span>
                   <div className="flex flex-wrap justify-end gap-2">
+                    <button type="button" onClick={() => void loadModels(config.id)} disabled={busy || modelLoadStatus[config.id] === "loading"} className="rounded-(--r-sm) border-none bg-transparent px-2 py-1 text-[12px] text-(--module-scope-action-strong)">{modelLoadStatus[config.id] === "loading" ? "加载中…" : "加载模型"}</button>
+                    <button type="button" onClick={() => void testProvider(config.id)} disabled={busy || !secretStatus[config.id]} className="rounded-(--r-sm) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) px-2 py-1 text-[12px] text-(--module-scope-text-primary)">测试连接</button>
                     {config.id !== defaultProviderConfigId && <button type="button" onClick={() => void setDefaultProvider(config.id)} disabled={busy} className="rounded-(--r-sm) border-none bg-transparent px-2 py-1 text-[12px] text-(--module-scope-action-strong)">设为默认</button>}
                     <button type="button" onClick={() => { clearError(); setEditingId(config.id); }} disabled={busy} className="rounded-(--r-sm) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) px-2 py-1 text-[12px] text-(--module-scope-text-primary)">编辑</button>
                     <button type="button" onClick={() => setDeleteTarget(config)} disabled={busy} className="rounded-(--r-sm) border-none bg-transparent px-2 py-1 text-[12px] text-(--module-scope-feedback-danger)">删除</button>
                   </div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-(--module-scope-text-tertiary)">
+                  <span>模型列表：{modelIds[config.id]?.length ? `${modelIds[config.id].length} 个` : "未加载"}</span>
+                  <span>连接：{connectionStatus[config.id] === "testing" ? "测试中…" : connectionStatus[config.id] === "available" ? "连接可用" : connectionStatus[config.id] === "failed" ? "连接失败" : "未测试"}</span>
+                  <span>能力：{capabilities[config.id]?.streaming === "supported" ? "支持流式" : capabilities[config.id]?.streaming === "unsupported" ? "一次性响应" : "待测试"}</span>
+                  {modelLoadErrors[config.id] && <span className="text-(--module-scope-feedback-danger)">{modelLoadErrors[config.id]}</span>}
                 </div>
               </article>
             ))}

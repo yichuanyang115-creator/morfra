@@ -15,6 +15,7 @@ pub enum SecretStoreError {
 
 pub trait SecretStore {
     fn set(&self, account: &str, secret: &str) -> Result<(), SecretStoreError>;
+    fn get(&self, account: &str) -> Result<Option<String>, SecretStoreError>;
     fn status(&self, account: &str) -> Result<bool, SecretStoreError>;
     fn delete(&self, account: &str) -> Result<(), SecretStoreError>;
 }
@@ -63,6 +64,19 @@ impl SecretStore for NativeKeychainStore {
         }
     }
 
+    fn get(&self, account: &str) -> Result<Option<String>, SecretStoreError> {
+        if !valid_account(account) {
+            return Err(SecretStoreError::InvalidAccount);
+        }
+        let entry = keyring::Entry::new(KEYCHAIN_SERVICE, account)
+            .map_err(|_| SecretStoreError::StorageUnavailable)?;
+        match entry.get_password() {
+            Ok(secret) => Ok(Some(secret)),
+            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(_) => Err(SecretStoreError::OperationFailed),
+        }
+    }
+
     fn delete(&self, account: &str) -> Result<(), SecretStoreError> {
         if !valid_account(account) {
             return Err(SecretStoreError::InvalidAccount);
@@ -90,6 +104,15 @@ impl SecretStore for MemorySecretStore {
             .expect("test store lock")
             .insert(account.to_string(), secret.to_string());
         Ok(())
+    }
+
+    fn get(&self, account: &str) -> Result<Option<String>, SecretStoreError> {
+        Ok(self
+            .values
+            .lock()
+            .expect("test store lock")
+            .get(account)
+            .cloned())
     }
 
     fn status(&self, account: &str) -> Result<bool, SecretStoreError> {
@@ -133,6 +156,17 @@ mod tests {
         let store = MemorySecretStore::default();
         store.delete("provider-test").expect("delete");
         assert!(!store.status("provider-test").expect("status"));
+    }
+
+    #[test]
+    fn abstract_store_get_does_not_expose_plaintext_to_status() {
+        let store = MemorySecretStore::default();
+        assert_eq!(store.get("provider-test").expect("missing secret"), None);
+        store.set("provider-test", &test_secret()).expect("set");
+        assert_eq!(
+            store.get("provider-test").expect("secret"),
+            Some(test_secret())
+        );
     }
 
     #[cfg(target_os = "macos")]
