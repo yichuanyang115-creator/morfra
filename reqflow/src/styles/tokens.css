@@ -3,34 +3,36 @@
  * 这里是无 theme.json 时的同步首屏回退，themeRuntime 会在应用首次渲染前覆盖同名变量。
  */
 :root {
-  --palette-canvas: #FCFCFA;
+  --palette-canvas: #F5F7FA;
   --palette-surface: #FFFFFF;
-  --palette-ink: #2B2421;
-  --palette-green-600: #3F7A02;
-  --palette-green-500: #5B9F00;
-  --palette-green-50: #F4FAEC;
-  --palette-purple-700: #5D3A73;
-  --palette-purple-500: #76558C;
-  --palette-purple-100: #E8DDF0;
-  --palette-purple-50: #F5EFF8;
-  --palette-success: #2C7A63;
-  --palette-danger: #B3261E;
-  --palette-warning: #7A5200;
+  --palette-ink: #1F2937;
+  --palette-neutral-700: #4B5563;
+  --palette-neutral-500: #6B7280;
+  --palette-neutral-300: #D1D5DB;
+  --palette-neutral-100: #E5E7EB;
+  --palette-neutral-50: #EEF1F5;
+  --palette-blue-700: #2559C7;
+  --palette-blue-500: #2F6FED;
+  --palette-blue-100: #8FB2FF;
+  --palette-blue-50: #E7EFFF;
+  --palette-success: #176B3A;
+  --palette-danger: #C62828;
+  --palette-warning: #7A4B00;
 
   --semantic-background-canvas: var(--palette-canvas);
   --semantic-background-surface: var(--palette-surface);
-  --semantic-background-elevated: var(--palette-purple-50);
+  --semantic-background-elevated: var(--palette-neutral-50);
   --semantic-text-primary: var(--palette-ink);
-  --semantic-text-secondary: var(--palette-purple-700);
-  --semantic-text-tertiary: var(--palette-purple-500);
-  --semantic-text-disabled: var(--palette-purple-500);
-  --semantic-border-subtle: var(--palette-purple-100);
-  --semantic-border-strong: #B9A6C6;
-  --semantic-action-strong: var(--palette-green-600);
-  --semantic-action-base: var(--palette-green-500);
-  --semantic-action-soft: var(--palette-green-50);
-  --semantic-context-strong: var(--palette-purple-700);
-  --semantic-context-soft: var(--palette-purple-50);
+  --semantic-text-secondary: var(--palette-neutral-700);
+  --semantic-text-tertiary: var(--palette-neutral-500);
+  --semantic-text-disabled: var(--palette-neutral-500);
+  --semantic-border-subtle: var(--palette-neutral-100);
+  --semantic-border-strong: var(--palette-neutral-300);
+  --semantic-action-strong: var(--palette-blue-700);
+  --semantic-action-base: var(--palette-blue-500);
+  --semantic-action-soft: var(--palette-blue-50);
+  --semantic-context-strong: var(--palette-blue-700);
+  --semantic-context-soft: var(--palette-blue-50);
   --semantic-feedback-success: var(--palette-success);
   --semantic-feedback-warning: var(--palette-warning);
   --semantic-feedback-danger: var(--palette-danger);
@@ -221,4 +223,130 @@
 
 :where(.theme-module-topbar, .theme-module-board, .theme-module-detail, .theme-module-settings, .theme-module-chat, .theme-module-business, .theme-module-feedback) :disabled {
   color: var(--module-scope-text-disabled);
+}
+
+/* v3 Morfra 外壳 Token：数据面保持不透明，材质只承担窗口外壳和临时浮层。 */
+:root {
+  --morfra-surface-canvas: #f5f7fa;
+  --morfra-surface-content: #ffffff;
+  --morfra-surface-sidebar: #eef1f5;
+  --morfra-surface-overlay: rgba(255, 255, 255, 0.94);
+  --morfra-scrim: rgba(15, 23, 42, 0.24);
+  --morfra-text-primary: #1f2937;
+  --morfra-text-secondary: #4b5563;
+  --morfra-text-tertiary: #6b7280;
+  --morfra-text-disabled: #9ca3af;
+  --morfra-border-subtle: #e5e7eb;
+  --morfra-border-default: #d1d5db;
+  --morfra-border-strong: #9ca3af;
+  --morfra-accent-primary: #2f6fed;
+  --morfra-accent-hover: #2559c7;
+  --morfra-accent-pressed: #1e4aa7;
+  --morfra-accent-subtle: #e7efff;
+  --morfra-focus-ring: #2f6fed;
+  --morfra-selection-fill: #e7efff;
+  --morfra-selection-border: #8fb2ff;
+  --morfra-status-danger: #c62828;
+  --morfra-status-warning: #7a4b00;
+  --morfra-status-success: #176b3a;
+  --morfra-status-info: #2768a8;
+  --morfra-business-blue: #2f6fed;
+  --morfra-business-teal: #167c80;
+  --morfra-business-orange: #a85d00;
+  --morfra-shadow-floating: 0 14px 32px rgba(15, 23, 42, 0.14);
+  --morfra-shadow-panel: -8px 0 24px rgba(15, 23, 42, 0.08);
+  --morfra-radius-control: 6px;
+  --morfra-radius-panel: 10px;
+  --morfra-titlebar-height: 40px;
+}
+
+html[data-appearance="dark"] {
+  --morfra-surface-canvas: #1c1c1e;
+  --morfra-surface-content: #242426;
+  --morfra-surface-sidebar: #202023;
+  --morfra-surface-overlay: rgba(43, 43, 48, 0.97);
+  --morfra-scrim: rgba(0, 0, 0, 0.48);
+  --morfra-text-primary: #f5f5f7;
+  --morfra-text-secondary: #c7c7cc;
+  --morfra-text-tertiary: #98989f;
+  --morfra-text-disabled: #6f7078;
+  --morfra-border-subtle: #38383d;
+  --morfra-border-default: #4a4a52;
+  --morfra-border-strong: #6f7078;
+  --morfra-accent-primary: #7ca7ff;
+  --morfra-accent-hover: #9abbff;
+  --morfra-accent-pressed: #5e8fee;
+  --morfra-accent-subtle: #253a63;
+  --morfra-focus-ring: #9abbff;
+  --morfra-selection-fill: #253a63;
+  --morfra-selection-border: #6e9dff;
+  --morfra-status-danger: #ff8178;
+  --morfra-status-warning: #e5b95d;
+  --morfra-status-success: #78d89a;
+  --morfra-status-info: #86b8f4;
+  --morfra-business-blue: #7ca7ff;
+  --morfra-business-teal: #65c6c6;
+  --morfra-business-orange: #f0b56d;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-appearance="light"]) {
+    --morfra-surface-canvas: #1c1c1e;
+    --morfra-surface-content: #242426;
+    --morfra-surface-sidebar: #202023;
+    --morfra-surface-overlay: rgba(43, 43, 48, 0.97);
+    --morfra-scrim: rgba(0, 0, 0, 0.48);
+    --morfra-text-primary: #f5f5f7;
+    --morfra-text-secondary: #c7c7cc;
+    --morfra-text-tertiary: #98989f;
+    --morfra-text-disabled: #6f7078;
+    --morfra-border-subtle: #38383d;
+    --morfra-border-default: #4a4a52;
+    --morfra-border-strong: #6f7078;
+    --morfra-accent-primary: #7ca7ff;
+    --morfra-accent-hover: #9abbff;
+    --morfra-accent-pressed: #5e8fee;
+    --morfra-accent-subtle: #253a63;
+    --morfra-focus-ring: #9abbff;
+    --morfra-selection-fill: #253a63;
+    --morfra-selection-border: #6e9dff;
+    --morfra-status-danger: #ff8178;
+    --morfra-status-warning: #e5b95d;
+    --morfra-status-success: #78d89a;
+    --morfra-status-info: #86b8f4;
+    --morfra-business-blue: #7ca7ff;
+    --morfra-business-teal: #65c6c6;
+    --morfra-business-orange: #f0b56d;
+  }
+}
+
+html[data-appearance="light"] {
+  color-scheme: light;
+}
+
+html[data-appearance="dark"] {
+  color-scheme: dark;
+}
+
+html[data-reduced-transparency="true"] {
+  --morfra-surface-overlay: var(--morfra-surface-content);
+  --morfra-scrim: #d1d5db;
+}
+
+html[data-appearance="dark"][data-reduced-transparency="true"] {
+  --morfra-scrim: #111827;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --morfra-surface-overlay: var(--morfra-surface-content);
+    --morfra-scrim: #d1d5db;
+  }
+}
+
+@media (prefers-color-scheme: dark) and (prefers-reduced-transparency: reduce) {
+  html:not([data-appearance="light"]) {
+    --morfra-surface-overlay: var(--morfra-surface-content);
+    --morfra-scrim: #111827;
+  }
 }

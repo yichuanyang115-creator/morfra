@@ -1,27 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { createDefaultTheme } from "./themeDefaults";
-import { isForbiddenGray, validateThemeConfig } from "./themeValidation";
+import { isHexColor, validateThemeConfig } from "./themeValidation";
 
 describe("themeValidation", () => {
-  it("接受 Design-Brief 定义的默认主题", () => {
+  it("接受 v3 中性色与冷蓝默认主题", () => {
     expect(validateThemeConfig(createDefaultTheme())).toMatchObject({ valid: true });
   });
 
-  it("拒绝中性灰，但保留白色与暖白基底", () => {
-    expect(isForbiddenGray("#808080")).toBe(true);
-    expect(isForbiddenGray("#F7F7F7")).toBe(true);
-    expect(isForbiddenGray("#FAFAFA")).toBe(true);
-    expect(isForbiddenGray("#FFFFFF")).toBe(false);
-    expect(isForbiddenGray("#FCFCFA")).toBe(false);
+  it("允许中性色参与结构层级，不再执行 v2 禁灰门禁", () => {
+    expect(isHexColor("#808080")).toBe(true);
+    expect(isHexColor("#F7F7F7")).toBe(true);
+    const neutralTheme = createDefaultTheme();
+    neutralTheme.semantic.borderStrong = "#808080";
+
+    expect(validateThemeConfig(neutralTheme)).toMatchObject({ valid: true });
   });
 
   it("拒绝不支持的版本和损坏的颜色", () => {
-    const unsupportedVersion = { ...createDefaultTheme(), version: 2 };
+    const unsupportedVersion = { ...createDefaultTheme(), version: 1 };
     const invalidColor = createDefaultTheme();
-    invalidColor.palette.green500 = "#808080";
+    invalidColor.palette.blue500 = "#GGGGGG";
 
     expect(validateThemeConfig(unsupportedVersion)).toMatchObject({ valid: false, reason: "配置版本不受支持" });
-    expect(validateThemeConfig(invalidColor)).toMatchObject({ valid: false, reason: "基础色 green500 无效" });
+    expect(validateThemeConfig(invalidColor)).toMatchObject({ valid: false, reason: "基础色 blue500 无效" });
   });
 
   it("对语义色执行 WCAG 门禁并返回具体字段", () => {
@@ -37,22 +38,11 @@ describe("themeValidation", () => {
     }
   });
 
-  it("拒绝语义层手动输入的中性灰", () => {
-    const invalidTheme = createDefaultTheme();
-    invalidTheme.semantic.actionStrong = "#808080";
-
-    expect(validateThemeConfig(invalidTheme)).toMatchObject({
-      valid: false,
-      reason: "语义色 actionStrong 无效",
-      issues: [{ field: "semantic.actionStrong" }],
-    });
-  });
-
-  it("红黄保留色只能分配给对应反馈角色", () => {
+  it("保留危险色和警告色的语义角色约束", () => {
     const invalidAction = createDefaultTheme();
     invalidAction.semantic.actionStrong = "danger";
     const invalidWarning = createDefaultTheme();
-    invalidWarning.semantic.feedbackWarning = "purple700";
+    invalidWarning.semantic.feedbackWarning = "blue700";
 
     expect(validateThemeConfig(invalidAction)).toMatchObject({
       valid: false,
@@ -66,21 +56,19 @@ describe("themeValidation", () => {
 
   it("主要操作色作为普通文字使用时必须达到 4.5:1", () => {
     const invalidTheme = createDefaultTheme();
-    invalidTheme.semantic.actionStrong = "#4F9200";
+    invalidTheme.semantic.actionStrong = "#AAB4C5";
 
     const result = validateThemeConfig(invalidTheme);
+
     expect(result).toMatchObject({
       valid: false,
       reason: "actionStrong 与 backgroundSurface 对比度不足（需 ≥4.5:1）",
     });
-    if (!result.valid) {
-      expect(result.issues?.some((issue) => issue.field === "semantic.actionStrong")).toBe(true);
-    }
   });
 
   it("覆盖真实弱背景上的操作与反馈文字对比度", () => {
     const invalidTheme = createDefaultTheme();
-    invalidTheme.semantic.actionSoft = "green600";
+    invalidTheme.semantic.actionSoft = "#8FB2FF";
 
     const result = validateThemeConfig(invalidTheme);
 
@@ -92,7 +80,7 @@ describe("themeValidation", () => {
 
   it("校验操作文字在选中与浮层背景上的对比度", () => {
     const invalidTheme = createDefaultTheme();
-    invalidTheme.semantic.actionStrong = "#007E5A";
+    invalidTheme.semantic.actionStrong = "#9AB8F5";
 
     const result = validateThemeConfig(invalidTheme);
 
@@ -102,20 +90,11 @@ describe("themeValidation", () => {
     }
   });
 
-  it("拒绝用紫色覆盖操作与焦点角色，也拒绝用绿色覆盖结构与选中角色", () => {
-    const purpleFocus = createDefaultTheme();
-    purpleFocus.moduleOverrides.board = { actionBase: "purple700" };
-    const greenSelection = createDefaultTheme();
-    greenSelection.moduleOverrides.topbar = { contextSoft: "green50" };
+  it("允许产品强调色与业务颜色按职责使用，不强制指定绿紫结构色", () => {
+    const customTheme = createDefaultTheme();
+    customTheme.moduleOverrides.board = { actionBase: "neutral700", contextSoft: "blue50" };
 
-    expect(validateThemeConfig(purpleFocus)).toMatchObject({
-      valid: false,
-      issues: [{ field: "moduleOverrides.board.actionBase", message: "操作、悬停和键盘焦点只能使用绿色" }],
-    });
-    expect(validateThemeConfig(greenSelection)).toMatchObject({
-      valid: false,
-      issues: [{ field: "moduleOverrides.topbar.contextSoft", message: "结构与选中状态只能使用紫色" }],
-    });
+    expect(validateThemeConfig(customTheme)).toMatchObject({ valid: true });
   });
 
   it("对模块覆盖重复执行 WCAG 门禁并定位到模块字段", () => {

@@ -61,6 +61,10 @@ button {
   border-radius: 4px;
 }
 
+.morfra-shell :focus-visible {
+  outline-color: var(--morfra-focus-ring);
+}
+
 /* 拖拽分隔条调整看板宽度时锁住全局光标和选中行为，避免拖着拖着突然选中一片文字。 */
 body.resizing-panel {
   cursor: col-resize;
@@ -70,12 +74,630 @@ body.resizing-panel * {
   user-select: none;
 }
 
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.morfra-shell {
+  --module-scope-background-canvas: var(--morfra-surface-canvas);
+  --module-scope-background-surface: var(--morfra-surface-content);
+  --module-scope-background-elevated: var(--morfra-surface-sidebar);
+  --module-scope-text-primary: var(--morfra-text-primary);
+  --module-scope-text-secondary: var(--morfra-text-secondary);
+  --module-scope-text-tertiary: var(--morfra-text-tertiary);
+  --module-scope-text-disabled: var(--morfra-text-disabled);
+  --module-scope-border-subtle: var(--morfra-border-subtle);
+  --module-scope-border-strong: var(--morfra-border-strong);
+  --module-scope-action-strong: var(--morfra-accent-primary);
+  --module-scope-action-base: var(--morfra-focus-ring);
+  --module-scope-action-soft: var(--morfra-accent-subtle);
+  --module-scope-context-strong: var(--morfra-accent-primary);
+  --module-scope-context-soft: var(--morfra-selection-fill);
+  --module-scope-feedback-success: var(--morfra-status-success);
+  --module-scope-feedback-warning: var(--morfra-status-warning);
+  --module-scope-feedback-danger: var(--morfra-status-danger);
+  display: flex;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--morfra-surface-canvas);
+  color: var(--morfra-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+
+.morfra-titlebar {
+  display: flex;
+  height: var(--morfra-titlebar-height);
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--morfra-border-subtle);
+  background: var(--morfra-surface-overlay);
+  padding: 0 10px;
+  -webkit-app-region: drag;
+}
+
+.morfra-titlebar button,
+.morfra-titlebar input,
+.morfra-titlebar a {
+  -webkit-app-region: no-drag;
+}
+
+.morfra-titlebar-button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  place-items: center;
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: transparent;
+  color: var(--morfra-text-secondary);
+  cursor: pointer;
+}
+
+.morfra-titlebar-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.morfra-titlebar-button:hover,
+.morfra-titlebar-button.is-active {
+  background: var(--morfra-accent-subtle);
+  color: var(--morfra-accent-primary);
+}
+
+.morfra-wordmark {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.morfra-wordmark-name {
+  flex: none;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.morfra-titlebar-project {
+  overflow: hidden;
+  color: var(--morfra-text-tertiary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.morfra-titlebar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.morfra-appearance-glyph {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.morfra-shell-body {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.morfra-sidebar {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--morfra-border-subtle);
+  background: var(--morfra-surface-sidebar);
+  padding: 14px 10px 10px;
+}
+
+.morfra-sidebar-heading,
+.morfra-sidebar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.morfra-sidebar-heading {
+  justify-content: space-between;
+  padding: 0 8px 8px;
+  color: var(--morfra-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.morfra-sidebar-count {
+  color: var(--morfra-text-tertiary);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.morfra-sidebar-projects {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.morfra-project-item,
+.morfra-table-item,
+.morfra-view-item {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: transparent;
+  color: var(--morfra-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.morfra-project-item,
+.morfra-table-item {
+  min-height: 32px;
+  padding: 6px 8px;
+}
+
+.morfra-project-item {
+  cursor: pointer;
+}
+
+.morfra-project-item:hover,
+.morfra-project-item.is-active,
+.morfra-table-item.is-active {
+  background: var(--morfra-accent-subtle);
+  color: var(--morfra-accent-primary);
+}
+
+.morfra-project-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.morfra-project-item.is-active .morfra-project-dot {
+  opacity: 1;
+}
+
+.morfra-project-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.morfra-sidebar-section {
+  display: block;
+  margin-top: 18px;
+  border-top: 1px solid var(--morfra-border-subtle);
+  padding-top: 14px;
+}
+
+.morfra-sidebar-label,
+.morfra-sidebar-empty {
+  padding: 0 8px 6px;
+  color: var(--morfra-text-tertiary);
+  font-size: 10px;
+}
+
+.morfra-table-icon,
+.morfra-view-icon {
+  width: 16px;
+  flex: none;
+  color: var(--morfra-accent-primary);
+  text-align: center;
+}
+
+.morfra-view-item {
+  padding: 6px 8px 6px 32px;
+  color: var(--morfra-text-tertiary);
+  font-size: 11px;
+}
+
+.morfra-sidebar-create {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  border-top: 1px solid var(--morfra-border-subtle);
+  padding-top: 10px;
+}
+
+.morfra-sidebar-create input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--morfra-border-default);
+  border-radius: var(--morfra-radius-control);
+  background: var(--morfra-surface-content);
+  color: var(--morfra-text-primary);
+  font: inherit;
+  font-size: 11px;
+  outline: 0;
+  padding: 6px 8px;
+}
+
+.morfra-sidebar-create button {
+  width: 28px;
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: var(--morfra-accent-primary);
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.morfra-sidebar-error {
+  margin: 8px 4px 0;
+  color: var(--morfra-status-danger);
+  font-size: 10px;
+}
+
+.morfra-main {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--morfra-surface-content);
+}
+
+.morfra-sidebar-resizer {
+  position: relative;
+  z-index: 2;
+  width: 8px;
+  min-width: 8px;
+  cursor: col-resize;
+}
+
+.morfra-sidebar-resizer::after {
+  position: absolute;
+  top: 0;
+  right: 3px;
+  bottom: 0;
+  left: 3px;
+  background: transparent;
+  content: "";
+}
+
+.morfra-sidebar-resizer:hover::after,
+.morfra-sidebar-resizer.is-dragging::after,
+.morfra-sidebar-resizer:focus-visible::after {
+  background: var(--morfra-accent-primary);
+  opacity: 0.65;
+}
+
+.morfra-right-panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-left: 1px solid var(--morfra-border-subtle);
+  background: var(--morfra-surface-content);
+}
+
+.morfra-right-panel-merged {
+  box-shadow: var(--morfra-shadow-panel);
+}
+
+.morfra-panel-resizer {
+  position: relative;
+  z-index: 2;
+  width: 8px;
+  min-width: 8px;
+  cursor: col-resize;
+}
+
+.morfra-panel-resizer::after {
+  position: absolute;
+  top: 0;
+  right: 3px;
+  bottom: 0;
+  left: 3px;
+  background: transparent;
+  content: "";
+}
+
+.morfra-panel-resizer:hover::after,
+.morfra-panel-resizer.is-dragging::after,
+.morfra-panel-resizer:focus-visible::after {
+  background: var(--morfra-accent-primary);
+  opacity: 0.65;
+}
+
+.morfra-panel-header,
+.morfra-panel-tabs {
+  display: flex;
+  min-height: 40px;
+  flex: none;
+  align-items: center;
+  border-bottom: 1px solid var(--morfra-border-subtle);
+  padding: 0 12px;
+  color: var(--morfra-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.morfra-panel-header {
+  justify-content: space-between;
+}
+
+.morfra-panel-tabs {
+  gap: 16px;
+  padding: 0 12px;
+}
+
+.morfra-panel-tabs button {
+  height: 100%;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--morfra-text-tertiary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.morfra-panel-tabs button.is-active {
+  border-bottom-color: var(--morfra-accent-primary);
+  color: var(--morfra-accent-primary);
+}
+
+.morfra-panel-close {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: transparent;
+  color: var(--morfra-text-tertiary);
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.morfra-panel-close:hover {
+  background: var(--morfra-accent-subtle);
+  color: var(--morfra-text-primary);
+}
+
+.morfra-panel-content {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+}
+
+.morfra-panel-content > .is-hidden {
+  display: none;
+}
+
+.morfra-panel-content > div > .morfra-panel-header {
+  display: none;
+}
+
+.morfra-context-empty {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  color: var(--morfra-text-tertiary);
+  text-align: center;
+}
+
+.morfra-context-empty p {
+  margin: 0;
+  color: var(--morfra-text-secondary);
+  font-size: 12px;
+}
+
+.morfra-context-empty span:last-child {
+  font-size: 11px;
+}
+
+.morfra-empty-symbol {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--morfra-border-default);
+  border-radius: 50%;
+  color: var(--morfra-accent-primary);
+  font-size: 17px;
+}
+
+.morfra-drawer-layer {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  pointer-events: none;
+}
+
+.morfra-drawer-scrim {
+  position: absolute;
+  border: 0;
+  background: var(--morfra-scrim);
+  cursor: pointer;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.morfra-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(var(--morfra-right-panel-width), calc(100% - 52px));
+  min-width: 320px;
+  max-width: 560px;
+  box-shadow: var(--morfra-shadow-panel);
+  pointer-events: auto;
+}
+
+.morfra-drawer-panel .morfra-right-panel {
+  height: 100%;
+}
+
+.morfra-sidebar-overlay {
+  position: absolute;
+  z-index: 30;
+  inset: var(--morfra-titlebar-height) 0 0;
+  pointer-events: none;
+}
+
+.morfra-sidebar-overlay-scrim {
+  position: absolute;
+  border: 0;
+  background: var(--morfra-scrim);
+  cursor: pointer;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.morfra-sidebar-overlay-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(320px, calc(100% - 52px));
+  box-shadow: var(--morfra-shadow-panel);
+  pointer-events: auto;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar {
+  height: 100%;
+  align-items: stretch;
+  padding: 14px 10px 10px;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar-heading > span:first-child,
+.morfra-sidebar-overlay-panel .morfra-sidebar-count,
+.morfra-sidebar-overlay-panel .morfra-project-name {
+  display: inline;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar-section {
+  display: block;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar-create {
+  display: flex;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar-error {
+  display: block;
+}
+
+.morfra-sidebar-overlay-panel .morfra-project-item {
+  justify-content: flex-start;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+@media (max-width: 1199px) {
+  .morfra-sidebar {
+    align-items: center;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .morfra-sidebar-heading,
+  .morfra-sidebar-projects,
+  .morfra-sidebar-section,
+  .morfra-sidebar-create,
+  .morfra-sidebar-error {
+    width: 100%;
+  }
+
+  .morfra-sidebar-heading > span:first-child,
+  .morfra-sidebar-count,
+  .morfra-project-name,
+  .morfra-sidebar-section,
+  .morfra-sidebar-create,
+  .morfra-sidebar-error {
+    display: none;
+  }
+
+  .morfra-project-item {
+    justify-content: center;
+    padding: 8px 0;
+  }
+
+  .morfra-project-dot {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-heading > span:first-child,
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-count,
+.morfra-shell[data-sidebar-open="false"] .morfra-project-name,
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-section,
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-create,
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-error {
+  display: none;
+}
+
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar {
+  align-items: center;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.morfra-shell[data-sidebar-open="false"] .morfra-project-item {
+  justify-content: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 [contenteditable]:focus-visible {
   outline: 2px solid var(--semantic-action-base) !important;
   outline-offset: 1px;
+}
+
+.morfra-shell input:focus-visible,
+.morfra-shell select:focus-visible,
+.morfra-shell textarea:focus-visible,
+.morfra-shell [contenteditable]:focus-visible {
+  outline-color: var(--morfra-focus-ring) !important;
 }
 
 /* 正文 Tab / Block editor，数值对齐设计稿《需求管理系统原型.html》.block-editor 规则块 */

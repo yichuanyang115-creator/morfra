@@ -1,16 +1,18 @@
-export const THEME_CONFIG_VERSION = 1 as const;
+export const THEME_CONFIG_VERSION = 2 as const;
 
 export const PALETTE_KEYS = [
   "canvas",
   "surface",
   "ink",
-  "green600",
-  "green500",
-  "green50",
-  "purple700",
-  "purple500",
-  "purple100",
-  "purple50",
+  "neutral700",
+  "neutral500",
+  "neutral300",
+  "neutral100",
+  "neutral50",
+  "blue700",
+  "blue500",
+  "blue100",
+  "blue50",
   "success",
   "danger",
   "warning",
@@ -22,13 +24,15 @@ export interface PrimitivePalette {
   canvas: string;
   surface: string;
   ink: string;
-  green600: string;
-  green500: string;
-  green50: string;
-  purple700: string;
-  purple500: string;
-  purple100: string;
-  purple50: string;
+  neutral700: string;
+  neutral500: string;
+  neutral300: string;
+  neutral100: string;
+  neutral50: string;
+  blue700: string;
+  blue500: string;
+  blue100: string;
+  blue50: string;
   success: string;
   danger: string;
   warning: string;

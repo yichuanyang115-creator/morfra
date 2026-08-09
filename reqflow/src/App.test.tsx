@@ -47,7 +47,7 @@ describe("App 主题启动门", () => {
     render(<App />);
 
     expect(screen.getByText("加载外观…")).toBeInTheDocument();
-    expect(screen.queryByText("测试项目")).not.toBeInTheDocument();
+    expect(screen.getByTestId("morfra-titlebar")).toBeInTheDocument();
     expect(loadTheme).toHaveBeenCalledOnce();
   });
 

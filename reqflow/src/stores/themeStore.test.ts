@@ -44,19 +44,19 @@ describe("themeStore", () => {
     const state = useThemeStore.getState();
     expect(state.loaded).toBe(true);
     expect(state.recoveryNotice).toBeNull();
-    expect(state.appliedTheme.palette.ink).toBe("#2B2421");
+    expect(state.appliedTheme.palette.ink).toBe("#1F2937");
   });
 
   it("保存后重新加载会恢复同一份应用级配置", async () => {
     const config = createDefaultTheme();
-    config.palette.green500 = "#4F9200";
+    config.palette.blue500 = "#2A63D4";
 
     expect(await useThemeStore.getState().save(config)).toBe(true);
-    expect(files.get(THEME_PATH)).toContain("#4F9200");
+    expect(files.get(THEME_PATH)).toContain("#2A63D4");
 
     useThemeStore.setState({ appliedTheme: createDefaultTheme(), loaded: false });
     await useThemeStore.getState().load();
-    expect(useThemeStore.getState().appliedTheme.palette.green500).toBe("#4F9200");
+    expect(useThemeStore.getState().appliedTheme.palette.blue500).toBe("#2A63D4");
   });
 
   it("损坏 JSON 时回退默认主题并给出非阻断提示", async () => {
@@ -71,7 +71,7 @@ describe("themeStore", () => {
   });
 
   it("版本不兼容时不读取成应用主题，也不影响已有数据文件", async () => {
-    files.set(THEME_PATH, JSON.stringify({ ...createDefaultTheme(), version: 2 }));
+    files.set(THEME_PATH, JSON.stringify({ ...createDefaultTheme(), version: 1 }));
     files.set("/app-local-data/projects/project-a/schema.json", '{"version":1}');
 
     await useThemeStore.getState().load();
@@ -82,16 +82,16 @@ describe("themeStore", () => {
   });
 
   it("进入设置后复制草稿，编辑草稿不提前改全局主题或磁盘", () => {
-    const before = useThemeStore.getState().appliedTheme.palette.green500;
+    const before = useThemeStore.getState().appliedTheme.palette.blue500;
 
     useThemeStore.getState().beginDraft();
     useThemeStore.getState().updateDraft((theme) => ({
       ...theme,
-      semantic: { ...theme.semantic, actionBase: "#4F9200" },
+      semantic: { ...theme.semantic, actionBase: "#2A63D4" },
     }));
 
-    expect(useThemeStore.getState().draftTheme?.semantic.actionBase).toBe("#4F9200");
-    expect(useThemeStore.getState().appliedTheme.palette.green500).toBe(before);
+    expect(useThemeStore.getState().draftTheme?.semantic.actionBase).toBe("#2A63D4");
+    expect(useThemeStore.getState().appliedTheme.palette.blue500).toBe(before);
     expect(files.size).toBe(0);
   });
 
@@ -101,7 +101,7 @@ describe("themeStore", () => {
     useThemeStore.getState().beginDraft();
     useThemeStore.getState().updateDraft((theme) => ({
       ...theme,
-      semantic: { ...theme.semantic, actionStrong: "#3E7A02" },
+      semantic: { ...theme.semantic, actionStrong: "#2559C7" },
     }));
     useThemeStore.getState().cancelDraft();
 
@@ -123,7 +123,7 @@ describe("themeStore", () => {
 
     useThemeStore.getState().resetDraft();
     expect(await useThemeStore.getState().applyDraft()).toBe(true);
-    expect(files.get(THEME_PATH)).toContain("\"version\": 1");
+    expect(files.get(THEME_PATH)).toContain("\"version\": 2");
   });
 
   it("主题文件保存失败时保留草稿并返回可重试错误", async () => {
@@ -145,19 +145,19 @@ describe("themeStore", () => {
       ...theme,
       semantic: { ...theme.semantic, actionStrong: "#2F6E02" },
     }));
-    useThemeStore.getState().updateModuleOverride("board", "contextSoft", "purple100");
+    useThemeStore.getState().updateModuleOverride("board", "contextSoft", "blue50");
 
     expect(useThemeStore.getState().draftTheme?.moduleOverrides).toEqual({
-      board: { contextSoft: "purple100" },
+      board: { contextSoft: "blue50" },
     });
     expect(await useThemeStore.getState().applyDraft()).toBe(true);
     const persisted = JSON.parse(files.get(THEME_PATH) ?? "{}") as { moduleOverrides?: unknown };
-    expect(persisted.moduleOverrides).toEqual({ board: { contextSoft: "purple100" } });
+    expect(persisted.moduleOverrides).toEqual({ board: { contextSoft: "blue50" } });
 
     useThemeStore.setState({ appliedTheme: createDefaultTheme(), draftTheme: null, loaded: false });
     await useThemeStore.getState().load();
     expect(useThemeStore.getState().appliedTheme.moduleOverrides.board).toEqual({
-      contextSoft: "purple100",
+      contextSoft: "blue50",
     });
     useThemeStore.getState().beginDraft();
 

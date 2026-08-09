@@ -25,24 +25,12 @@ export function isHexColor(value: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(value);
 }
 
-/** 纯白与默认暖白允许，其他中性灰被禁用。 */
-export function isForbiddenGray(value: string): boolean {
-  if (!isHexColor(value)) return false;
-  if (value.toUpperCase() === "#FFFFFF" || value.toUpperCase() === "#FCFCFA") return false;
-  const channels = [
-    Number.parseInt(value.slice(1, 3), 16),
-    Number.parseInt(value.slice(3, 5), 16),
-    Number.parseInt(value.slice(5, 7), 16),
-  ];
-  return Math.max(...channels) - Math.min(...channels) <= 4;
-}
-
 function isPaletteKey(value: string): value is PaletteKey {
   return PALETTE_KEYS.some((key) => key === value);
 }
 
 function isColorReference(value: unknown): value is ThemeColorReference {
-  return typeof value === "string" && (isPaletteKey(value) || (isHexColor(value) && !isForbiddenGray(value)));
+  return typeof value === "string" && (isPaletteKey(value) || isHexColor(value));
 }
 
 function resolveColor(reference: ThemeColorReference, palette: AppThemeConfig["palette"]): string {
@@ -72,14 +60,6 @@ function reservedColorFamily(value: string): ReservedColorFamily {
   if (hue >= 345 || hue < 20) return "red";
   if (hue >= 20 && hue < 75) return "yellow";
   if (hue >= 75 && hue < 185) return "green";
-  return "other";
-}
-
-function structuralColorFamily(value: string): "green" | "purple" | "other" {
-  const hue = colorHue(value, 0.02);
-  if (hue === null) return "other";
-  if (hue >= 75 && hue < 185) return "green";
-  if (hue >= 240 && hue < 330) return "purple";
   return "other";
 }
 
@@ -182,12 +162,6 @@ function collectRoleIssues(config: AppThemeConfig): ThemeValidationIssue[] {
     if (token !== "feedbackDanger" && token !== "feedbackWarning" && (family === "red" || family === "yellow")) {
       return [{ field: "semantic." + token, message: "普通操作和结构角色不能占用红色或黄色保留色" }];
     }
-    if (["actionStrong", "actionBase", "actionSoft"].includes(token) && structuralColorFamily(color) !== "green") {
-      return [{ field: "semantic." + token, message: "操作、悬停和键盘焦点只能使用绿色" }];
-    }
-    if (["contextStrong", "contextSoft"].includes(token) && structuralColorFamily(color) !== "purple") {
-      return [{ field: "semantic." + token, message: "结构与选中状态只能使用紫色" }];
-    }
     return [];
   });
 }
@@ -205,11 +179,11 @@ export function validateThemeConfig(value: unknown): ThemeValidationResult {
 
   for (const key of PALETTE_KEYS) {
     const color = value.palette[key];
-    if (typeof color !== "string" || !isHexColor(color) || isForbiddenGray(color)) {
+    if (typeof color !== "string" || !isHexColor(color)) {
       return {
         valid: false,
         reason: "基础色 " + key + " 无效",
-        issues: [{ field: "palette." + key, message: "基础色 " + key + " 必须是非灰色六位 Hex" }],
+        issues: [{ field: "palette." + key, message: "基础色 " + key + " 必须是六位 Hex" }],
       };
     }
   }

@@ -5,80 +5,80 @@ import { applyTheme, resolveTheme } from "./themeRuntime";
 describe("themeRuntime", () => {
   it("解析 Primitive → Semantic 引用，并写入最终三层 CSS 变量", () => {
     const config = createDefaultTheme();
-    config.palette.green500 = "#4F9200";
+    config.palette.blue500 = "#2A63D4";
     const root = document.createElement("div").style;
 
     const resolved = applyTheme(config, root);
 
-    expect(resolved.semantic.actionBase).toBe("#4F9200");
-    expect(root.getPropertyValue("--semantic-action-base")).toBe("#4F9200");
-    expect(root.getPropertyValue("--semantic-action-soft")).toBe("#F4FAEC");
-    expect(root.getPropertyValue("--semantic-context-soft")).toBe("#F5EFF8");
-    expect(root.getPropertyValue("--module-topbar-action-base")).toBe("#4F9200");
+    expect(resolved.semantic.actionBase).toBe("#2A63D4");
+    expect(root.getPropertyValue("--semantic-action-base")).toBe("#2A63D4");
+    expect(root.getPropertyValue("--semantic-action-soft")).toBe("#E7EFFF");
+    expect(root.getPropertyValue("--semantic-context-soft")).toBe("#E7EFFF");
+    expect(root.getPropertyValue("--module-topbar-action-base")).toBe("#2A63D4");
     expect(root.getPropertyValue("--accent")).toBe("");
     expect(root.getPropertyValue("--st-done-soft")).toBe("");
   });
 
   it("支持语义层使用显式合法色，而不是只限于调色板引用", () => {
     const config = createDefaultTheme();
-    config.semantic.actionBase = "#4F9200";
+    config.semantic.actionBase = "#2A63D4";
 
-    expect(resolveTheme(config).semantic.actionBase).toBe("#4F9200");
+    expect(resolveTheme(config).semantic.actionBase).toBe("#2A63D4");
   });
 
   it("模块未覆盖时继承语义层，显式覆盖只影响对应模块", () => {
     const config = createDefaultTheme();
-    config.moduleOverrides.board = { contextSoft: "purple100" };
+    config.moduleOverrides.board = { contextSoft: "blue100" };
 
     const resolved = resolveTheme(config);
 
-    expect(resolved.modules.board.contextSoft).toBe("#E8DDF0");
-    expect(resolved.modules.detail.contextSoft).toBe("#F5EFF8");
+    expect(resolved.modules.board.contextSoft).toBe("#8FB2FF");
+    expect(resolved.modules.detail.contextSoft).toBe("#E7EFFF");
   });
 
   it("应用全局操作色时所有模块同步，显式选中色覆盖继续保留", () => {
     const config = createDefaultTheme();
-    config.semantic.actionStrong = "#3E7A02";
-    config.moduleOverrides.board = { contextSoft: "purple100" };
+    config.semantic.actionStrong = "#2559C7";
+    config.moduleOverrides.board = { contextSoft: "blue100" };
     const root = document.createElement("div").style;
 
     const resolved = applyTheme(config, root);
     const modules = ["topbar", "board", "detail", "settings", "chat", "business", "feedback"] as const;
 
     for (const moduleName of modules) {
-      expect(resolved.modules[moduleName].actionStrong).toBe("#3E7A02");
-      expect(root.getPropertyValue(`--module-${moduleName}-action-strong`)).toBe("#3E7A02");
+      expect(resolved.modules[moduleName].actionStrong).toBe("#2559C7");
+      expect(root.getPropertyValue(`--module-${moduleName}-action-strong`)).toBe("#2559C7");
     }
-    expect(resolved.modules.board.contextSoft).toBe("#E8DDF0");
-    expect(resolved.modules.detail.contextSoft).toBe("#F5EFF8");
+    expect(resolved.modules.board.contextSoft).toBe("#8FB2FF");
+    expect(resolved.modules.detail.contextSoft).toBe("#E7EFFF");
   });
 
   it("业务与反馈模块也能独立覆盖反馈色并生成对应 CSS 变量", () => {
     const config = createDefaultTheme();
-    config.moduleOverrides.business = { feedbackSuccess: "green500" };
+    config.moduleOverrides.business = { feedbackSuccess: "success" };
     config.moduleOverrides.feedback = { feedbackDanger: "danger" };
     const root = document.createElement("div").style;
 
     const resolved = applyTheme(config, root);
 
-    expect(resolved.modules.business.feedbackSuccess).toBe("#5B9F00");
-    expect(resolved.modules.feedback.feedbackDanger).toBe("#B3261E");
-    expect(root.getPropertyValue("--module-business-feedback-success")).toBe("#5B9F00");
-    expect(root.getPropertyValue("--module-feedback-feedback-danger")).toBe("#B3261E");
+    expect(resolved.modules.business.feedbackSuccess).toBe("#176B3A");
+    expect(resolved.modules.feedback.feedbackDanger).toBe("#C62828");
+    expect(root.getPropertyValue("--module-business-feedback-success")).toBe("#176B3A");
+    expect(root.getPropertyValue("--module-feedback-feedback-danger")).toBe("#C62828");
   });
 
   it("为每个模块写入独立 CSS 变量，清除覆盖后重新跟随语义层", () => {
     const config = createDefaultTheme();
-    config.moduleOverrides.board = { contextSoft: "purple100" };
+    config.moduleOverrides.board = { contextSoft: "blue100" };
     const root = document.createElement("div").style;
 
     applyTheme(config, root);
-    expect(root.getPropertyValue("--module-board-context-soft")).toBe("#E8DDF0");
-    expect(root.getPropertyValue("--module-detail-context-soft")).toBe("#F5EFF8");
+    expect(root.getPropertyValue("--module-board-context-soft")).toBe("#8FB2FF");
+    expect(root.getPropertyValue("--module-detail-context-soft")).toBe("#E7EFFF");
 
     delete config.moduleOverrides.board;
-    config.semantic.contextSoft = "#F2E8F7";
+    config.semantic.contextSoft = "#D6E3FF";
     applyTheme(config, root);
-    expect(root.getPropertyValue("--module-board-context-soft")).toBe("#F2E8F7");
+    expect(root.getPropertyValue("--module-board-context-soft")).toBe("#D6E3FF");
   });
 });

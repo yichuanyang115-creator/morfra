@@ -83,7 +83,7 @@ export function AppearanceSettings({ onClose }: { onClose: () => void }) {
         <div className="mx-auto max-w-2xl">
           <div className="mb-5">
             <h1 className="m-0 text-[16px] font-[590] text-(--module-scope-text-primary)">外观</h1>
-            <p className="m-0 mt-1 text-[12.5px] text-(--module-scope-text-secondary)">调整语义色。灰色不会进入可选颜色，应用前会执行可读性门禁。</p>
+            <p className="m-0 mt-1 text-[12.5px] text-(--module-scope-text-secondary)">调整语义色。中性色可用于结构层级，应用前会执行可读性门禁。</p>
           </div>
           {draftIssues.length > 0 && (
             <div role="alert" className="mb-4 rounded-(--r-md) border border-(--module-scope-feedback-danger) bg-(--module-scope-feedback-danger-soft) p-3">

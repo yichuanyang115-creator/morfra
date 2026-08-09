@@ -11,6 +11,7 @@ import { UndoToast } from "./components/shared/UndoToast";
 import { useUndoKeyboard } from "./hooks/useUndoKeyboard";
 import { isTauriRuntime } from "./lib/ipc/storageClient";
 import { StorageWorkspace } from "./components/storage/StorageWorkspace";
+import { MorfraShell } from "./components/layout/MorfraShell";
 
 function mostRecentRequirementId<T extends { id: string; createdAt: string }>(requirements: T[]): string | null {
   if (requirements.length === 0) return null;
@@ -84,28 +85,19 @@ function App() {
     }
   }, [loadedProjectId, currentProjectId, requirements, selectedRequirementId, selectRequirement]);
 
-  if (!themeLoaded) {
-    return <div className="flex h-screen w-screen items-center justify-center text-(--semantic-text-secondary) text-[13px]">加载外观…</div>;
-  }
-
-  if (projectsError) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center text-(--semantic-text-secondary) text-[13px]">
-        数据读取失败，请检查项目文件夹
+  if (!themeLoaded || projectsError || !projectsLoaded || storageRuntime) {
+    const storageMainContent = !themeLoaded ? (
+      <div className="flex h-full items-center justify-center text-(--module-scope-text-secondary) text-[13px]">加载外观…</div>
+    ) : projectsError ? (
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-(--module-scope-text-secondary) text-[13px]">
+        <span>项目数据读取失败，请检查应用数据目录</span>
+        <button type="button" onClick={() => void initProjects()} className="rounded border border-(--module-scope-border-subtle) px-2.5 py-1.5 text-[12px]">重试</button>
       </div>
-    );
-  }
+    ) : !projectsLoaded ? (
+      <div className="flex h-full items-center justify-center text-(--module-scope-text-secondary) text-[13px]">加载项目…</div>
+    ) : <StorageWorkspace embedded />;
 
-  if (!projectsLoaded) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center text-(--semantic-text-secondary) text-[13px]">
-        加载中…
-      </div>
-    );
-  }
-
-  if (storageRuntime) {
-    return <StorageWorkspace />;
+    return <MorfraShell mainContent={storageMainContent} />;
   }
 
   return (

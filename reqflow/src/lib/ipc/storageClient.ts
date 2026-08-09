@@ -8,6 +8,7 @@ export function isTauriRuntime(): boolean {
     // 测试环境可能只 mock invoke；继续使用全局标记回退。
   }
   if (typeof window === "undefined") return false;
+  if (window.location.protocol === "tauri:") return true;
   const runtime = window as unknown as Record<string, unknown>;
   return "__TAURI_INTERNALS__" in runtime || "__TAURI__" in runtime;
 }

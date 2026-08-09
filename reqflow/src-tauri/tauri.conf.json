@@ -12,10 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "需求管理系统",
+        "title": "Morfra",
         "width": 1280,
         "height": 800,
-        "minWidth": 1127,
+        "minWidth": 960,
         "minHeight": 640
       }
     ],

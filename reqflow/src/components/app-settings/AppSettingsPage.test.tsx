@@ -37,12 +37,14 @@ describe("AppSettingsPage 外观草稿", () => {
     const onSelectSection = vi.fn<(section: AppSettingsSection) => void>();
     render(<AppSettingsPage section="appearance" onSelectSection={onSelectSection} onClose={onClose} />);
 
-    const input = await screen.findByDisplayValue("green600");
+    const input = document.querySelector<HTMLInputElement>("#theme-color-actionStrong");
+    expect(input).not.toBeNull();
+    if (!input) return;
     await user.clear(input);
-    await user.type(input, "#4F9200");
+    await user.type(input, "#2A63D4");
 
-    expect(useThemeStore.getState().draftTheme?.semantic.actionStrong).toBe("#4F9200");
-    expect(useThemeStore.getState().appliedTheme.semantic.actionStrong).toBe("green600");
+    expect(useThemeStore.getState().draftTheme?.semantic.actionStrong).toBe("#2A63D4");
+    expect(useThemeStore.getState().appliedTheme.semantic.actionStrong).toBe("blue700");
     expect(screen.getByText("综合预览")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "取消" }));
@@ -54,7 +56,9 @@ describe("AppSettingsPage 外观草稿", () => {
     const user = userEvent.setup();
     render(<AppSettingsPage section="appearance" onSelectSection={vi.fn()} onClose={vi.fn()} />);
 
-    const input = await screen.findByDisplayValue("green600");
+    const input = document.querySelector<HTMLInputElement>("#theme-color-actionStrong");
+    expect(input).not.toBeNull();
+    if (!input) return;
     await user.clear(input);
     await user.type(input, "#B3261E");
 
@@ -84,8 +88,8 @@ describe("AppSettingsPage 外观草稿", () => {
 
     const selectedBackground = screen.getByLabelText(/选中背景/);
     await user.clear(selectedBackground);
-    await user.type(selectedBackground, "purple100");
-    expect(useThemeStore.getState().draftTheme?.moduleOverrides.board?.contextSoft).toBe("purple100");
+    await user.type(selectedBackground, "blue100");
+    expect(useThemeStore.getState().draftTheme?.moduleOverrides.board?.contextSoft).toBe("blue100");
 
     await user.click(screen.getByRole("button", { name: "恢复跟随主题" }));
     expect(useThemeStore.getState().draftTheme?.moduleOverrides.board).toBeUndefined();

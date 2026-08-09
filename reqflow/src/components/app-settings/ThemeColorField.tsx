@@ -24,7 +24,7 @@ export function ThemeColorField({ token, label, value, error, idPrefix = "theme"
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
-        placeholder="如 green600"
+        placeholder="如 blue500"
         className={
           "h-8 rounded-(--r-sm) border bg-(--module-scope-background-surface) px-2.5 font-(family-name:--font-mono) text-[12px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base) " +
           (error ? "border-(--module-scope-feedback-danger)" : "border-(--module-scope-border-strong)")
