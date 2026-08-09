@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::backup;
 use super::error::{StorageError, StorageErrorCode};
-use super::{migrations, repository};
+use super::{migrations, repository, validation};
 
 pub const PROJECT_MANIFEST_FILE: &str = "project.json";
 pub const DATABASE_FILE: &str = "morfra.sqlite3";
@@ -102,10 +102,27 @@ pub fn create_project(
         let mut connection = open_connection(&paths)?;
         repository::initialize_blank_project(&mut connection, &manifest)
     })();
-    if result.is_err() && root_was_new {
-        let _ = fs::remove_dir_all(&paths.root);
+    if result.is_err() {
+        cleanup_failed_creation(&paths, root_was_new);
     }
     result
+}
+
+fn cleanup_failed_creation(paths: &ProjectPaths, remove_root: bool) {
+    for path in [
+        &paths.manifest,
+        &paths.database,
+        &paths.root.join("morfra.sqlite3-shm"),
+        &paths.root.join("morfra.sqlite3-wal"),
+        &paths.root.join("project.json.tmp"),
+    ] {
+        let _ = fs::remove_file(path);
+    }
+    let _ = fs::remove_dir_all(&paths.attachments);
+    let _ = fs::remove_dir_all(&paths.backups);
+    if remove_root {
+        let _ = fs::remove_dir_all(&paths.root);
+    }
 }
 
 pub fn open_project(root: &Path) -> Result<OpenProject, StorageError> {
@@ -115,6 +132,7 @@ pub fn open_project(root: &Path) -> Result<OpenProject, StorageError> {
     validate_manifest(&manifest)?;
     let connection = open_connection(&paths)?;
     repository::validate_project_identity(&connection, &manifest)?;
+    validation::validate_project_structure(&connection)?;
     backup::ensure_daily_backup(&paths, &manifest, &connection)?;
     Ok(OpenProject {
         manifest,
@@ -185,7 +203,7 @@ pub(crate) fn timestamp() -> String {
 mod tests {
     use std::fs;
 
-    use super::{create_project, open_project, ProjectPaths};
+    use super::{cleanup_failed_creation, create_project, open_project, ProjectPaths};
     use crate::storage::repository::load_snapshot;
 
     fn temporary_path(label: &str) -> std::path::PathBuf {
@@ -205,12 +223,41 @@ mod tests {
         assert_eq!(reopened_snapshot.tables[0].views.len(), 1);
         assert!(ProjectPaths::existing(&root)
             .expect("paths")
+            .manifest
+            .is_file());
+        assert!(ProjectPaths::existing(&root)
+            .expect("paths")
+            .database
+            .is_file());
+        assert!(ProjectPaths::existing(&root)
+            .expect("paths")
             .attachments
             .is_dir());
         assert!(ProjectPaths::existing(&root)
             .expect("paths")
             .backups
             .is_dir());
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn failed_creation_cleanup_removes_generated_package_artifacts() {
+        let root = temporary_path("cleanup");
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).expect("root");
+        let paths = ProjectPaths::new(&root).expect("paths");
+        paths.initialize_directories().expect("directories");
+        fs::write(&paths.manifest, "partial").expect("manifest");
+        fs::write(&paths.database, "partial").expect("database");
+        fs::write(root.join("morfra.sqlite3-wal"), "partial").expect("wal");
+
+        cleanup_failed_creation(&paths, false);
+
+        assert!(root.is_dir());
+        assert!(!paths.manifest.exists());
+        assert!(!paths.database.exists());
+        assert!(!paths.attachments.exists());
+        assert!(!paths.backups.exists());
         fs::remove_dir_all(root).expect("cleanup");
     }
 }

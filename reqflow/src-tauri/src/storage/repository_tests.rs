@@ -1,6 +1,7 @@
 use super::{create_table, create_table_for_test, initialize_blank_project, load_snapshot};
 use crate::storage::connection::ProjectManifest;
 use crate::storage::migrations::{apply_pending_migrations, configure_connection};
+use crate::storage::undo::{UndoAction, UndoStack};
 
 fn database() -> (rusqlite::Connection, ProjectManifest) {
     let mut connection = rusqlite::Connection::open_in_memory().expect("database");
@@ -53,5 +54,36 @@ fn table_creation_produces_undoable_minimal_model() {
             .tables
             .len(),
         1
+    );
+}
+
+#[test]
+fn undo_removes_the_created_table_and_keeps_the_default_table() {
+    let (mut connection, manifest) = database();
+    let created = create_table(&mut connection, "可撤销表").expect("table");
+    let mut undo = UndoStack::default();
+    undo.push(UndoAction::DeleteTable {
+        table_id: created.id,
+    });
+
+    undo.undo(&mut connection).expect("undo");
+
+    let snapshot = load_snapshot(&connection, &manifest).expect("snapshot");
+    assert_eq!(snapshot.tables.len(), 1);
+    assert_eq!(snapshot.tables[0].name, "未命名表");
+}
+
+#[test]
+fn opening_a_project_with_no_title_field_is_rejected_as_corrupt() {
+    let (connection, _manifest) = database();
+    connection
+        .execute("DELETE FROM fields WHERE is_title = 1", [])
+        .expect("delete title");
+
+    let error = crate::storage::validation::validate_project_structure(&connection)
+        .expect_err("corrupt project");
+    assert_eq!(
+        error.code,
+        crate::storage::error::StorageErrorCode::DatabaseCorrupt
     );
 }

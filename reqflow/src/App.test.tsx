@@ -40,6 +40,7 @@ describe("App 主题启动门", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    delete (window as unknown as Record<string, unknown>)["__TAURI_INTERNALS__"];
   });
 
   it("主题未恢复前不渲染主界面", () => {
@@ -67,5 +68,43 @@ describe("App 主题启动门", () => {
       await vi.advanceTimersByTimeAsync(2500);
     });
     expect(acknowledgeRecovery).toHaveBeenCalledOnce();
+  });
+
+  it("Tauri 运行时展示 SQLite 项目包工作区而不是旧 Markdown 看板", () => {
+    Object.defineProperty(window, "__TAURI_INTERNALS__", { value: {}, configurable: true });
+    useThemeStore.setState({ loaded: true, recoveryNotice: null, load: loadTheme, acknowledgeRecovery });
+    useProjectStore.setState({
+      projects: [
+        {
+          id: "folder-1",
+          name: "本地 Morfra",
+          sources: [],
+          storageSnapshot: {
+            manifest: { id: "project-1", name: "本地 Morfra", formatVersion: 1, createdAt: "1", updatedAt: "1" },
+            tables: [
+              {
+                id: "table-1",
+                name: "未命名表",
+                position: 0,
+                titleFieldId: "field-1",
+                recordCount: 0,
+                views: [{ id: "view-1", name: "表格", viewType: "table", position: 0 }],
+              },
+            ],
+          },
+        },
+      ],
+      currentProjectId: "folder-1",
+      loaded: true,
+      error: false,
+      init: initProjects,
+    });
+
+    render(<App />);
+
+    expect(screen.getByTestId("storage-workspace")).toBeInTheDocument();
+    expect(screen.getAllByText("本地 Morfra")).toHaveLength(2);
+    expect(screen.getByText("Morfra 本地项目包")).toBeInTheDocument();
+    expect(screen.queryByText("需求看板")).not.toBeInTheDocument();
   });
 });

@@ -28,7 +28,7 @@ pub fn apply_pending_migrations(
             applied_at TEXT NOT NULL
         );",
     )?;
-    let current_version: i64 = connection.query_row(
+    let mut current_version: i64 = connection.query_row(
         "SELECT COALESCE(MAX(version), 0) FROM schema_migrations",
         [],
         |row| row.get(0),
@@ -81,6 +81,7 @@ pub fn apply_pending_migrations(
                 false,
             )
         })?;
+        current_version = *version;
     }
     Ok(())
 }

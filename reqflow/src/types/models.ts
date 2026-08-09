@@ -1,7 +1,11 @@
+import type { ProjectSnapshot } from "./domain";
+
 export interface Project {
   id: string;
   name: string;
   sources: string[];
+  /** v3 Tauri 项目包快照；旧 Markdown 回退模式不设置。 */
+  storageSnapshot?: ProjectSnapshot;
 }
 
 /**

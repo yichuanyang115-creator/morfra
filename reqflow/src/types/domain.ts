@@ -1,4 +1,5 @@
 export type ViewType = "table" | "board";
+export type FieldType = "text";
 
 export interface ProjectManifest {
   id: string;
@@ -13,6 +14,21 @@ export interface ViewSummary {
   name: string;
   viewType: ViewType;
   position: number;
+}
+
+export interface FieldSummary {
+  id: string;
+  name: string;
+  fieldType: FieldType;
+  isTitle: boolean;
+  position: number;
+}
+
+export interface RecordSummary {
+  id: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TableSummary {

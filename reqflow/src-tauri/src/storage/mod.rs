@@ -6,6 +6,7 @@ pub mod error;
 pub mod migrations;
 pub mod repository;
 pub mod undo;
+pub mod validation;
 
 use std::path::PathBuf;
 

@@ -1,5 +1,16 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { BackupInfo, BenchmarkReport, ProjectSnapshot } from "../../types/domain";
+
+export function isTauriRuntime(): boolean {
+  try {
+    if (isTauri()) return true;
+  } catch {
+    // 测试环境可能只 mock invoke；继续使用全局标记回退。
+  }
+  if (typeof window === "undefined") return false;
+  const runtime = window as unknown as Record<string, unknown>;
+  return "__TAURI_INTERNALS__" in runtime || "__TAURI__" in runtime;
+}
 
 export interface CreateProjectInput {
   path: string;

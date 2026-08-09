@@ -8,6 +8,7 @@ pub enum StorageErrorCode {
     ProjectAlreadyExists,
     ProjectNotFound,
     InvalidProjectManifest,
+    DatabaseCorrupt,
     MigrationFailed,
     DatabaseError,
     IoError,

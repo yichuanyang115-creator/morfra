@@ -9,6 +9,8 @@ import { useThemeStore } from "./stores/themeStore";
 import { Toast } from "./components/shared/Toast";
 import { UndoToast } from "./components/shared/UndoToast";
 import { useUndoKeyboard } from "./hooks/useUndoKeyboard";
+import { isTauriRuntime } from "./lib/ipc/storageClient";
+import { StorageWorkspace } from "./components/storage/StorageWorkspace";
 
 function mostRecentRequirementId<T extends { id: string; createdAt: string }>(requirements: T[]): string | null {
   if (requirements.length === 0) return null;
@@ -16,6 +18,7 @@ function mostRecentRequirementId<T extends { id: string; createdAt: string }>(re
 }
 
 function App() {
+  const storageRuntime = isTauriRuntime();
   const [undoSummary, setUndoSummary] = useState<string | null>(null);
   const showUndoToast = useCallback((summary: string) => setUndoSummary(summary), []);
   useUndoKeyboard(showUndoToast);
@@ -48,24 +51,27 @@ function App() {
   }, [initProjects]);
 
   useEffect(() => {
+    if (storageRuntime) return;
     if (currentProjectId && currentProjectId !== loadedProjectId) {
       void loadForProject(currentProjectId);
     }
-  }, [currentProjectId, loadedProjectId, loadForProject]);
+  }, [currentProjectId, loadedProjectId, loadForProject, storageRuntime]);
 
   // REQ-029：打开项目时检测并静默补齐等价 Schema（无 schema.json 即旧项目），迁移发生后弹 toast。
   useEffect(() => {
+    if (storageRuntime) return;
     if (currentProjectId && currentProjectId !== schemaLoadedProjectId) {
       void loadSchemaForProject(currentProjectId, project?.sources ?? []);
     }
-  }, [currentProjectId, schemaLoadedProjectId, loadSchemaForProject, project]);
+  }, [currentProjectId, schemaLoadedProjectId, loadSchemaForProject, project, storageRuntime]);
 
   // REQ-024 v2.7：对话框状态和记录按项目落盘，切换项目时跟需求列表一样重新加载。
   useEffect(() => {
+    if (storageRuntime) return;
     if (currentProjectId && currentProjectId !== chatLoadedProjectId) {
       void loadChatForProject(currentProjectId);
     }
-  }, [currentProjectId, chatLoadedProjectId, loadChatForProject]);
+  }, [currentProjectId, chatLoadedProjectId, loadChatForProject, storageRuntime]);
 
   // REQ-004 MUST：右栏默认显示最近操作的需求。项目切换后 selectedRequirementId
   // 会指向已不存在于当前需求列表里的旧需求，此时也要重新选中当前项目最近操作的需求。
@@ -96,6 +102,10 @@ function App() {
         加载中…
       </div>
     );
+  }
+
+  if (storageRuntime) {
+    return <StorageWorkspace />;
   }
 
   return (
