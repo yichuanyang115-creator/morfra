@@ -1,63 +1,37 @@
-import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { currentProject, useProjectStore } from "../../stores/projectStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { calculateWindowLayout, PANEL_RESIZER_WIDTH, type WindowLayout } from "../../lib/layout/windowLayout";
 import { useLayoutStore, type AppearanceMode } from "../../stores/layoutStore";
 import { applyAccessibilityPreferences, applyAppearanceMode, subscribeToAccessibilityPreferences, subscribeToSystemAppearance } from "../../lib/layout/appearance";
 import { WindowTitlebar } from "./WindowTitlebar";
 import { RightPanelHost } from "./RightPanelHost";
 import { LayoutResizer } from "./LayoutResizer";
+import { ProjectSwitcher } from "../sidebar/ProjectSwitcher";
+import { TableList } from "../sidebar/TableList";
 
 interface MorfraShellProps {
   mainContent: ReactNode;
 }
 
 function ProjectSidebar({ onProjectSelected }: { onProjectSelected?: () => void }) {
-  const projects = useProjectStore((state) => state.projects);
   const project = useProjectStore(currentProject);
-  const switchProject = useProjectStore((state) => state.switchProject);
-  const createProject = useProjectStore((state) => state.createProject);
-  const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleCreate(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const nextName = name.trim();
-    if (!nextName) return;
-    setError(null);
-    try {
-      await createProject(nextName);
-      setName("");
-    } catch {
-      setError("项目创建失败，请重试");
-    }
-  }
-
-  async function handleSwitch(id: string) {
-    setError(null);
-    try {
-      await switchProject(id);
-      onProjectSelected?.();
-    } catch {
-      setError("项目打开失败，请检查项目包完整性");
-    }
-  }
+  const canUndo = useProjectStore((state) => state.canUndo);
+  const createTable = useProjectStore((state) => state.createTable);
+  const renameTable = useProjectStore((state) => state.renameTable);
+  const deleteTable = useProjectStore((state) => state.deleteTable);
+  const reorderTables = useProjectStore((state) => state.reorderTables);
+  const undoStorageChange = useProjectStore((state) => state.undoStorageChange);
+  const activeTableId = useWorkspaceStore((state) => project ? state.activeTableByProject[project.id] ?? null : null);
+  const setActiveTable = useWorkspaceStore((state) => state.setActiveTable);
+  const tables = project?.storageSnapshot?.tables ?? [];
 
   return (
     <aside className="morfra-sidebar" data-testid="morfra-sidebar" aria-label="项目导航">
-      <div className="morfra-sidebar-heading"><span>项目</span><span className="morfra-sidebar-count">{projects.length}</span></div>
-      <div className="morfra-sidebar-projects">
-        {projects.map((item) => <button type="button" key={item.id} className={`morfra-project-item ${item.id === project?.id ? "is-active" : ""}`} aria-current={item.id === project?.id ? "page" : undefined} onClick={() => void handleSwitch(item.id)}><span className="morfra-project-dot" /> <span className="morfra-project-name">{item.name}</span></button>)}
-      </div>
-      <div className="morfra-sidebar-section">
-        <div className="morfra-sidebar-label">当前表</div>
-        {project?.storageSnapshot?.tables[0] ? <div className="morfra-table-item is-active"><span className="morfra-table-icon">▦</span><span className="morfra-project-name">{project.storageSnapshot.tables[0].name}</span></div> : <div className="morfra-sidebar-empty">没有打开的表</div>}
-        {project?.storageSnapshot?.tables[0]?.views[0] && <div className="morfra-view-item"><span className="morfra-view-icon">≡</span>{project.storageSnapshot.tables[0].views[0].name}</div>}
-      </div>
-      <form className="morfra-sidebar-create" onSubmit={(event) => void handleCreate(event)}>
-        <input aria-label="新建 Morfra 项目名称" value={name} onChange={(event) => setName(event.target.value)} placeholder="新建项目" />
-        <button type="submit" aria-label="创建项目">＋</button>
-      </form>
-      {error && <p className="morfra-sidebar-error" role="alert">{error}</p>}
+      {project?.storageSnapshot && <div className="morfra-sidebar-scope">Morfra 本地项目包</div>}
+      <div className="morfra-sidebar-heading"><span>项目</span></div>
+      <ProjectSwitcher onProjectSelected={onProjectSelected} closeOnClick={Boolean(onProjectSelected)} />
+      {project ? <TableList tables={tables} activeTableId={activeTableId} canUndo={canUndo} onSelect={(id) => setActiveTable(project.id, id)} onCreate={createTable} onRename={renameTable} onDelete={deleteTable} onReorder={reorderTables} onUndo={undoStorageChange} /> : <div className="morfra-sidebar-empty">没有打开的项目</div>}
     </aside>
   );
 }

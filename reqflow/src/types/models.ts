@@ -4,6 +4,8 @@ export interface Project {
   id: string;
   name: string;
   sources: string[];
+  /** Tauri 项目包的真实本地路径；旧 Markdown 回退模式不设置。 */
+  storagePath?: string;
   /** v3 Tauri 项目包快照；旧 Markdown 回退模式不设置。 */
   storageSnapshot?: ProjectSnapshot;
 }

@@ -1,0 +1,26 @@
+import { useState } from "react";
+import type { TableSummary } from "../../types/domain";
+
+interface TableHeaderProps {
+  table: TableSummary;
+  onRename: (name: string) => Promise<void>;
+}
+
+export function TableHeader({ table, onRename }: TableHeaderProps) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(table.name);
+
+  async function commit() {
+    const nextName = name.trim();
+    if (nextName && nextName !== table.name) await onRename(nextName);
+    setEditing(false);
+  }
+
+  return <header className="morfra-table-header">
+    <div className="morfra-table-header-main">
+      <span className="morfra-table-header-kicker">表</span>
+      {editing ? <input autoFocus aria-label="表名称" value={name} onChange={(event) => setName(event.target.value)} onBlur={() => void commit()} onKeyDown={(event) => { if (event.key === "Enter") void commit(); if (event.key === "Escape") { setName(table.name); setEditing(false); } }} className="morfra-table-title-input" /> : <button type="button" className="morfra-table-title-button" onClick={() => { setName(table.name); setEditing(true); }}>{table.name}</button>}
+    </div>
+    <span className="morfra-table-record-count">{table.recordCount} 条记录</span>
+  </header>;
+}

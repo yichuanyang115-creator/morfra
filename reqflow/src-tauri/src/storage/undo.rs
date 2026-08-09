@@ -2,10 +2,12 @@ use rusqlite::Connection;
 
 use super::error::{StorageError, StorageErrorCode};
 use super::repository;
+use super::table_backup::{self, DeletedTable};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UndoAction {
     DeleteTable { table_id: String },
+    RestoreTable { table: DeletedTable },
 }
 
 #[derive(Default)]
@@ -37,7 +39,10 @@ impl UndoStack {
         };
         let result = match &action {
             UndoAction::DeleteTable { table_id } => {
-                repository::delete_table(connection, table_id).map(|()| "已撤销新建表".to_string())
+                repository::delete_table(connection, table_id).map(|_| "已撤销新建表".to_string())
+            }
+            UndoAction::RestoreTable { table } => {
+                table_backup::restore_table(connection, table).map(|()| "已撤销删除表".to_string())
             }
         };
         if result.is_err() {

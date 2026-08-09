@@ -28,6 +28,15 @@ pub fn run() {
             storage::commands::storage_backup_project,
             storage::commands::storage_list_backups,
             storage::commands::storage_restore_project,
+            storage::lifecycle_commands::storage_rename_project,
+            storage::lifecycle_commands::storage_rename_table,
+            storage::lifecycle_commands::storage_delete_table,
+            storage::lifecycle_commands::storage_reorder_tables,
+            storage::lifecycle_commands::storage_create_view,
+            storage::lifecycle_commands::storage_rename_view,
+            storage::lifecycle_commands::storage_duplicate_view,
+            storage::lifecycle_commands::storage_delete_view,
+            storage::lifecycle_commands::storage_reorder_views,
         ])
         .setup(|app| {
             // 调试模式自动弹出 WebView devtools 面板，本机右键菜单没有触发出

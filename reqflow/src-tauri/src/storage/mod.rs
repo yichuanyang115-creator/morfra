@@ -3,8 +3,11 @@ pub mod benchmark;
 pub mod commands;
 pub mod connection;
 pub mod error;
+pub mod lifecycle;
+pub mod lifecycle_commands;
 pub mod migrations;
 pub mod repository;
+pub mod table_backup;
 pub mod undo;
 pub mod validation;
 

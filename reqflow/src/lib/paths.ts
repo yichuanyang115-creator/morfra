@@ -7,6 +7,7 @@ const SCHEMA_FILE = "schema.json";
 const TEMPLATES_DIR = "templates";
 const TEMPLATES_INITIALIZED_FILE = ".initialized";
 const THEME_FILE = "theme.json";
+const RECENT_PROJECTS_FILE = "recent-projects.json";
 
 export async function projectsRootDir(): Promise<string> {
   const base = await appLocalDataDir();
@@ -48,6 +49,10 @@ export async function templatesInitializedPath(): Promise<string> {
 /** 应用级外观配置：不属于任何项目，不写进 schema 或 Markdown。 */
 export async function themePath(): Promise<string> {
   return join(await appLocalDataDir(), THEME_FILE);
+}
+
+export async function recentProjectsPath(): Promise<string> {
+  return join(await appLocalDataDir(), RECENT_PROJECTS_FILE);
 }
 
 export function requirementFileName(requirementId: string): string {

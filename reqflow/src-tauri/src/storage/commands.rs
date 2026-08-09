@@ -11,7 +11,7 @@ use super::repository::{self, ProjectSnapshot};
 use super::undo::UndoAction;
 use super::StorageState;
 
-fn active_project_path(state: &Mutex<StorageState>) -> Result<PathBuf, StorageError> {
+pub(crate) fn active_project_path(state: &Mutex<StorageState>) -> Result<PathBuf, StorageError> {
     state
         .lock()
         .map_err(|_| {

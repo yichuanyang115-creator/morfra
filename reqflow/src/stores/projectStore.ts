@@ -1,116 +1,46 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
 import { DEFAULT_SOURCES, type Project } from "../types/models";
-import { ensureDir, listDirNames, readFile, removeDir, writeFile } from "../lib/fs";
-import { parseFrontmatter, stringifyFrontmatter } from "../lib/frontmatter";
-import { projectDir, projectMetaPath, projectsRootDir, schemaPath } from "../lib/paths";
-import { blankSchema, legacyEquivalentSchema, schemaFromSnapshot } from "../lib/schemaDefaults";
-import type { SchemaTemplate } from "../types/templates";
-import type { Schema } from "../types/schema";
-import {
-  closeStorageProject,
-  createStorageProject,
-  createStorageTable,
-  isTauriRuntime,
-  openStorageProject,
-  undoStorageChange,
-} from "../lib/ipc/storageClient";
 import type { ProjectSnapshot } from "../types/domain";
+import type { SchemaTemplate } from "../types/templates";
+import { ensureDir, listDirNames, removeDir } from "../lib/fs";
+import { projectDir, projectsRootDir } from "../lib/paths";
+import { closeStorageProject, createStorageTable, createStorageView, deleteStorageTable, deleteStorageView, duplicateStorageView, isTauriRuntime, renameStorageProject, renameStorageTable, renameStorageView, reorderStorageTables, reorderStorageViews, undoStorageChange, } from "../lib/ipc/storageClient";
+import { loadRecentProjects, removeRecentProject as removeRecentRecord, touchRecentProject } from "../lib/recentProjects";
+import { emitTableDeleted } from "../lib/tableLifecycleEvents";
+import { createDefaultLegacyProject, createStorageProjectFromName, initLegacySchema, legacySchemaForTemplate, loadLegacyProject, loadStorageProjects, openStorageProjectAt, reorderRecentProjects, saveLegacyProject, updateProjectSnapshot } from "./projectStoreHelpers";
 
-const DEFAULT_PROJECT_NAME = "默认项目";
-
-interface ProjectFrontmatter {
-  id: string;
-  name: string;
-  sources?: string[];
-}
-
-interface ProjectState {
+export interface ProjectState {
   projects: Project[];
   currentProjectId: string | null;
   loaded: boolean;
   initializing: boolean;
   error: boolean;
+  canUndo: boolean;
   init: () => Promise<void>;
   switchProject: (id: string) => Promise<void>;
+  openProject: (path: string) => Promise<void>;
   createProject: (name: string, template?: SchemaTemplate) => Promise<void>;
   renameProject: (id: string, name: string) => Promise<void>;
+  removeRecentProject: (id: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   closeProject: () => Promise<void>;
   createTable: (name: string) => Promise<void>;
+  renameTable: (tableId: string, name: string) => Promise<void>;
+  deleteTable: (tableId: string) => Promise<void>;
+  reorderTables: (tableIds: string[]) => Promise<void>;
+  createView: (tableId: string, name: string, viewType: "table" | "board") => Promise<void>;
+  renameView: (viewId: string, name: string) => Promise<void>;
+  duplicateView: (viewId: string, name: string) => Promise<void>;
+  deleteView: (viewId: string) => Promise<void>;
+  reorderViews: (tableId: string, viewIds: string[]) => Promise<void>;
   undoStorageChange: () => Promise<void>;
 }
 
-async function loadProject(id: string): Promise<Project | null> {
-  const metaPath = await projectMetaPath(id);
-  const raw = await readFile(metaPath);
-  if (raw === null) return null;
-  const { data } = parseFrontmatter<ProjectFrontmatter>(raw);
-  return { id: data.id ?? id, name: data.name ?? id, sources: data.sources ?? DEFAULT_SOURCES };
-}
-
-async function saveProject(project: Project): Promise<void> {
-  const dir = await projectDir(project.id);
-  await ensureDir(dir);
-  const metaPath = await projectMetaPath(project.id);
-  const frontmatter: ProjectFrontmatter = { id: project.id, name: project.name, sources: project.sources };
-  await writeFile(metaPath, stringifyFrontmatter(frontmatter, ""));
-}
-
-/** 新建项目时同步写入完整 Schema：空白项目与模板项目都不依赖后续迁移补齐。 */
-async function initSchema(projectId: string, schema: Schema): Promise<void> {
-  const path = await schemaPath(projectId);
-  await writeFile(path, JSON.stringify(schema, null, 2));
-}
-
-async function createDefaultProject(): Promise<Project> {
-  const project: Project = { id: nanoid(), name: DEFAULT_PROJECT_NAME, sources: DEFAULT_SOURCES };
-  await saveProject(project);
-  await initSchema(project.id, legacyEquivalentSchema(project.sources));
-  return project;
-}
-
-function storageProject(folderId: string, snapshot: ProjectSnapshot): Project {
-  return {
-    id: folderId,
-    name: snapshot.manifest.name,
-    sources: [],
-    storageSnapshot: snapshot,
-  };
-}
-
-async function createStorageProjectFromName(name: string): Promise<Project> {
-  const folderId = nanoid();
-  const path = await projectDir(folderId);
-  const snapshot = await createStorageProject({ path, name });
-  return storageProject(folderId, snapshot);
-}
-
-async function loadStorageProjects(): Promise<Project[]> {
-  const root = await projectsRootDir();
-  await ensureDir(root);
-  const folderIds = await listDirNames(root);
-  const projects: Project[] = [];
-
-  for (const folderId of folderIds) {
-    try {
-      const snapshot = await openStorageProject(await projectDir(folderId));
-      projects.push(storageProject(folderId, snapshot));
-    } catch {
-      // 旧 Markdown 项目或损坏的 Morfra 包不进入 v3 项目列表，避免把坏项目当成空项目。
-    }
-  }
-
-  if (projects.length === 0) {
-    projects.push(await createStorageProjectFromName(DEFAULT_PROJECT_NAME));
-  } else {
-    // 启动扫描按顺序打开多个项目，最后一次 IPC 会留下最后一个 active_project；
-    // 当前 UI 默认展示第一个项目，因此必须把 Rust 会话重新对齐到它。
-    const firstProject = projects[0];
-    const snapshot = await openStorageProject(await projectDir(firstProject.id));
-    projects[0] = { ...firstProject, name: snapshot.manifest.name, storageSnapshot: snapshot };
-  }
-  return projects;
+function replaceCurrentSnapshot(set: (partial: Partial<ProjectState>) => void, get: () => ProjectState, snapshot: ProjectSnapshot): void {
+  const currentId = get().currentProjectId;
+  if (!currentId) return;
+  set({ projects: updateProjectSnapshot(get().projects, currentId, snapshot) });
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -119,131 +49,169 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   loaded: false,
   initializing: false,
   error: false,
+  canUndo: false,
 
   init: async () => {
     if (get().loaded || get().initializing) return;
     set({ initializing: true, error: false });
-
     try {
       if (isTauriRuntime()) {
         const projects = await loadStorageProjects();
-        set({ projects, currentProjectId: projects[0].id, loaded: true, initializing: false });
+        set({ projects, currentProjectId: projects[0]?.id ?? null, loaded: true, initializing: false, canUndo: false });
         return;
       }
-
       const root = await projectsRootDir();
       await ensureDir(root);
       const ids = await listDirNames(root);
-
-      // 单个项目元数据解析失败不该拖垮整个项目列表，逐个隔离捕获、跳过坏项目
-      const loaded = await Promise.all(ids.map((id) => loadProject(id).catch(() => null)));
-      let projects = loaded.filter((p): p is Project => p !== null);
-
-      if (projects.length === 0) {
-        const defaultProject = await createDefaultProject();
-        projects = [defaultProject];
-      }
-
-      set({ projects, currentProjectId: projects[0].id, loaded: true, initializing: false });
+      const loaded = await Promise.all(ids.map((id) => loadLegacyProject(id).catch(() => null)));
+      let projects = loaded.filter((project): project is Project => project !== null);
+      if (projects.length === 0) projects = [await createDefaultLegacyProject()];
+      set({ projects, currentProjectId: projects[0].id, loaded: true, initializing: false, canUndo: false });
     } catch {
       set({ initializing: false, error: true });
     }
   },
 
   switchProject: async (id) => {
-    if (get().projects.some((p) => p.id === id)) {
-      if (isTauriRuntime()) {
-        const snapshot = await openStorageProject(await projectDir(id));
-        set((state) => ({
-          projects: state.projects.map((project) =>
-            project.id === id ? { ...project, name: snapshot.manifest.name, storageSnapshot: snapshot } : project,
-          ),
-        }));
-      }
-      set({ currentProjectId: id });
+    const target = get().projects.find((project) => project.id === id);
+    if (!target) return;
+    if (isTauriRuntime() && target.storagePath) {
+      const project = await openStorageProjectAt(target.storagePath);
+      const recent = await loadRecentProjects();
+      const projects = await reorderRecentProjects(get().projects.map((item) => item.id === id ? project : item), recent);
+      set({ projects, currentProjectId: project.id, canUndo: false });
+      return;
     }
+    set({ currentProjectId: id, canUndo: false });
+  },
+
+  openProject: async (path) => {
+    if (!isTauriRuntime()) return;
+    const project = await openStorageProjectAt(path);
+    const existing = get().projects.filter((item) => item.id !== project.id);
+    const projects = await reorderRecentProjects([project, ...existing], await loadRecentProjects());
+    set({ projects, currentProjectId: project.id, canUndo: false });
   },
 
   createProject: async (name, template) => {
     if (isTauriRuntime()) {
       const project = await createStorageProjectFromName(name);
-      set((state) => ({
-        projects: [...state.projects, project],
-        currentProjectId: project.id,
-      }));
+      set({ projects: [project, ...get().projects], currentProjectId: project.id, canUndo: false });
       return;
     }
-
-    const project: Project = { id: nanoid(), name, sources: DEFAULT_SOURCES };
-    await saveProject(project);
-    await initSchema(project.id, template ? schemaFromSnapshot(template.schemaSnapshot) : blankSchema());
-    set((state) => ({
-      projects: [...state.projects, project],
-      currentProjectId: project.id,
-    }));
+    const project: Project = { id: nanoid(), name: name.trim(), sources: DEFAULT_SOURCES };
+    await saveLegacyProject(project);
+    await initLegacySchema(project.id, legacySchemaForTemplate(template));
+    set({ projects: [...get().projects, project], currentProjectId: project.id, canUndo: false });
   },
 
   renameProject: async (id, name) => {
     if (isTauriRuntime()) {
-      throw new Error("Morfra 项目重命名将在项目管理阶段接入");
+      const target = get().projects.find((project) => project.id === id);
+      if (!target?.storagePath) return;
+      if (get().currentProjectId !== id) await get().switchProject(id);
+      const snapshot = await renameStorageProject(name);
+      replaceCurrentSnapshot(set, get, snapshot);
+      await touchRecentProject({ id, path: target.storagePath, name: snapshot.manifest.name });
+      return;
     }
-    const project = get().projects.find((p) => p.id === id);
+    const project = get().projects.find((item) => item.id === id);
     if (!project) return;
-    const updated: Project = { ...project, name };
-    await saveProject(updated);
-    set((state) => ({
-      projects: state.projects.map((p) => (p.id === id ? updated : p)),
-    }));
+    const updated = { ...project, name: name.trim() };
+    await saveLegacyProject(updated);
+    set({ projects: get().projects.map((item) => item.id === id ? updated : item) });
+  },
+
+  removeRecentProject: async (id) => {
+    if (!isTauriRuntime()) return;
+    const remaining = get().projects.filter((project) => project.id !== id);
+    await removeRecentRecord(id);
+    if (get().currentProjectId !== id) {
+      set({ projects: remaining, canUndo: false });
+      return;
+    }
+    const next = remaining[0];
+    if (!next?.storagePath) {
+      await closeStorageProject();
+      set({ projects: remaining, currentProjectId: null, canUndo: false });
+      return;
+    }
+    const project = await openStorageProjectAt(next.storagePath);
+    set({ projects: [project, ...remaining.slice(1)], currentProjectId: project.id, canUndo: false });
   },
 
   deleteProject: async (id) => {
+    if (isTauriRuntime()) {
+      await get().removeRecentProject(id);
+      return;
+    }
     const { projects, currentProjectId } = get();
     if (projects.length <= 1) return;
-
-    if (isTauriRuntime() && currentProjectId === id) {
-      await closeStorageProject();
-    }
-    const dir = await projectDir(id);
-    await removeDir(dir);
-
-    const remaining = projects.filter((p) => p.id !== id);
-    set({
-      projects: remaining,
-      currentProjectId: currentProjectId === id ? remaining[0].id : currentProjectId,
-    });
+    await removeDir(await projectDir(id));
+    const remaining = projects.filter((project) => project.id !== id);
+    set({ projects: remaining, currentProjectId: currentProjectId === id ? remaining[0].id : currentProjectId });
   },
 
   closeProject: async () => {
-    if (!isTauriRuntime()) return;
-    await closeStorageProject();
-    set({ currentProjectId: null });
+    if (isTauriRuntime()) await closeStorageProject();
+    set({ currentProjectId: null, canUndo: false });
   },
 
   createTable: async (name) => {
     if (!isTauriRuntime()) return;
-    const snapshot = await createStorageTable(name);
-    const currentProjectId = get().currentProjectId;
-    if (!currentProjectId) return;
-    set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === currentProjectId ? { ...project, storageSnapshot: snapshot } : project,
-      ),
-    }));
+    replaceCurrentSnapshot(set, get, await createStorageTable(name));
+    set({ canUndo: true });
+  },
+
+  renameTable: async (tableId, name) => {
+    if (!isTauriRuntime()) return;
+    replaceCurrentSnapshot(set, get, await renameStorageTable(tableId, name));
+  },
+
+  deleteTable: async (tableId) => {
+    if (!isTauriRuntime()) return;
+    replaceCurrentSnapshot(set, get, await deleteStorageTable(tableId));
+    set({ canUndo: true });
+    emitTableDeleted(tableId);
+  },
+
+  reorderTables: async (tableIds) => {
+    if (!isTauriRuntime()) return;
+    replaceCurrentSnapshot(set, get, await reorderStorageTables(tableIds));
+  },
+
+  createView: async (tableId, name, viewType) => {
+    if (!isTauriRuntime()) return;
+    replaceCurrentSnapshot(set, get, await createStorageView(tableId, name, viewType));
+  },
+
+  renameView: async (viewId, name) => {
+    if (!isTauriRuntime()) return;
+    replaceCurrentSnapshot(set, get, await renameStorageView(viewId, name));
+  },
+
+  duplicateView: async (viewId, name) => {
+    if (!isTauriRuntime()) return;
+    replaceCurrentSnapshot(set, get, await duplicateStorageView(viewId, name));
+  },
+
+  deleteView: async (viewId) => {
+    if (!isTauriRuntime()) return;
+    replaceCurrentSnapshot(set, get, await deleteStorageView(viewId));
+  },
+
+  reorderViews: async (tableId, viewIds) => {
+    if (!isTauriRuntime()) return;
+    replaceCurrentSnapshot(set, get, await reorderStorageViews(tableId, viewIds));
   },
 
   undoStorageChange: async () => {
     if (!isTauriRuntime()) return;
-    const snapshot = await undoStorageChange();
-    const currentProjectId = get().currentProjectId;
-    if (!currentProjectId) return;
-    set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === currentProjectId ? { ...project, storageSnapshot: snapshot } : project,
-      ),
-    }));
+    replaceCurrentSnapshot(set, get, await undoStorageChange());
+    set({ canUndo: false });
   },
 }));
 
 export function currentProject(state: ProjectState): Project | null {
-  return state.projects.find((p) => p.id === state.currentProjectId) ?? null;
+  return state.projects.find((project) => project.id === state.currentProjectId) ?? null;
 }

@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use super::connection::{timestamp, ProjectManifest};
 use super::error::{StorageError, StorageErrorCode};
 
+pub use super::table_backup::delete_table;
+
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -257,29 +259,6 @@ fn insert_table_defaults(
          VALUES (?1, 1, '{}', ?2, ?2)",
         (&view_id, &now),
     )?;
-    Ok(())
-}
-
-pub fn delete_table(connection: &mut Connection, table_id: &str) -> Result<(), StorageError> {
-    let transaction = connection.transaction()?;
-    let table_count: i64 =
-        transaction.query_row("SELECT COUNT(*) FROM data_tables", [], |row| row.get(0))?;
-    if table_count <= 1 {
-        return Err(StorageError::validation("项目至少需要保留一张表"));
-    }
-    let deleted = transaction.execute("DELETE FROM data_tables WHERE id = ?1", [table_id])?;
-    if deleted != 1 {
-        return Err(StorageError::new(
-            StorageErrorCode::ValidationError,
-            "要删除的表不存在",
-            false,
-        ));
-    }
-    transaction.execute(
-        "UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'",
-        [timestamp()],
-    )?;
-    transaction.commit()?;
     Ok(())
 }
 

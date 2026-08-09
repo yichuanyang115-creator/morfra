@@ -34,6 +34,42 @@ export async function createStorageTable(name: string): Promise<ProjectSnapshot>
   return invoke<ProjectSnapshot>("storage_create_table", { name });
 }
 
+export async function renameStorageProject(name: string): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_rename_project", { name });
+}
+
+export async function renameStorageTable(tableId: string, name: string): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_rename_table", { tableId, name });
+}
+
+export async function deleteStorageTable(tableId: string): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_delete_table", { tableId });
+}
+
+export async function reorderStorageTables(tableIds: string[]): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_reorder_tables", { tableIds });
+}
+
+export async function createStorageView(tableId: string, name: string, viewType: "table" | "board"): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_create_view", { tableId, name, viewType });
+}
+
+export async function renameStorageView(viewId: string, name: string): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_rename_view", { viewId, name });
+}
+
+export async function duplicateStorageView(viewId: string, name: string): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_duplicate_view", { viewId, name });
+}
+
+export async function deleteStorageView(viewId: string): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_delete_view", { viewId });
+}
+
+export async function reorderStorageViews(tableId: string, viewIds: string[]): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_reorder_views", { tableId, viewIds });
+}
+
 export async function undoStorageChange(): Promise<ProjectSnapshot> {
   return invoke<ProjectSnapshot>("storage_undo");
 }

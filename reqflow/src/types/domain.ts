@@ -45,6 +45,13 @@ export interface ProjectSnapshot {
   tables: TableSummary[];
 }
 
+export interface RecentProject {
+  id: string;
+  path: string;
+  name: string;
+  lastOpenedAt: string;
+}
+
 export interface StorageError {
   code: string;
   message: string;
