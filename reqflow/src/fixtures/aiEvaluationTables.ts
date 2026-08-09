@@ -4,6 +4,7 @@ import type {
   TableEvent,
   TableSnapshot,
 } from "../lib/ai/tableDataAdapter";
+import { normalizeTableSnapshot } from "../lib/ai/tableSnapshot";
 
 const CAPTURED_AT = "2026-08-08T08:00:00.000Z";
 
@@ -61,6 +62,99 @@ export const AI_EVALUATION_TABLES: readonly TableSnapshot[] = [
     ],
     capturedAt: CAPTURED_AT,
   },
+  {
+    tableId: "table-empty",
+    name: "空表",
+    schemaVersion: "empty-v1",
+    primaryTitleFieldId: "title",
+    fields: [
+      { id: "title", name: "事项", type: "text" },
+      {
+        id: "status",
+        name: "状态",
+        type: "singleSelect",
+        options: [{ id: "todo", label: "待处理" }, { id: "done", label: "已完成" }],
+      },
+    ],
+    records: [],
+    capturedAt: CAPTURED_AT,
+  },
+  {
+    tableId: "table-mixed",
+    name: "混合字段",
+    schemaVersion: "mixed-v1",
+    primaryTitleFieldId: "title",
+    fields: [
+      { id: "title", name: "事项", type: "text" },
+      { id: "amount", name: "金额", type: "number" },
+      { id: "progress", name: "进度", type: "percent" },
+      {
+        id: "status",
+        name: "状态",
+        type: "singleSelect",
+        options: [{ id: "todo", label: "待处理" }, { id: "done", label: "已完成" }],
+      },
+      {
+        id: "tags",
+        name: "标签",
+        type: "multiSelect",
+        options: [{ id: "alpha", label: "Alpha" }, { id: "beta", label: "Beta" }],
+      },
+      { id: "dueDate", name: "截止日期", type: "date" },
+      { id: "checked", name: "已检查", type: "checkbox" },
+      { id: "files", name: "附件", type: "attachment" },
+      { id: "computed", name: "计算值", type: "computed" },
+    ],
+    records: [
+      {
+        id: "mixed-1",
+        values: {
+          title: "重复记录",
+          amount: 10,
+          progress: null,
+          status: "todo",
+          tags: ["alpha"],
+          dueDate: null,
+          checked: true,
+          files: [{ id: "file-1", name: "说明.pdf", mimeType: "application/pdf" }],
+          computed: 1,
+        },
+      },
+      {
+        id: "mixed-2",
+        values: {
+          title: "重复记录",
+          amount: null,
+          progress: 50,
+          status: "done",
+          tags: [],
+          dueDate: "2026-08-09",
+          checked: false,
+          files: [],
+          computed: 2,
+        },
+      },
+    ],
+    capturedAt: CAPTURED_AT,
+  },
+  {
+    tableId: "table-same-name-a",
+    name: "同名记录 A",
+    schemaVersion: "same-a-v1",
+    primaryTitleFieldId: "title",
+    fields: [{ id: "title", name: "事项", type: "text" }, { id: "score", name: "分数", type: "number" }],
+    records: [{ id: "same-a-1", values: { title: "重复记录", score: 10 } }],
+    capturedAt: CAPTURED_AT,
+  },
+  {
+    tableId: "table-same-name-b",
+    name: "同名记录 B",
+    schemaVersion: "same-b-v1",
+    primaryTitleFieldId: "title",
+    fields: [{ id: "title", name: "事项", type: "text" }, { id: "score", name: "分数", type: "number" }],
+    records: [{ id: "same-b-1", values: { title: "重复记录", score: 99 } }],
+    capturedAt: CAPTURED_AT,
+  },
 ] as const;
 
 export interface EvaluationTableAdapterControls {
@@ -71,7 +165,7 @@ export interface EvaluationTableAdapterControls {
 }
 
 function cloneSnapshot(snapshot: TableSnapshot): TableSnapshot {
-  return structuredClone(snapshot);
+  return normalizeTableSnapshot(snapshot);
 }
 
 export function createEvaluationTableAdapter(): EvaluationTableAdapterControls {

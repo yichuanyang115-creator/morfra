@@ -93,7 +93,7 @@ export interface AIAnalysisFilter {
   value?: AIPrimitive | AIPrimitive[];
 }
 
-export type AIAnalysisAggregateOperation = "count" | "sum" | "average" | "minimum" | "maximum";
+export type AIAnalysisAggregateOperation = "count" | "percentage" | "sum" | "average" | "minimum" | "maximum";
 
 export interface AIAnalysisAggregate {
   id: string;
@@ -108,6 +108,8 @@ export interface AIAnalysisPlan {
   aggregates: AIAnalysisAggregate[];
   sort: Array<{ fieldId: string; direction: "ascending" | "descending" }>;
   limit: number | null;
+  /** 可选的模型范围声明；宿主传入的已选记录范围始终拥有更高优先级。 */
+  recordIds?: string[];
 }
 
 export interface AIPanelPreference {
