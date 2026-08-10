@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FieldSummary } from "../../types/domain";
-import { normalizeGridFieldIds, parseGridLayout } from "./DataGrid";
+import { normalizeGridFieldIds, orderGridFieldIdsByGroup, parseGridLayout } from "./DataGrid";
 
 const fields: FieldSummary[] = [
   { id: "title", tableId: "table-1", groupId: null, name: "名称", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] },
@@ -24,5 +24,20 @@ describe("parseGridLayout", () => {
 
   it("仅接受可辨识的行高和数值列宽，防止旧配置损坏画布", () => {
     expect(parseGridLayout({ fieldIds: ["title"], rowHeight: 999, columnWidths: { title: 280, bad: "x" }, frozenFieldId: "title", collapsedGroupIds: ["group-1", 1] }, fields)).toEqual({ fieldIds: ["title"], groupOrder: ["group-1"], columnWidths: { title: 280 }, frozenFieldId: "title", rowHeight: 40, collapsedGroupIds: ["group-1"] });
+  });
+
+  it("以 groupOrder 作为画布恢复时的分组排序真相源", () => {
+    const groupedFields: FieldSummary[] = [
+      fields[0],
+      { ...fields[1], groupId: "group-a" },
+      { id: "owner", tableId: "table-1", groupId: "group-b", name: "负责人", fieldType: "text", isTitle: false, position: 2, config: {}, options: [] },
+    ];
+    const groupOrder = ["group-b", "group-a", "ungrouped"];
+
+    expect(orderGridFieldIdsByGroup(["title", "status", "owner"], groupedFields, groupOrder)).toEqual(["title", "owner", "status"]);
+    expect(parseGridLayout({ fieldIds: ["title", "status", "owner"], groupOrder }, groupedFields, [
+      { id: "group-a", tableId: "table-1", name: "阶段", position: 0 },
+      { id: "group-b", tableId: "table-1", name: "负责人", position: 1 },
+    ]).fieldIds).toEqual(["title", "owner", "status"]);
   });
 });

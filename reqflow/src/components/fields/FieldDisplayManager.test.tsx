@@ -37,4 +37,37 @@ describe("FieldDisplayManager", () => {
     fireEvent.drop(screen.getByTestId("field-group-group-a"));
     expect(onChange.mock.calls[onChange.mock.calls.length - 1]?.[1]).toEqual(["group-b", "group-a", "ungrouped"]);
   });
+
+  it("拖拽组块时同时回传按新 groupOrder 排列的字段", () => {
+    const onChange = vi.fn();
+    render(<FieldDisplayManager fields={fields} groups={groups} selectedIds={["title", "status", "owner"]} onChange={onChange} onClose={vi.fn()} />);
+
+    fireEvent.dragStart(screen.getByTestId("field-group-ungrouped"), { dataTransfer: { effectAllowed: "" } });
+    fireEvent.drop(screen.getByTestId("field-group-group-a"));
+
+    expect(onChange.mock.calls[onChange.mock.calls.length - 1]).toEqual([
+      ["title", "owner", "status"],
+      ["ungrouped", "group-a", "group-b"],
+    ]);
+  });
+
+  it("不能把字段组拖到主标题块", () => {
+    const onChange = vi.fn();
+    render(<FieldDisplayManager fields={fields} groups={groups} selectedIds={["title", "status", "owner"]} onChange={onChange} onClose={vi.fn()} />);
+
+    fireEvent.dragStart(screen.getByTestId("field-group-ungrouped"), { dataTransfer: { effectAllowed: "" } });
+    fireEvent.drop(screen.getByTestId("field-group-title"));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("不能把普通字段拖到主标题字段", () => {
+    const onChange = vi.fn();
+    render(<FieldDisplayManager fields={fields} groups={groups} selectedIds={["title", "status", "owner"]} onChange={onChange} onClose={vi.fn()} />);
+
+    fireEvent.dragStart(screen.getByText("负责人"), { dataTransfer: { effectAllowed: "" } });
+    fireEvent.drop(screen.getByText("标题 · 主标题"));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });
