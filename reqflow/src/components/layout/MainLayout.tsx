@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import type { DetailMode } from "../../stores/uiStore";
 import { useUiStore } from "../../stores/uiStore";
-import { useChatStore } from "../../stores/chatStore";
+import { useAIProviderStore } from "../../stores/aiProviderStore";
 import {
   RESIZER_WIDTH,
   chatOccupiedWidth,
@@ -9,6 +9,7 @@ import {
   clampChatWidth,
   detailPanelWidthFor,
 } from "../../lib/boardWidth";
+import { REGULAR_WINDOW_BREAKPOINT } from "../../lib/layout/windowLayout";
 import { ChatPanel } from "../chat/ChatPanel";
 
 interface MainLayoutProps {
@@ -44,20 +45,22 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
   const showBoardResizer = detailMode === "expanded";
   const boardWidth = useUiStore((s) => s.boardWidth);
   const setBoardWidth = useUiStore((s) => s.setBoardWidth);
-  const chatOpen = useChatStore((s) => s.open);
-  const chatStoredWidth = useChatStore((s) => s.width);
-  const setChatWidth = useChatStore((s) => s.setWidth);
+  const chatOpen = useAIProviderStore((s) => s.panelOpen);
+  const chatStoredWidth = useAIProviderStore((s) => s.panelWidth);
+  const setChatWidth = useAIProviderStore((s) => s.setPanelWidth);
   const boardDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const chatDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   // 拖拽期间关掉列宽过渡动画，否则每次 pointermove 更新目标宽度都会重新起一段
   // 180ms 缓动追赶，鼠标移动越快、宽度越跟不上手（对应原型 .app-body.resizing 处理）。
   const [isDragging, setIsDragging] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+  const isNarrow = viewportWidth < REGULAR_WINDOW_BREAKPOINT;
 
   const clampedBoardWidth = clampBoardWidth(boardWidth, window.innerWidth);
-  const clampedChatWidth = chatOpen
+  const clampedChatWidth = chatOpen && !isNarrow
     ? clampChatWidth(chatStoredWidth, detailMode, boardWidth, window.innerWidth)
     : 0;
-  const chatOccupied = chatOccupiedWidth(chatOpen, chatStoredWidth, detailMode, boardWidth, window.innerWidth);
+  const chatOccupied = chatOccupiedWidth(chatOpen && !isNarrow, chatStoredWidth, detailMode, boardWidth, window.innerWidth);
   const detailPanelWidth = detailPanelWidthFor(detailMode, boardWidth, window.innerWidth, chatOccupied);
 
   // 视口尺寸变化会改变拖拽上限（比如窗口缩小），重新夹一遍当前宽度，
@@ -65,15 +68,16 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
   useEffect(() => {
     function handleResize() {
       setBoardWidth(useUiStore.getState().boardWidth, window.innerWidth);
-      const chat = useChatStore.getState();
-      if (chat.open) {
-        const reclamped = clampChatWidth(chat.width, detailMode, useUiStore.getState().boardWidth, window.innerWidth);
-        if (reclamped !== chat.width) void setChatWidth(reclamped);
+      setViewportWidth(window.innerWidth);
+      const chat = useAIProviderStore.getState();
+      if (chat.panelOpen && !isNarrow) {
+        const reclamped = clampChatWidth(chat.panelWidth, detailMode, useUiStore.getState().boardWidth, window.innerWidth);
+        if (reclamped !== chat.panelWidth) void setChatWidth(reclamped);
       }
     }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [setBoardWidth, setChatWidth, detailMode]);
+  }, [isNarrow, setBoardWidth, setChatWidth, detailMode]);
 
   // 拖拽过程中鼠标可能扫过其它文字，锁住全局选中行为，避免拖着拖着突然选中一片文字。
   useEffect(() => {
@@ -125,7 +129,7 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
 
   return (
     <div
-      className={`grid min-h-0 flex-1 ${isDragging ? "" : "transition-[grid-template-columns] duration-180 ease-in-out"}`}
+      className={`relative grid min-h-0 flex-1 ${isDragging ? "" : "transition-[grid-template-columns] duration-180 ease-in-out"}`}
       style={{ gridTemplateColumns: gridTemplate(detailMode, clampedBoardWidth, clampedChatWidth) }}
     >
       <main className="flex min-h-0 min-w-0 flex-col border-r border-(--module-scope-border-subtle) bg-(--module-scope-background-surface)">
@@ -163,7 +167,7 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
         <div
           role="separator"
           aria-orientation="vertical"
-          aria-label="调整对话框宽度"
+          aria-label="调整 AI 面板宽度"
           onPointerDown={handleChatPointerDown}
           onPointerMove={handleChatPointerMove}
           onPointerUp={handleChatPointerUp}
@@ -173,7 +177,8 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
         <div />
       )}
 
-      <ChatPanel width={clampedChatWidth > 0 ? clampedChatWidth : null} />
+      <ChatPanel width={clampedChatWidth > 0 ? clampedChatWidth : null} onClose={() => { void useAIProviderStore.getState().setPanelOpen(false); }} />
+      {isNarrow && chatOpen && <div className="absolute inset-0 z-20 flex justify-end" data-testid="ai-drawer"><button type="button" aria-label="关闭 AI 面板" onClick={() => { void useAIProviderStore.getState().setPanelOpen(false); }} className="absolute inset-0 border-none bg-(--overlay-scrim)" /><div className="relative z-10 h-full max-w-[calc(100%-52px)] shadow-(--shadow-panel)"><ChatPanel width={Math.min(chatStoredWidth, Math.max(260, viewportWidth - 52))} onClose={() => { void useAIProviderStore.getState().setPanelOpen(false); }} /></div></div>}
     </div>
   );
 }

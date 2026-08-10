@@ -13,6 +13,7 @@ import type {
   AIProviderErrorCode,
 } from "../lib/ai/providerClient";
 import type { AIProviderConfig } from "../types/ai";
+import { AI_MAX_WIDTH, AI_MIN_WIDTH } from "../lib/layout/windowLayout";
 import { createPersistenceActions } from "./aiProviderStorePersistenceActions";
 import { createProviderActions } from "./aiProviderStoreProviderActions";
 import {
@@ -64,6 +65,8 @@ export interface AIProviderState {
   loadModelsForDraft: (draft: AIProviderDraft) => Promise<AIProviderActionResult>;
   setDefaultProvider: (providerConfigId: string) => Promise<AIProviderActionResult>;
   confirmDataExfiltration: () => Promise<AIProviderActionResult>;
+  setPanelOpen: (open: boolean) => Promise<AIProviderActionResult>;
+  setPanelWidth: (width: number) => Promise<AIProviderActionResult>;
   deleteProvider: (providerConfigId: string) => Promise<AIProviderActionResult>;
   loadModels: (providerConfigId: string) => Promise<AIProviderActionResult>;
   setManualModel: (providerConfigId: string, modelId: string) => Promise<AIProviderActionResult>;
@@ -163,6 +166,25 @@ export const useAIProviderStore = create<AIProviderState>((set, get) => ({
       return { ok: true };
     } catch {
       set({ errorMessage: "确认状态保存失败，请重试" });
+      return actionError();
+    }
+  },
+  setPanelOpen: async (open) => {
+    set({ panelOpen: open });
+    try {
+      await saveAIPanelPreference(preferenceFromState(get(), { open }));
+      return { ok: true };
+    } catch {
+      return actionError();
+    }
+  },
+  setPanelWidth: async (width) => {
+    const nextWidth = Math.min(Math.max(width, AI_MIN_WIDTH), AI_MAX_WIDTH);
+    set({ panelWidth: nextWidth });
+    try {
+      await saveAIPanelPreference(preferenceFromState(get(), { width: nextWidth }));
+      return { ok: true };
+    } catch {
       return actionError();
     }
   },

@@ -1,133 +1,190 @@
-import { useEffect, useRef, useState } from "react";
-import { useChatStore } from "../../stores/chatStore";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAIConversationStore } from "../../stores/aiConversationStore";
+import { useAIProviderStore } from "../../stores/aiProviderStore";
+import type { AIConversationMode } from "../../types/ai";
+import { ChatComposer, type ChatModelOption } from "./ChatComposer";
+import { ChatContextBar } from "./ChatContextBar";
+import { ChatEmptyState } from "./ChatEmptyState";
+import { ChatHeader } from "./ChatHeader";
+import { ChatHistoryView } from "./ChatHistoryView";
+import { ChatMessage } from "./ChatMessage";
+import type { AIHostActions, ChatTableContext } from "./chatTypes";
 
-function TrashIcon() {
-  return (
-    <svg className="size-3.5" viewBox="0 0 20 20" fill="none">
-      <path
-        d="M4.5 6h11M8 6V4.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V6m-6.5 0 .6 9a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9l.6-9"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const EMPTY_CONVERSATIONS: never[] = [];
 
-function SendIcon() {
-  return (
-    <svg className="size-3.5" viewBox="0 0 20 20" fill="none">
-      <path d="M17 3 3 9.5l6 1.5 1.5 6L17 3Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-interface ChatPanelProps {
+export interface ChatPanelProps {
   width: number | null;
+  tableContext?: ChatTableContext;
+  hostActions?: AIHostActions;
+  onClose?: () => void;
+  onOpenSettings?: () => void;
 }
 
-export function ChatPanel({ width }: ChatPanelProps) {
-  const messages = useChatStore((s) => s.messages);
-  const thinking = useChatStore((s) => s.thinking);
-  const persistenceError = useChatStore((s) => s.persistenceError);
-  const sendMessage = useChatStore((s) => s.sendMessage);
-  const clearChat = useChatStore((s) => s.clearChat);
+function dispatchSettingsRequest(): void {
+  window.dispatchEvent(new CustomEvent("open-ai-service-settings"));
+}
+
+export function ChatPanel({ width, tableContext, hostActions, onClose = () => undefined, onOpenSettings = dispatchSettingsRequest }: ChatPanelProps) {
+  const tableId = tableContext?.table.tableId ?? null;
+  const tableName = tableContext?.table.name;
+  const adapter = tableContext?.adapter;
+  const providedSnapshot = tableContext?.snapshot;
+  const providedSelection = tableContext?.selectedRecordIds;
+  const [snapshot, setSnapshot] = useState(providedSnapshot);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const [selectionIds, setSelectionIds] = useState<string[]>(providedSelection ? [...providedSelection] : []);
+  const [draftMode, setDraftMode] = useState<AIConversationMode>("table-analysis");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectionReferenced, setSelectionReferenced] = useState(false);
+  const [draftModelKey, setDraftModelKey] = useState<string | null>(null);
   const [input, setInput] = useState("");
+  const [interactionError, setInteractionError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const configs = useAIProviderStore((state) => state.configs);
+  const secretStatus = useAIProviderStore((state) => state.secretStatus);
+  const defaultProviderConfigId = useAIProviderStore((state) => state.defaultProviderConfigId);
+  const lastProviderConfigId = useAIProviderStore((state) => state.lastProviderConfigId);
+  const lastModelId = useAIProviderStore((state) => state.lastModelId);
+  const modelIds = useAIProviderStore((state) => state.modelIds);
+  const dataExfiltrationConfirmed = useAIProviderStore((state) => state.dataExfiltrationConfirmed);
+  const providerLoaded = useAIProviderStore((state) => state.loaded);
+  const loadProviders = useAIProviderStore((state) => state.load);
+
+  const loadTable = useAIConversationStore((state) => state.loadTable);
+  const conversationState = useAIConversationStore((state) => tableId ? state.conversationsByTable[tableId] : undefined);
+  const conversations = conversationState ?? EMPTY_CONVERSATIONS;
+  const currentConversationId = useAIConversationStore((state) => tableId ? state.currentConversationIdByTable[tableId] ?? null : null);
+  const tableLoaded = useAIConversationStore((state) => tableId ? state.loadedTables[tableId] === true : false);
+  const currentConversation = conversations.find((conversation) => conversation.id === currentConversationId) ?? null;
+  const loadingTable = useAIConversationStore((state) => tableId ? state.loadingTables[tableId] === true : false);
+  const activeRequest = useAIConversationStore((state) => currentConversationId ? state.activeRequests[currentConversationId] : undefined);
+  const persistenceError = useAIConversationStore((state) => state.persistenceError);
+  const createConversation = useAIConversationStore((state) => state.createConversation);
+  const selectConversation = useAIConversationStore((state) => state.selectConversation);
+  const renameConversation = useAIConversationStore((state) => state.renameConversation);
+  const deleteConversation = useAIConversationStore((state) => state.deleteConversation);
+  const setConversationModel = useAIConversationStore((state) => state.setConversationModel);
+  const sendMessage = useAIConversationStore((state) => state.sendMessage);
+  const retryMessage = useAIConversationStore((state) => state.retryMessage);
+  const stopConversation = useAIConversationStore((state) => state.stopConversation);
+  const copyAnswer = useAIConversationStore((state) => state.copyAnswer);
+
+  useEffect(() => {
+    if (!providerLoaded) void loadProviders();
+  }, [loadProviders, providerLoaded]);
+
+  useEffect(() => {
+    setSnapshot(providedSnapshot);
+    setSnapshotError(null);
+    if (!adapter || !tableId || providedSnapshot) return;
+    let cancelled = false;
+    void adapter.getTableSnapshot(tableId).then((next) => { if (!cancelled) setSnapshot(next); }).catch(() => { if (!cancelled) setSnapshotError("当前表数据暂时不可用"); });
+    return () => { cancelled = true; };
+  }, [adapter, providedSnapshot, tableId]);
+
+  useEffect(() => {
+    if (!adapter || !tableId) { setSelectionIds(providedSelection ? [...providedSelection] : []); return; }
+    setSelectionIds(providedSelection ? [...providedSelection] : adapter.getSelectedRecordIds(tableId));
+    return adapter.subscribe((event) => {
+      if (event.type === "selection-changed" && event.tableId === tableId && !providedSelection) setSelectionIds([...event.recordIds]);
+    });
+  }, [adapter, providedSelection, tableId]);
+
+  useEffect(() => {
+    if (tableId && !tableLoaded) void loadTable(tableId);
+  }, [loadTable, tableId, tableLoaded]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, thinking]);
+  }, [currentConversation?.messages, activeRequest]);
 
-  if (width == null) return null;
+  const availableConfigs = useMemo(() => configs.filter((config) => secretStatus[config.id] === true), [configs, secretStatus]);
+  const defaultConfig = availableConfigs.find((config) => config.id === (currentConversation?.providerConfigId ?? lastProviderConfigId ?? defaultProviderConfigId)) ?? availableConfigs[0] ?? null;
+  const modelOptions = useMemo<ChatModelOption[]>(() => availableConfigs.flatMap((config) => {
+    const ids = modelIds[config.id]?.length ? modelIds[config.id] : config.cachedModelIds.length ? config.cachedModelIds : [config.defaultModelId];
+    return ids.map((modelId) => ({ providerConfigId: config.id, modelId, providerName: config.name }));
+  }), [availableConfigs, modelIds]);
+  const preferredModelKey = currentConversation ? `${currentConversation.providerConfigId}::${currentConversation.modelId}` : draftModelKey;
+  const selectedModel = modelOptions.find((option) => `${option.providerConfigId}::${option.modelId}` === preferredModelKey) ?? modelOptions.find((option) => option.providerConfigId === defaultConfig?.id && option.modelId === (lastModelId ?? defaultConfig.defaultModelId)) ?? modelOptions[0] ?? null;
+  const selectedProviderConfig = availableConfigs.find((config) => config.id === selectedModel?.providerConfigId) ?? defaultConfig;
+  const mode = currentConversation?.mode ?? draftMode;
+  const userMessages = currentConversation?.messages.filter((message) => message.role === "user") ?? [];
+  const lastUserMessage = userMessages[userMessages.length - 1];
+  const recordCount = snapshot?.records.length;
+  const configured = availableConfigs.length > 0;
+  const tableReady = Boolean(tableId && adapter);
+  const tableAnalysisDisabled = mode === "table-analysis" && recordCount === 0;
+  const composerDisabled = !tableReady || loadingTable || tableAnalysisDisabled || Boolean(snapshotError);
 
-  function handleSend() {
-    if (!input.trim()) return;
-    sendMessage(input);
-    setInput("");
+  async function ensureConversation(targetMode: AIConversationMode) {
+    if (currentConversation && currentConversation.mode === targetMode) return currentConversation;
+    if (!defaultConfig || !selectedModel) return null;
+    return createConversation({ tableId: tableId ?? "", mode: targetMode, providerConfigId: selectedModel.providerConfigId, modelId: selectedModel.modelId });
   }
 
-  return (
-    <div
-      data-theme-module="chat"
-      className="theme-module-chat flex h-full min-w-0 flex-none flex-col border-l border-(--module-scope-border-subtle) bg-(--module-scope-background-surface)"
-      style={{ width: `${width}px` }}
-    >
-      <div className="flex flex-none items-center justify-end border-b border-(--module-scope-border-subtle) px-2.5 py-1.5">
-        <button
-          type="button"
-          aria-label="清空对话"
-          onClick={() => void clearChat()}
-          className="grid size-6.5 place-items-center rounded-(--r-sm) border-none bg-transparent text-(--module-scope-text-secondary) hover:bg-(--module-scope-background-surface) hover:text-(--module-scope-feedback-danger)"
-        >
-          <TrashIcon />
-        </button>
-      </div>
-      {persistenceError && <p role="alert" className="m-0 border-b border-(--module-scope-feedback-danger) px-2.5 py-1 text-[11px] text-(--module-scope-feedback-danger)">{persistenceError}</p>}
+  async function sendQuestion(question: string, selectionOverride?: boolean): Promise<void> {
+    const trimmed = question.trim();
+    if (!trimmed || !tableId) return;
+    if (!configured || !defaultConfig || !selectedModel) { setInteractionError("请先配置可用的 AI 服务和模型。"); return; }
+    if (!adapter) { setInteractionError("当前表数据尚未接入 AI 面板。"); return; }
+    if (tableAnalysisDisabled && mode === "table-analysis") { setInteractionError("当前表没有记录，表格分析暂不可用；可以切换到通用对话。"); return; }
+    setInteractionError(null);
+    const conversation = await ensureConversation(mode);
+    if (!conversation) { setInteractionError("无法创建会话，请先选择可用模型。"); return; }
+    setInput("");
+    const shouldReference = (selectionOverride ?? selectionReferenced) && selectionIds.length > 0;
+    setSelectionReferenced(false);
+    if (!selectedProviderConfig) { setInteractionError("无法找到所选 AI 服务，请重新选择模型。"); return; }
+    const result = await sendMessage({ tableId, conversationId: conversation.id, question: trimmed, selectionReferenced: shouldReference, selectedRecordIds: shouldReference ? selectionIds : undefined, runtime: { adapter, providerConfig: { id: selectedProviderConfig.id, baseUrl: selectedProviderConfig.baseUrl, defaultModelId: selectedProviderConfig.defaultModelId }, modelId: selectedModel.modelId, dataExfiltrationConfirmed } });
+    if (!result.ok) setInteractionError(result.message ?? "这次请求没有完成，请重试。");
+    else { hostActions?.notifyGenerationCompleted?.({ tableId, conversationId: conversation.id }); window.dispatchEvent(new CustomEvent("ai-generation-completed")); }
+  }
 
-      <div ref={scrollRef} role="log" aria-live="polite" aria-label="对话消息" className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2">
-        {messages.length === 0 && !thinking ? (
-          <p className="m-0 px-1 py-3 text-center text-[12px] text-(--module-scope-text-tertiary)">随便聊点什么…</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                data-role={m.role}
-                aria-label={m.role === "user" ? "用户消息" : "AI 消息"}
-                className={`max-w-full break-words rounded-(--r-md) px-2.5 py-1.5 text-[12.5px] ${
-                  m.role === "user"
-                    ? "self-end bg-(--module-scope-context-soft) text-(--module-scope-action-strong)"
-                    : "self-start bg-transparent text-(--module-scope-text-primary)"
-                }`}
-              >
-                {m.content}
-              </div>
-            ))}
-            {thinking && (
-              <div aria-label="对话运行中" className="self-start rounded-(--r-md) bg-transparent px-2.5 py-1.5 text-[12.5px] text-(--module-scope-context-strong)">
-                <span className="sr-only">思考中…</span>
-                <span aria-hidden="true" className="inline-flex items-center gap-1">
-                  <span className="size-1.5 animate-pulse rounded-full bg-(--module-scope-context-strong)" />
-                  <span className="size-1.5 animate-pulse rounded-full bg-(--module-scope-context-strong) [animation-delay:150ms]" />
-                  <span className="size-1.5 animate-pulse rounded-full bg-(--module-scope-context-strong) [animation-delay:300ms]" />
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+  async function handleRetry(messageId: string): Promise<void> {
+    if (!tableId || !adapter || !defaultConfig || !selectedModel || !currentConversation) return;
+    setInteractionError(null);
+    if (!selectedProviderConfig) { setInteractionError("无法找到所选 AI 服务，请重新选择模型。"); return; }
+    const result = await retryMessage({ tableId, conversationId: currentConversation.id, assistantMessageId: messageId, runtime: { adapter, providerConfig: { id: selectedProviderConfig.id, baseUrl: selectedProviderConfig.baseUrl, defaultModelId: selectedProviderConfig.defaultModelId }, modelId: selectedModel.modelId, dataExfiltrationConfirmed } });
+    if (!result.ok) setInteractionError(result.message ?? "重试失败，请更换模型后再试。");
+    else { hostActions?.notifyGenerationCompleted?.({ tableId, conversationId: currentConversation.id }); window.dispatchEvent(new CustomEvent("ai-generation-completed")); }
+  }
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSend();
-        }}
-        className="flex flex-none items-end gap-1.5 border-t border-(--module-scope-border-subtle) p-2"
-      >
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          placeholder="输入消息，回车发送…"
-          rows={1}
-          className="min-h-8 flex-1 resize-none rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1.5 font-(family-name:--font-body) text-[12.5px] text-(--module-scope-text-primary) outline-none focus:border-(--module-scope-action-base)"
-        />
-        <button
-          type="submit"
-          aria-label="发送"
-          className="grid size-8 flex-none place-items-center rounded-(--r-sm) border-none bg-(--module-scope-action-strong) text-(--module-scope-background-surface) disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={!input.trim()}
-        >
-          <SendIcon />
-        </button>
-      </form>
-    </div>
-  );
+  function handleModelChange(option: ChatModelOption): void {
+    setDraftModelKey(`${option.providerConfigId}::${option.modelId}`);
+    if (currentConversation && tableId) void setConversationModel(tableId, currentConversation.id, option.providerConfigId, option.modelId);
+  }
+
+  function handleCopy(messageId: string): void {
+    if (!tableId || !currentConversation) return;
+    const content = copyAnswer(tableId, currentConversation.id, messageId);
+    if (content && navigator.clipboard) void navigator.clipboard.writeText(content);
+  }
+
+  function handleModeChange(nextMode: AIConversationMode): void {
+    setDraftMode(nextMode);
+    setHistoryOpen(false);
+    if (currentConversation?.mode !== nextMode && tableId && configured) void ensureConversation(nextMode);
+  }
+
+  function handleNewConversation(): void {
+    setHistoryOpen(false);
+    if (tableId && configured) void createConversation({ tableId, mode, providerConfigId: selectedModel?.providerConfigId ?? defaultConfig?.id ?? "", modelId: selectedModel?.modelId ?? defaultConfig?.defaultModelId ?? "" });
+  }
+
+  if (width == null) return null;
+  return <div data-theme-module="chat" className="theme-module-chat flex h-full min-w-0 flex-none flex-col border-l border-(--module-scope-border-subtle) bg-(--module-scope-background-surface)" style={{ width: `${width}px` }}>
+    <ChatHeader mode={mode} historyOpen={historyOpen} onModeChange={handleModeChange} onOpenHistory={() => setHistoryOpen((value) => !value)} onNewConversation={handleNewConversation} onClose={onClose} />
+    <ChatContextBar mode={mode} tableName={tableName} recordCount={recordCount} contextRef={lastUserMessage?.contextRef} selectedCount={selectionIds.length} selectionReferenced={selectionReferenced} onToggleSelection={() => setSelectionReferenced((value) => !value)} />
+    {historyOpen && tableId ? <ChatHistoryView conversations={conversations} currentConversationId={currentConversationId} onSelect={(conversationId) => { void selectConversation(tableId, conversationId); setHistoryOpen(false); }} onRename={(conversationId, title) => { void renameConversation(tableId, conversationId, title); }} onDelete={(conversationId) => { void deleteConversation(tableId, conversationId); }} onBack={() => setHistoryOpen(false)} /> : <>
+      <div ref={scrollRef} role="log" aria-live="polite" aria-busy={Boolean(activeRequest)} aria-label="AI 对话消息" className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2">
+        {!tableReady ? <div className="flex h-full flex-col items-center justify-center gap-1 px-4 text-center text-[12px] text-(--module-scope-text-secondary)"><strong className="font-[590] text-(--module-scope-text-primary)">等待当前表上下文</strong><span>AI 面板会在宿主提供只读表快照后启用分析。</span></div> : !currentConversation ? <ChatEmptyState configured={configured} tableName={tableName} recordCount={recordCount} selectedCount={selectionIds.length} snapshot={snapshot} mode={mode} onOpenSettings={onOpenSettings} onModeChange={handleModeChange} onSuggestion={(question) => { void sendQuestion(question, question === "总结已选记录"); }} /> : <div className="flex flex-col gap-2">{currentConversation.messages.map((message) => <ChatMessage key={message.id} message={message} tableId={tableId ?? ""} hostActions={hostActions} onRetry={(messageId) => { void handleRetry(messageId); }} onCopy={handleCopy} />)}{activeRequest && <span className="sr-only">生成进行中，可以继续浏览表格和记录详情。</span>}</div>}
+      </div>
+      {snapshotError && <p role="alert" className="m-0 border-t border-(--module-scope-feedback-danger) bg-(--module-scope-feedback-danger-soft) px-2.5 py-1.5 text-[11.5px] text-(--module-scope-feedback-danger)">{snapshotError}</p>}
+      {(interactionError || persistenceError) && <p role="alert" className="m-0 border-t border-(--module-scope-feedback-danger) bg-(--module-scope-feedback-danger-soft) px-2.5 py-1.5 text-[11.5px] text-(--module-scope-feedback-danger)">{interactionError ?? persistenceError}</p>}
+      {configured && tableReady && <ChatComposer value={input} onChange={setInput} onSubmit={() => { void sendQuestion(input); }} onStop={() => { if (currentConversation) void stopConversation(currentConversation.id); }} disabled={composerDisabled} generating={Boolean(activeRequest)} selectionReferenced={selectionReferenced} selectedCount={selectionIds.length} modelOptions={modelOptions} selectedModel={selectedModel} onModelChange={handleModelChange} />}
+    </>}
+  </div>;
 }
+
+export type { AIHostActions, ChatTableContext } from "./chatTypes";
