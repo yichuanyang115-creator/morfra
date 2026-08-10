@@ -62,6 +62,8 @@ export interface AIMessage {
   modelId: string | null;
   status: AIMessageStatus;
   createdAt: string;
+  /** 仅保存安全的可呈现错误，不保存供应商原始响应或请求正文。 */
+  errorMessage?: string;
 }
 
 export interface AIConversation {

@@ -77,7 +77,8 @@ function isMessage(value: unknown): value is AIMessage {
     && isNullableString(value.providerConfigId)
     && isNullableString(value.modelId)
     && ["pending", "streaming", "complete", "stopped", "failed"].includes(String(value.status))
-    && isString(value.createdAt);
+    && isString(value.createdAt)
+    && (value.errorMessage === undefined || isString(value.errorMessage));
 }
 
 export function isConversation(value: unknown): value is AIConversation {
