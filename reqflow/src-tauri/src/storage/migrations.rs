@@ -6,7 +6,17 @@ use rusqlite::{backup::Backup, Connection};
 use super::connection::timestamp;
 use super::error::{StorageError, StorageErrorCode};
 
-const MIGRATIONS: &[(i64, &str)] = &[(1, include_str!("../../migrations/001_v3_init.sql"))];
+const MIGRATIONS: &[(i64, &str)] = &[
+    (1, include_str!("../../migrations/001_v3_init.sql")),
+    (
+        2,
+        include_str!("../../migrations/002_phase35_fields_records.sql"),
+    ),
+    (
+        3,
+        include_str!("../../migrations/003_phase35_detail_config.sql"),
+    ),
+];
 
 pub fn configure_connection(connection: &Connection) -> Result<(), StorageError> {
     connection.execute_batch(
@@ -39,48 +49,79 @@ pub fn apply_pending_migrations(
             continue;
         }
         if current_version > 0 {
-            let directory = backups_dir.ok_or_else(|| {
-                StorageError::new(
-                    StorageErrorCode::MigrationFailed,
-                    "数据库升级前无法创建保护备份",
-                    true,
-                )
-            })?;
-            create_online_backup(connection, directory, *version)?;
+            if let Some(directory) = backups_dir {
+                create_online_backup(connection, directory, *version)?;
+            } else {
+                let database_path: String = connection
+                    .query_row("PRAGMA database_list", [], |row| row.get(2))
+                    .unwrap_or_default();
+                if !database_path.is_empty() {
+                    return Err(StorageError::new(
+                        StorageErrorCode::MigrationFailed,
+                        "数据库升级前无法创建保护备份",
+                        true,
+                    ));
+                }
+            }
         }
-        let transaction = connection.transaction().map_err(|_| {
-            StorageError::new(
+        // v2 rebuilds the two v1 tables whose CHECK/FK definitions cannot be
+        // altered in place by SQLite. The migration itself is still atomic;
+        // foreign-key checks are restored before returning, including errors.
+        let foreign_keys_were_disabled = *version == 2;
+        if foreign_keys_were_disabled {
+            connection
+                .execute_batch("PRAGMA foreign_keys = OFF;")
+                .map_err(|_| {
+                    StorageError::new(
+                        StorageErrorCode::MigrationFailed,
+                        "数据库结构升级无法暂时关闭外键检查",
+                        true,
+                    )
+                })?;
+        }
+        let migration_result = match connection.transaction() {
+            Ok(transaction) => transaction
+                .execute_batch(sql)
+                .map_err(|_| {
+                    StorageError::new(
+                        StorageErrorCode::MigrationFailed,
+                        "数据库结构升级失败，已回滚本次变更",
+                        false,
+                    )
+                })
+                .and_then(|_| {
+                    transaction
+                        .execute(
+                            "INSERT INTO schema_migrations (version, applied_at) VALUES (?1, ?2)",
+                            (version, timestamp()),
+                        )
+                        .map_err(|_| {
+                            StorageError::new(
+                                StorageErrorCode::MigrationFailed,
+                                "数据库升级记录失败，已回滚本次变更",
+                                false,
+                            )
+                        })
+                })
+                .and_then(|_| {
+                    transaction.commit().map_err(|_| {
+                        StorageError::new(
+                            StorageErrorCode::MigrationFailed,
+                            "数据库升级提交失败，已回滚本次变更",
+                            false,
+                        )
+                    })
+                }),
+            Err(_) => Err(StorageError::new(
                 StorageErrorCode::MigrationFailed,
                 "数据库升级无法开始事务",
                 true,
-            )
-        })?;
-        transaction.execute_batch(sql).map_err(|_| {
-            StorageError::new(
-                StorageErrorCode::MigrationFailed,
-                "数据库结构升级失败，已回滚本次变更",
-                false,
-            )
-        })?;
-        transaction
-            .execute(
-                "INSERT INTO schema_migrations (version, applied_at) VALUES (?1, ?2)",
-                (version, timestamp()),
-            )
-            .map_err(|_| {
-                StorageError::new(
-                    StorageErrorCode::MigrationFailed,
-                    "数据库升级记录失败，已回滚本次变更",
-                    false,
-                )
-            })?;
-        transaction.commit().map_err(|_| {
-            StorageError::new(
-                StorageErrorCode::MigrationFailed,
-                "数据库升级提交失败，已回滚本次变更",
-                false,
-            )
-        })?;
+            )),
+        };
+        if foreign_keys_were_disabled {
+            let _ = connection.execute_batch("PRAGMA foreign_keys = ON;");
+        }
+        migration_result?;
         current_version = *version;
     }
     Ok(())
@@ -131,6 +172,14 @@ mod tests {
                 row.get(0)
             })
             .expect("version");
-        assert_eq!(version, 1);
+        assert_eq!(version, 3);
+        let has_group_column: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('fields') WHERE name = 'group_id'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("fields schema");
+        assert_eq!(has_group_column, 1);
     }
 }

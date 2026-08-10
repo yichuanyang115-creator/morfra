@@ -1,0 +1,9 @@
+include!("field_repository_tests_setup.rs");
+include!("field_repository_tests_basic.rs");
+include!("field_repository_tests_update.rs");
+include!("field_repository_tests_options.rs");
+include!("field_repository_tests_order.rs");
+include!("field_repository_tests_config.rs");
+include!("field_repository_tests_groups.rs");
+include!("field_repository_tests_view.rs");
+include!("field_repository_tests_detail.rs");

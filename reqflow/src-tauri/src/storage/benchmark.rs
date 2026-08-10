@@ -81,8 +81,8 @@ fn seed_dataset(connection: &mut Connection) -> Result<(), StorageError> {
     )?;
     {
         let mut statement = transaction.prepare(
-            "INSERT INTO records (id, table_id, position, created_at, updated_at)
-             VALUES (?1, 'benchmark-table', ?2, ?3, ?3)",
+            "INSERT INTO records (id, table_id, position, auto_number, created_at, updated_at)
+             VALUES (?1, 'benchmark-table', ?2, ?2 + 1, ?3, ?3)",
         )?;
         for record_index in 0..RECORD_COUNT {
             statement.execute((

@@ -1,3 +1,4 @@
+use serde_json::Value;
 use std::sync::Mutex;
 use tauri::State;
 
@@ -138,4 +139,46 @@ pub fn storage_reorder_views(
     let mut opened = connection::open_project(&path)?;
     lifecycle::reorder_views(&mut opened.connection, &table_id, &view_ids)?;
     repository::load_snapshot(&opened.connection, &opened.manifest)
+}
+
+#[tauri::command]
+pub fn storage_get_view_config(
+    view_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<Value, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let opened = connection::open_project(&path)?;
+    lifecycle::load_view_config(&opened.connection, &view_id)
+}
+
+#[tauri::command]
+pub fn storage_update_view_config(
+    view_id: String,
+    config: Value,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<Value, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let mut opened = connection::open_project(&path)?;
+    lifecycle::update_view_config(&mut opened.connection, &view_id, config)
+}
+
+#[tauri::command]
+pub fn storage_get_detail_fields(
+    table_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<Vec<String>, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let opened = connection::open_project(&path)?;
+    lifecycle::load_detail_fields(&opened.connection, &table_id)
+}
+
+#[tauri::command]
+pub fn storage_update_detail_fields(
+    table_id: String,
+    field_ids: Vec<String>,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<Vec<String>, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let mut opened = connection::open_project(&path)?;
+    lifecycle::update_detail_fields(&mut opened.connection, &table_id, &field_ids)
 }

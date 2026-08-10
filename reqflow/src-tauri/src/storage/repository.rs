@@ -244,8 +244,8 @@ fn insert_table_defaults(
     let now = timestamp();
     let field_id = new_id("field");
     transaction.execute(
-        "INSERT INTO fields (id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at)
-         VALUES (?1, ?2, '标题', 'text', 1, 0, '{}', ?3, ?3)",
+        "INSERT INTO fields (id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at)
+         VALUES (?1, ?2, NULL, '标题', 'text', 1, 0, '{}', ?3, ?3)",
         (&field_id, table_id, &now),
     )?;
     let view_id = new_id("view");
@@ -259,6 +259,7 @@ fn insert_table_defaults(
          VALUES (?1, 1, '{}', ?2, ?2)",
         (&view_id, &now),
     )?;
+    transaction.execute("INSERT INTO table_configs (table_id, detail_field_ids_json, updated_at) VALUES (?1, '[]', ?2)", (table_id, &now))?;
     Ok(())
 }
 

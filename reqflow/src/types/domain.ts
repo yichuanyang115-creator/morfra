@@ -1,5 +1,7 @@
 export type ViewType = "table" | "board";
-export type FieldType = "text";
+export type FieldType = "text" | "select" | "multi_select" | "number" | "progress" | "date" | "image" | "file" | "link" | "checkbox" | "auto_number" | "created_time" | "updated_time";
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 
 export interface ProjectManifest {
   id: string;
@@ -18,17 +20,52 @@ export interface ViewSummary {
 
 export interface FieldSummary {
   id: string;
+  tableId: string;
+  groupId: string | null;
   name: string;
   fieldType: FieldType;
   isTitle: boolean;
   position: number;
+  config: JsonValue;
+  options: FieldOptionSummary[];
 }
 
-export interface RecordSummary {
+export interface FieldGroupSummary {
   id: string;
+  tableId: string;
+  name: string;
   position: number;
+}
+
+export interface FieldOptionSummary {
+  id: string;
+  fieldId: string;
+  name: string;
+  color: string;
+  position: number;
+}
+
+export interface RecordData {
+  id: string;
+  tableId: string;
+  position: number;
+  autoNumber: number;
   createdAt: string;
   updatedAt: string;
+  values: Record<string, JsonValue>;
+  multiSelectValues: Record<string, string[]>;
+}
+
+export interface TableDataSnapshot {
+  tableId: string;
+  groups: FieldGroupSummary[];
+  fields: FieldSummary[];
+  records: RecordData[];
+}
+
+export interface OptionUsage {
+  recordCount: number;
+  viewRuleCount: number;
 }
 
 export interface TableSummary {
