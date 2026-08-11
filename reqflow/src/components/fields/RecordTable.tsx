@@ -30,17 +30,17 @@ function CellEditor({ record, field, onUpdate }: { record: RecordData; field: Fi
   if (field.fieldType === "checkbox") return <input type="checkbox" checked={value === true} aria-label={`${field.name}复选框`} onChange={(event) => void onUpdate(record.id, field.id, event.target.checked)} />;
   if (field.fieldType === "select") return <select className="w-full min-w-0 bg-transparent text-(--morfra-text-primary) outline-none" value={typeof value === "string" ? value : ""} onChange={(event) => { if (event.target.value === "__new__") { const name = window.prompt("新增选项"); if (name?.trim()) void onUpdate(record.id, field.id, name.trim()); } else void onUpdate(record.id, field.id, event.target.value || null); }}><option value="">未选择</option>{field.options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}{configValue(field.config, "allowCreate") !== false && <option value="__new__">＋新增选项</option>}</select>;
   if (field.fieldType === "multi_select") return <EditableMultiValue record={record} field={field} onUpdate={onUpdate} />;
-  if (field.fieldType === "image") return <div className="space-y-1">{typeof value === "string" && value && <img src={value} alt={`${field.name}预览`} className="max-h-16 max-w-28 object-contain" />}{<EditableValue record={record} field={field} value={value} onUpdate={onUpdate} />}</div>;
-  if (field.fieldType === "file") return <div className="space-y-1">{typeof value === "string" && value && <a href={value} target="_blank" rel="noreferrer" className="text-(--morfra-accent-primary) underline">{fileName(value)}</a>}{<EditableValue record={record} field={field} value={value} onUpdate={onUpdate} />}</div>;
+  if (field.fieldType === "image") return <div className="space-y-1"><div className="flex gap-1">{attachmentValues(value).map((url) => <img key={url} src={url} alt={`${field.name}预览`} className="max-h-16 max-w-28 object-contain" />)}</div><EditableValue record={record} field={field} value={value} onUpdate={onUpdate} /></div>;
+  if (field.fieldType === "file") return <div className="space-y-1">{attachmentValues(value).map((url) => <a key={url} href={url} target="_blank" rel="noreferrer" className="mr-2 text-(--morfra-accent-primary) underline">{fileName(url)}</a>)}<EditableValue record={record} field={field} value={value} onUpdate={onUpdate} /></div>;
   if (field.fieldType === "number") return <div className="flex items-center gap-1"><EditableValue record={record} field={field} value={value} onUpdate={onUpdate} /><span className="text-(--morfra-text-tertiary)">{numberSuffix(field.config)}</span></div>;
   return <EditableValue record={record} field={field} value={value} onUpdate={onUpdate} />;
 }
 
 function EditableValue({ record, field, value, onUpdate }: { record: RecordData; field: FieldSummary; value: JsonValue | undefined; onUpdate: RecordTableProps["onUpdate"] }) {
-  const [draft, setDraft] = useState(formatValue(value));
-  const inputType = field.fieldType === "number" || field.fieldType === "progress" ? "number" : field.fieldType === "date" ? (configValue(field.config, "includeTime") === true ? "datetime-local" : "date") : field.fieldType === "image" || field.fieldType === "file" ? "url" : "text";
+  const [draft, setDraft] = useState(field.fieldType === "image" || field.fieldType === "file" ? attachmentValues(value).join(", ") : formatValue(value));
+  const inputType = field.fieldType === "number" || field.fieldType === "progress" ? "number" : field.fieldType === "date" ? (configValue(field.config, "includeTime") === true ? "datetime-local" : "date") : "text";
   const multiline = field.fieldType === "text" && configValue(field.config, "multiline") === true;
-  const inputProps = { className: "w-full min-w-0 bg-transparent text-(--morfra-text-primary) outline-none", value: draft, placeholder: "—", onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft(event.target.value), onBlur: () => { const next = draft.trim(); const current = formatValue(value); if (next === current) return; const normalized: JsonValue = next === "" ? null : inputType === "number" ? Number(next) : next; void onUpdate(record.id, field.id, normalized); } };
+  const inputProps = { className: "w-full min-w-0 bg-transparent text-(--morfra-text-primary) outline-none", value: draft, placeholder: field.fieldType === "image" || field.fieldType === "file" ? "多个 URL 用逗号分隔" : "—", onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft(event.target.value), onBlur: () => { const next = draft.trim(); const current = field.fieldType === "image" || field.fieldType === "file" ? attachmentValues(value).join(", ") : formatValue(value); if (next === current) return; const normalized: JsonValue = field.fieldType === "image" || field.fieldType === "file" ? next.split(/[\n,]/).map((item) => item.trim()).filter(Boolean) : next === "" ? null : inputType === "number" ? Number(next) : next; void onUpdate(record.id, field.id, normalized); } };
   return multiline ? <textarea {...inputProps} rows={2} /> : <input {...inputProps} type={inputType} min={field.fieldType === "progress" ? 0 : undefined} max={field.fieldType === "progress" ? 100 : undefined} />;
 }
 
@@ -49,6 +49,7 @@ function formatValue(value: JsonValue | undefined): string { if (value === undef
 function configValue(config: JsonValue, key: string): JsonValue | undefined { return config && typeof config === "object" && !Array.isArray(config) ? config[key] : undefined; }
 
 function fileName(value: string): string { try { return decodeURIComponent(new URL(value).pathname.split("/").pop() || value); } catch { return value; } }
+function attachmentValues(value: JsonValue | undefined): string[] { return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : typeof value === "string" && value ? [value] : []; }
 
 function numberSuffix(config: JsonValue): string { const format = config && typeof config === "object" && !Array.isArray(config) ? config.format : undefined; return format === "percent" ? "%" : format === "currency" ? "¤" : ""; }
 

@@ -86,3 +86,16 @@ pub fn storage_apply_table_mutation(
     push_undo(state.inner(), UndoAction::RestoreBatch { backup })?;
     field_repository::load_table_data(&opened.connection, &table_id)
 }
+
+#[tauri::command]
+pub fn storage_reorder_records(
+    table_id: String,
+    record_ids: Vec<String>,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<TableDataSnapshot, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let mut opened = connection::open_project(&path)?;
+    let backup = record_repository::reorder_records(&mut opened.connection, &table_id, &record_ids)?;
+    push_undo(state.inner(), UndoAction::RestoreBatch { backup })?;
+    field_repository::load_table_data(&opened.connection, &table_id)
+}

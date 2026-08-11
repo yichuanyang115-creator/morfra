@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FieldSummary } from "../../types/domain";
-import { createGridLayoutSaveCoordinator, gridLayoutSaveRollback, parseCachedGridLayout, parseLoadingGridLayout, shouldRollbackGridLayoutSave, shouldShowGridSkeleton } from "./StorageWorkspace";
+import { createGridLayoutSaveCoordinator, gridLayoutSaveRollback, parseCachedGridLayout, parseLoadingGridLayout, resetGridFieldLayout, shouldRollbackGridLayoutSave, shouldShowGridSkeleton } from "./StorageWorkspace";
 
 const fields: FieldSummary[] = [
   { id: "title", tableId: "table-1", groupId: null, name: "名称", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] },
@@ -8,6 +8,10 @@ const fields: FieldSummary[] = [
 ];
 
 describe("parseCachedGridLayout", () => {
+  it("重置字段布局时保留筛选、排序、分组和条件填色管线", () => {
+    const current = parseCachedGridLayout('{"fieldIds":["title"],"filters":[{"id":"f","fieldId":"status","operator":"equals","value":"todo"}],"group":{"fieldId":"status"}}', fields);
+    expect(resetGridFieldLayout(current, ["title", "status"]).pipeline).toEqual(current.pipeline);
+  });
   it("数据首次加载时从当前视图缓存恢复骨架列数、隐藏列结果和列宽", () => {
     expect(parseLoadingGridLayout('{"fieldIds":["title","owner"],"columnWidths":{"title":280,"owner":120},"rowHeight":56}', "title")).toEqual({
       fieldIds: ["title", "owner"],

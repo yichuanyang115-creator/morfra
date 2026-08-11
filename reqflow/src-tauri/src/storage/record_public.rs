@@ -65,6 +65,21 @@ pub fn create_record(
     Ok(id)
 }
 
+pub fn reorder_records(connection: &mut Connection, table_id: &str, record_ids: &[String]) -> Result<BatchBackup, StorageError> {
+    let stored_ids = connection.prepare("SELECT id FROM records WHERE table_id = ?1 ORDER BY position")?.query_map([table_id], |row| row.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
+    let requested = record_ids.iter().cloned().collect::<HashSet<_>>();
+    let stored = stored_ids.iter().cloned().collect::<HashSet<_>>();
+    if record_ids.len() != requested.len() || requested != stored { return Err(StorageError::validation("记录排序必须包含当前表全部且不重复的记录")); }
+    let backups = stored_ids.iter().map(|record_id| capture_record(connection, record_id)).collect::<Result<Vec<_>, _>>()?;
+    let transaction = connection.transaction()?;
+    let temporary_offset: i64 = transaction.query_row("SELECT COALESCE(MAX(position), -1) + ?2 FROM records WHERE table_id = ?1", params![table_id, record_ids.len() as i64 + 1], |row| row.get(0))?;
+    for (position, record_id) in record_ids.iter().enumerate() { transaction.execute("UPDATE records SET position = ?1 WHERE id = ?2 AND table_id = ?3", params![temporary_offset + position as i64, record_id, table_id])?; }
+    for (position, record_id) in record_ids.iter().enumerate() { transaction.execute("UPDATE records SET position = ?1 WHERE id = ?2 AND table_id = ?3", params![position as i64, record_id, table_id])?; }
+    touch_project(&transaction)?;
+    transaction.commit()?;
+    Ok(BatchBackup { table_id: table_id.to_string(), records: backups, created_record_ids: vec![] })
+}
+
 pub fn update_cell(
     connection: &mut Connection,
     record_id: &str,
@@ -141,8 +156,8 @@ pub fn apply_batch_mutation(
 pub fn restore_batch_mutation(connection: &mut Connection, backup: &BatchBackup) -> Result<(), StorageError> {
     let transaction = connection.transaction()?;
     for record_id in &backup.created_record_ids { transaction.execute("DELETE FROM records WHERE id = ?1", [record_id])?; }
+    for record_backup in &backup.records { transaction.execute("DELETE FROM records WHERE id = ?1", [&record_backup.record.id])?; }
     for record_backup in &backup.records {
-        transaction.execute("DELETE FROM records WHERE id = ?1", [&record_backup.record.id])?;
         transaction.execute("INSERT INTO records (id, table_id, position, auto_number, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)", params![record_backup.record.id, record_backup.record.table_id, record_backup.record.position, record_backup.record.auto_number, record_backup.record.created_at, record_backup.record.updated_at])?;
         for value in &record_backup.values { transaction.execute("INSERT INTO cell_values (record_id, field_id, value_json, updated_at) VALUES (?1, ?2, ?3, ?4)", params![value.record_id, value.field_id, value.value_json, value.updated_at])?; }
         for value in &record_backup.multi_values { transaction.execute("INSERT INTO multi_select_values (record_id, field_id, option_id, position) VALUES (?1, ?2, ?3, ?4)", params![value.record_id, value.field_id, value.option_id, value.position])?; }
@@ -217,4 +232,3 @@ pub fn capture_record(
         multi_values,
     })
 }
-

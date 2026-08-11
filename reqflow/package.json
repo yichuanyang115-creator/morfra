@@ -9,7 +9,8 @@
     "build:macos": "bash scripts/build-macos-release.sh",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "vitest run"
+    "test": "vitest run",
+    "benchmark:phase39": "esbuild scripts/phase39-release-benchmark.ts --bundle --minify --platform=node --format=cjs --define:process.env.NODE_ENV='\"production\"' --outfile=dist/phase39-release-benchmark.cjs && node dist/phase39-release-benchmark.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

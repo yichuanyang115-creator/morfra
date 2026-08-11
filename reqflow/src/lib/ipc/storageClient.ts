@@ -178,6 +178,10 @@ export async function deleteStorageRecord(recordId: string): Promise<TableDataSn
   return invoke<TableDataSnapshot>("storage_delete_record", { recordId });
 }
 
+export async function reorderStorageRecords(tableId: string, recordIds: string[]): Promise<TableDataSnapshot> {
+  return invoke<TableDataSnapshot>("storage_reorder_records", { tableId, recordIds });
+}
+
 export interface StorageCellUpdate { recordId: string; fieldId: string; value: JsonValue; }
 export interface StorageNewRecord { values: Record<string, JsonValue>; }
 

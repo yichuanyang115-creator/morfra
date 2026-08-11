@@ -117,6 +117,35 @@ fn batch_mutation_is_atomic_and_undo_restores_changed_and_created_records() {
 }
 
 #[test]
+fn record_reorder_is_persisted_validated_and_undoable() {
+    let (mut connection, manifest) = database();
+    let table = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].clone();
+    let create = |connection: &mut rusqlite::Connection, title: &str| { let mut values = HashMap::new(); values.insert(table.title_field_id.clone(), json!(title)); record_repository::create_record(connection, &table.id, values).expect("record") };
+    let first = create(&mut connection, "第一条");
+    let second = create(&mut connection, "第二条");
+    let backup = record_repository::reorder_records(&mut connection, &table.id, &[second.clone(), first.clone()]).expect("reorder");
+    let reordered = field_repository::load_table_data(&connection, &table.id).expect("data");
+    assert_eq!(reordered.records.iter().map(|record| record.id.as_str()).collect::<Vec<_>>(), vec![second.as_str(), first.as_str()]);
+    assert!(record_repository::reorder_records(&mut connection, &table.id, std::slice::from_ref(&first)).is_err());
+    record_repository::restore_batch_mutation(&mut connection, &backup).expect("undo reorder");
+    let restored = field_repository::load_table_data(&connection, &table.id).expect("data");
+    assert_eq!(restored.records.iter().map(|record| record.id.as_str()).collect::<Vec<_>>(), vec![first.as_str(), second.as_str()]);
+}
+
+#[test]
+fn file_fields_persist_multiple_attachment_urls() {
+    let (mut connection, manifest) = database();
+    let table = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].clone();
+    let file_id = field_repository::create_field(&mut connection, &table.id, "附件", "file", json!({}), None).expect("file field");
+    let mut values = HashMap::new();
+    values.insert(table.title_field_id.clone(), json!("多附件记录"));
+    values.insert(file_id.clone(), json!(["https://files.test/one.pdf", "https://files.test/two.pdf"]));
+    record_repository::create_record(&mut connection, &table.id, values).expect("record");
+    let data = field_repository::load_table_data(&connection, &table.id).expect("data");
+    assert_eq!(data.records[0].values[&file_id], json!(["https://files.test/one.pdf", "https://files.test/two.pdf"]));
+}
+
+#[test]
 fn clearing_an_existing_title_cell_is_allowed_after_record_creation() {
     let (mut connection, manifest) = database();
     let table = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].clone();

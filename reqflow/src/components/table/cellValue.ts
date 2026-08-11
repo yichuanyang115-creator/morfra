@@ -1,14 +1,15 @@
 import type { FieldSummary, JsonValue, RecordData } from "../../types/domain";
+import { formatUserValue } from "../../lib/table/fieldFormatting";
 
 export function valueForCell(field: FieldSummary, record: RecordData): JsonValue {
+  if (field.fieldType === "auto_number") return record.autoNumber;
+  if (field.fieldType === "created_time") return record.createdAt || record.values[field.id] || null;
+  if (field.fieldType === "updated_time") return record.updatedAt || record.values[field.id] || null;
   return field.fieldType === "multi_select" ? record.multiSelectValues[field.id] ?? [] : record.values[field.id] ?? null;
 }
 
 export function formatCellValue(field: FieldSummary, value: JsonValue): string {
-  if (value === null || value === "") return "空";
-  if (field.fieldType === "multi_select" && Array.isArray(value)) return value.length ? `${value.length} 项` : "空";
-  if (typeof value === "boolean") return value ? "已勾选" : "未勾选";
-  return String(value);
+  return formatUserValue(field, value);
 }
 
 export function isReadOnlyField(field: FieldSummary): boolean {

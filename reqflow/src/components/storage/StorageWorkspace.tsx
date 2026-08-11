@@ -13,73 +13,16 @@ import { useStorageSelectionStore } from "../../stores/storageSelectionStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { getStorageViewConfig, updateStorageViewConfig } from "../../lib/ipc/storageClient";
 import { DataGrid, DataGridLoadingSkeleton, normalizeGridFieldIds, normalizeGridGroupOrder, orderGridFieldIdsByGroup, parseGridLayout, type GridLayoutConfig } from "../table/DataGrid";
-import type { FieldGroupSummary, FieldSummary, JsonValue } from "../../types/domain";
+import type { JsonValue } from "../../types/domain";
+import { EMPTY_VIEW_PIPELINE, runViewPipeline, type ViewPipelineConfig } from "../../lib/table/viewPipeline";
+import { uniqueProjectedRecordCount } from "../../lib/table/groupProjection";
+import { GroupBar } from "../table/tools/GroupBar";
+import { createGridLayoutSaveCoordinator, gridLayoutSaveRollback, parseCachedGridLayout, parseLoadingGridLayout, resetGridFieldLayout, shouldRollbackGridLayoutSave, shouldShowGridSkeleton } from "./storageGridLayout";
+export { createGridLayoutSaveCoordinator, gridLayoutSaveRollback, parseCachedGridLayout, parseLoadingGridLayout, resetGridFieldLayout, shouldRollbackGridLayoutSave, shouldShowGridSkeleton } from "./storageGridLayout";
 
 interface StorageWorkspaceProps {
   embedded?: boolean;
 }
-
-export function parseCachedGridLayout(raw: string | null, fields: FieldSummary[], groups: FieldGroupSummary[] = []): GridLayoutConfig {
-  try {
-    const stored: unknown = raw ? JSON.parse(raw) : null;
-    if (Array.isArray(stored)) return parseGridLayout({ fieldIds: stored }, fields, groups);
-    return parseGridLayout(isJsonRecord(stored) ? stored : {}, fields, groups);
-  } catch {
-    return parseGridLayout({}, fields, groups);
-  }
-}
-
-export function parseLoadingGridLayout(raw: string | null, titleFieldId: string): GridLayoutConfig {
-  try {
-    const stored: unknown = raw ? JSON.parse(raw) : null;
-    const source = isJsonRecord(stored) ? stored : {};
-    const requestedIds = Array.isArray(source.fieldIds) ? source.fieldIds.filter((id): id is string => typeof id === "string") : [];
-    const fieldIds = [...new Set([titleFieldId, ...requestedIds.filter((id) => id !== titleFieldId)])];
-    const columnWidths = isJsonRecord(source.columnWidths)
-      ? Object.fromEntries(Object.entries(source.columnWidths).filter((entry): entry is [string, number] => typeof entry[1] === "number"))
-      : {};
-    return {
-      fieldIds,
-      groupOrder: [],
-      columnWidths,
-      frozenFieldId: typeof source.frozenFieldId === "string" ? source.frozenFieldId : null,
-      rowHeight: source.rowHeight === 32 || source.rowHeight === 56 ? source.rowHeight : 40,
-      collapsedGroupIds: [],
-    };
-  } catch {
-    return { fieldIds: [titleFieldId], groupOrder: [], columnWidths: {}, frozenFieldId: null, rowHeight: 40, collapsedGroupIds: [] };
-  }
-}
-
-export function gridLayoutSaveRollback(confirmed: GridLayoutConfig | undefined, fallback: GridLayoutConfig | null): GridLayoutConfig | null {
-  return confirmed ?? fallback;
-}
-
-export interface GridLayoutSaveCoordinator {
-  confirm(viewId: string, layout: GridLayoutConfig): void;
-  getConfirmed(viewId: string): GridLayoutConfig | undefined;
-  enqueue(persist: () => Promise<void>): Promise<void>;
-}
-
-export function createGridLayoutSaveCoordinator(): GridLayoutSaveCoordinator {
-  let queue = Promise.resolve();
-  const confirmedLayouts = new Map<string, GridLayoutConfig>();
-  return {
-    confirm(viewId, layout) { confirmedLayouts.set(viewId, layout); },
-    getConfirmed(viewId) { return confirmedLayouts.get(viewId); },
-    enqueue(persist) { queue = queue.then(persist, persist); return queue; },
-  };
-}
-
-export function shouldRollbackGridLayoutSave(currentVersion: number, saveVersion: number, currentViewId: string | null, saveViewId: string): boolean {
-  return currentVersion === saveVersion && currentViewId === saveViewId;
-}
-
-export function shouldShowGridSkeleton(hasTableData: boolean, tableDataLoading: boolean, gridLayoutReady: boolean, hasLoadError: boolean): boolean {
-  return (!hasTableData && !hasLoadError) || (hasTableData && !gridLayoutReady) || (!hasTableData && tableDataLoading);
-}
-
-function isJsonRecord(value: unknown): value is Record<string, JsonValue> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 
 export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {}) {
   const project = useProjectStore(currentProject);
@@ -113,6 +56,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   const [error, setError] = useState<string | null>(null);
   const [viewConfigError, setViewConfigError] = useState<string | null>(null);
   const [viewConfigRetry, setViewConfigRetry] = useState(0);
+  const [gridSearch, setGridSearch] = useState("");
 
   const tables = project?.storageSnapshot?.tables ?? [];
   const activeTableId = project ? activeTableByProject[project.id] ?? tables[0]?.id ?? null : null;
@@ -126,6 +70,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   const createRecord = useTableDataStore((state) => state.createRecord);
   const updateCell = useTableDataStore((state) => state.updateCell);
   const applyTableMutation = useTableDataStore((state) => state.applyTableMutation);
+  const reorderRecords = useTableDataStore((state) => state.reorderRecords);
   const selectRecord = useStorageSelectionStore((state) => state.selectRecord);
   const detailOpen = useLayoutStore((state) => state.detailOpen);
   const toggleDetail = useLayoutStore((state) => state.toggleDetail);
@@ -143,6 +88,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   }, [activeTable, activeView, gridLayout, gridLayoutViewId]);
 
   useLayoutEffect(() => { activeViewIdRef.current = activeView?.id ?? null; }, [activeView?.id]);
+  useEffect(() => { setGridSearch(""); }, [activeView?.id]);
 
   function nextGridLayoutReadVersion(viewId: string): number {
     const next = (gridLayoutReadVersions.current.get(viewId) ?? 0) + 1;
@@ -210,7 +156,8 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
     setFieldDisplayIds(normalizedNext.fieldIds);
     const persist = async () => {
       try {
-        await updateStorageViewConfig(viewId, { fieldIds: normalizedNext.fieldIds, groupOrder: normalizedNext.groupOrder, columnWidths: normalizedNext.columnWidths, frozenFieldId: normalizedNext.frozenFieldId, rowHeight: normalizedNext.rowHeight, collapsedGroupIds: normalizedNext.collapsedGroupIds });
+        const pipeline = normalizedNext.pipeline ?? EMPTY_VIEW_PIPELINE;
+        await updateStorageViewConfig(viewId, { fieldIds: normalizedNext.fieldIds, groupOrder: normalizedNext.groupOrder, columnWidths: normalizedNext.columnWidths, frozenFieldId: normalizedNext.frozenFieldId, rowHeight: normalizedNext.rowHeight, collapsedGroupIds: normalizedNext.collapsedGroupIds, filters: pipeline.filters, filterMode: pipeline.filterMode, sorts: pipeline.sorts, group: pipeline.group, conditionalColors: pipeline.conditionalColors } as unknown as JsonValue);
         gridLayoutSaveCoordinator.current.confirm(viewId, normalizedNext);
         if (pendingGridLayouts.current.get(viewId) === normalizedNext) pendingGridLayouts.current.delete(viewId);
         nextGridLayoutReadVersion(viewId);
@@ -253,17 +200,38 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   const tableList = project && <TableList tables={tables} activeTableId={activeTable?.id ?? null} canUndo={canUndo} onSelect={(id) => project && setActiveTable(project.id, id)} onCreate={(name) => run(() => actions.createTable(name), "新建表失败，请重试")} onRename={(id, name) => run(() => actions.renameTable(id, name), "表重命名失败，请重试")} onDelete={(id) => run(() => actions.deleteTable(id), "删除表失败，数据未被修改")} onReorder={(ids) => run(() => actions.reorderTables(ids), "表顺序保存失败，请重试")} onUndo={() => run(undoStorageChange, "当前会话没有可撤销的存储操作")} />;
   const gridLayoutReady = Boolean(tableData && gridLayout && gridLayoutViewId === activeView?.id);
   const showGridSkeleton = shouldShowGridSkeleton(Boolean(tableData), tableDataLoading, gridLayoutReady, Boolean(tableDataError));
+  const pipelineResult = useMemo(() => {
+    if (!tableData || !gridLayout) return null;
+    return runViewPipeline(tableData, gridLayout.pipeline ?? EMPTY_VIEW_PIPELINE, gridSearch);
+  }, [gridLayout, gridSearch, tableData]);
+  const processedGridData = tableData && pipelineResult ? { ...tableData, records: pipelineResult.records } : tableData;
+  const groupField = tableData?.fields.find((field) => field.id === gridLayout?.pipeline?.group.fieldId);
+  const groupProjection = pipelineResult?.groups ?? [];
+  const changePipeline = (pipeline: ViewPipelineConfig) => { if (gridLayout) setGridLayoutConfig({ ...gridLayout, pipeline }); };
+  const createGroupedRecord = async (key: string) => {
+    if (!groupField || !activeTable || !tableData) return;
+    const title = window.prompt("新记录标题");
+    if (!title?.trim()) return;
+    const value: JsonValue = key === "__empty__" ? null : groupField.fieldType === "multi_select" ? [key] : groupField.fieldType === "checkbox" ? key === "true" : groupField.fieldType === "number" || groupField.fieldType === "progress" ? Number(key) : key;
+    const previousIds = new Set(tableData.records.map((record) => record.id));
+    const snapshot = await createRecord(activeTable.id, { [activeTable.titleFieldId]: title.trim(), [groupField.id]: value });
+    const created = snapshot.records.find((record) => !previousIds.has(record.id));
+    const visibleIds = new Set(runViewPipeline(snapshot, gridLayout?.pipeline ?? EMPTY_VIEW_PIPELINE, gridSearch).records.map((record) => record.id));
+    if (created && !visibleIds.has(created.id)) setError("记录已创建，但不符合当前筛选条件");
+  };
 
   const mainContent = <main className="morfra-storage-canvas" aria-label="Morfra 项目工作区">
     {project && activeTable && activeView ? <section className="morfra-storage-surface">
       <TableHeader table={{ ...activeTable, recordCount: tableData?.records.length ?? activeTable.recordCount }} onRename={(name) => run(() => actions.renameTable(activeTable.id, name), "表重命名失败，请重试")} onOpenFieldManager={() => setFieldManagerOpen(true)} onOpenDetailFields={() => setDetailFieldsOpen(true)} />
       <ViewTabBar tableId={activeTable.id} views={activeTable.views} activeViewId={activeView.id} onSelect={(id) => setActiveView(activeTable.id, id)} onCreate={(name, type) => run(() => actions.createView(activeTable.id, name, type), "新建视图失败，请重试")} onRename={(id, name) => run(() => actions.renameView(id, name), "视图重命名失败，请重试")} onDuplicate={(id, name) => run(() => actions.duplicateView(id, name), "复制视图失败，请重试")} onDelete={(id) => run(() => actions.deleteView(id), "删除视图失败，请重试")} onReorder={(ids) => run(() => actions.reorderViews(activeTable.id, ids), "视图顺序保存失败，请重试")} />
-      <ViewToolbar view={activeView} onOpenFieldDisplay={() => setFieldDisplayOpen(true)} />
+      <ViewToolbar view={activeView} fields={tableData?.fields} visibleFieldCount={gridLayout?.fieldIds.length} pipeline={gridLayout?.pipeline ?? EMPTY_VIEW_PIPELINE} search={gridSearch} rowHeight={gridLayout?.rowHeight} onSearchChange={setGridSearch} onRowHeightChange={(rowHeight) => { if (gridLayout) setGridLayoutConfig({ ...gridLayout, rowHeight }); }} onPipelineChange={changePipeline} onOpenFieldDisplay={() => setFieldDisplayOpen(true)} />
       <div className="morfra-storage-data-area">
         <div className="morfra-data-area-heading"><div><p className="morfra-data-area-kicker">{activeView.viewType === "board" ? "看板" : "数据表"}</p><h2>{activeTable.name}</h2><p>当前视图：{activeView.name} · {tableData?.records.length ?? activeTable.recordCount} 条记录</p></div><span className="morfra-data-area-id">主标题固定首列</span></div>
+        {groupField && gridLayout && <GroupBar groups={groupProjection} uniqueCount={uniqueProjectedRecordCount(groupProjection)} collapsedKeys={(gridLayout.pipeline ?? EMPTY_VIEW_PIPELINE).group.collapsedKeys} canCreate={!['created_time', 'updated_time'].includes(groupField.fieldType)} onToggle={(key) => { const current = (gridLayout.pipeline ?? EMPTY_VIEW_PIPELINE).group; changePipeline({ ...(gridLayout.pipeline ?? EMPTY_VIEW_PIPELINE), group: { ...current, collapsedKeys: current.collapsedKeys.includes(key) ? current.collapsedKeys.filter((item) => item !== key) : [...current.collapsedKeys, key] } }); }} onCreate={(key) => void run(() => createGroupedRecord(key), "新建分组记录失败，请重试")} onExpandAll={() => changePipeline({ ...(gridLayout.pipeline ?? EMPTY_VIEW_PIPELINE), group: { ...(gridLayout.pipeline ?? EMPTY_VIEW_PIPELINE).group, collapsedKeys: [] } })} onCollapseAll={() => changePipeline({ ...(gridLayout.pipeline ?? EMPTY_VIEW_PIPELINE), group: { ...(gridLayout.pipeline ?? EMPTY_VIEW_PIPELINE).group, collapsedKeys: groupProjection.map((group) => group.key) } })} />}
         {showGridSkeleton && loadingGridLayout && <DataGridLoadingSkeleton config={loadingGridLayout} />}
         {tableDataLoading && gridLayoutReady && <div className="morfra-grid-refresh-indicator" role="status">正在刷新表格数据…</div>}
-        {tableData && gridLayout && gridLayoutViewId === activeView.id && <DataGrid viewId={activeView.id} data={tableData} config={gridLayout} onConfigChange={setGridLayoutConfig} onCreate={() => void run(() => createRecord(activeTable.id, { [activeTable.titleFieldId]: "未命名记录" }).then(() => undefined), "新建记录失败，请重试")} onUpdateCell={updateCell} onApplyTableMutation={(tableId, plan, deleteRecordIds) => applyTableMutation(tableId, plan.updates, plan.newRecords, deleteRecordIds)} onUndo={async () => { await undoStorageChange(); await loadTableData(activeTable.id); }} onOpenDetail={(recordId) => { selectRecord(activeTable.id, recordId); setActiveRightPanel("detail"); if (!detailOpen) toggleDetail(); }} />}
+        {pipelineResult && tableData && pipelineResult.matched === 0 && tableData.records.length > 0 && <div className="morfra-grid-no-results" role="status"><span>当前搜索或筛选没有匹配记录。</span>{gridSearch && <button type="button" onClick={() => setGridSearch("")}>清除搜索</button>}{(gridLayout?.pipeline?.filters.length ?? 0) > 0 && <button type="button" onClick={() => changePipeline({ ...(gridLayout?.pipeline ?? EMPTY_VIEW_PIPELINE), filters: [] })}>清除筛选</button>}</div>}
+        {processedGridData && gridLayout && gridLayoutViewId === activeView.id && <DataGrid viewId={activeView.id} data={processedGridData} config={gridLayout} recordGroups={pipelineResult?.recordGroups} groups={pipelineResult?.groups} groupField={groupField} manualRecordIds={tableData?.records.map((record) => record.id) ?? []} onConfigChange={setGridLayoutConfig} onCreate={() => void run(() => createRecord(activeTable.id, { [activeTable.titleFieldId]: "未命名记录" }).then(() => undefined), "新建记录失败，请重试")} onCreateInGroup={(key) => void run(() => createGroupedRecord(key), "新建分组记录失败，请重试")} onUpdateCell={updateCell} onApplyTableMutation={(tableId, plan, deleteRecordIds) => applyTableMutation(tableId, plan.updates, plan.newRecords, deleteRecordIds)} onReorderRecords={(recordIds) => reorderRecords(activeTable.id, recordIds)} onUndo={async () => { await undoStorageChange(); await loadTableData(activeTable.id); }} onOpenDetail={(recordId) => { selectRecord(activeTable.id, recordId); setActiveRightPanel("detail"); if (!detailOpen) toggleDetail(); }} />}
         {!tableDataLoading && !tableData && !showGridSkeleton && <div className="morfra-storage-empty"><span aria-hidden="true">○</span><p>字段和记录暂不可用</p><small>请重试或重新打开项目。</small></div>}
         {viewConfigError && <p role="alert" className="morfra-storage-error">{viewConfigError}<button type="button" className="ml-2 underline" onClick={() => setViewConfigRetry((version) => version + 1)}>重试</button></p>}
         {detailLoadError && <p role="alert" className="morfra-storage-error">{detailLoadError}<button type="button" className="ml-2 underline" onClick={() => { if (activeTable) void loadDetailFields(activeTable.id); }}>重试</button></p>}
@@ -271,7 +239,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
     </section> : <div className="morfra-storage-empty morfra-storage-empty-project"><span aria-hidden="true">□</span><p>没有打开的项目</p><small>从文件菜单打开本地项目，或从项目切换器创建空白项目。</small></div>}
     {error && <p role="alert" className="morfra-storage-error">{error}{activeTable && <button type="button" className="ml-2 underline" onClick={() => { setError(null); void loadTableData(activeTable.id).catch(() => setError("字段和记录读取失败，请重试")); }}>重试</button>}</p>}
     {fieldManagerOpen && tableData && <FieldManager tableId={activeTable.id} data={tableData} onClose={() => setFieldManagerOpen(false)} onError={setError} />}
-    {fieldDisplayOpen && tableData && fieldDisplayIds && gridLayout && gridLayoutViewId === activeView?.id && <FieldDisplayManager fields={tableData.fields} groups={tableData.groups} selectedIds={fieldDisplayIds} groupOrder={gridLayout.groupOrder} onChange={(fieldIds, groupOrder) => setGridLayoutConfig({ ...gridLayout, fieldIds, groupOrder: groupOrder ?? gridLayout.groupOrder })} onReset={() => setGridLayoutConfig({ fieldIds: tableData.fields.map((field) => field.id), groupOrder: [], columnWidths: {}, frozenFieldId: null, rowHeight: gridLayout.rowHeight, collapsedGroupIds: [] })} onClose={() => setFieldDisplayOpen(false)} />}
+    {fieldDisplayOpen && tableData && fieldDisplayIds && gridLayout && gridLayoutViewId === activeView?.id && <FieldDisplayManager fields={tableData.fields} groups={tableData.groups} selectedIds={fieldDisplayIds} groupOrder={gridLayout.groupOrder} onChange={(fieldIds, groupOrder) => setGridLayoutConfig({ ...gridLayout, fieldIds, groupOrder: groupOrder ?? gridLayout.groupOrder })} onReset={() => setGridLayoutConfig(resetGridFieldLayout(gridLayout, tableData.fields.map((field) => field.id)))} onClose={() => setFieldDisplayOpen(false)} />}
     {detailFieldsOpen && tableData && detailFields && <FieldDisplayManager fields={tableData.fields.filter((field) => !field.isTitle)} selectedIds={detailFields} title="详情显示字段" description="只影响记录详情属性栏，不联动表格字段显示。" onChange={(fieldIds) => { void setDetailFields(activeTable.id, fieldIds).catch(() => setError("详情字段保存失败，已恢复")); }} onClose={() => setDetailFieldsOpen(false)} />}
   </main>;
 

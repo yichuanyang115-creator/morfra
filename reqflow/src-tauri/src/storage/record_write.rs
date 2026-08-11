@@ -78,10 +78,16 @@ fn normalize_value(
         return Ok(Value::Null);
     }
     match field.field_type.as_str() {
-        "text" | "image" | "file" | "link" | "date" => value
+        "text" | "link" | "date" => value
             .as_str()
             .map(|text| Value::String(text.to_string()))
             .ok_or_else(|| StorageError::validation("该字段需要文本值")),
+        "image" | "file" => {
+            if let Some(text) = value.as_str() { return Ok(Value::String(text.to_string())); }
+            let items = value.as_array().ok_or_else(|| StorageError::validation("附件字段需要 URL 或 URL 列表"))?;
+            let urls = items.iter().map(|item| item.as_str().map(str::trim).filter(|text| !text.is_empty()).map(|text| Value::String(text.to_string())).ok_or_else(|| StorageError::validation("附件列表只能包含有效 URL"))).collect::<Result<Vec<_>, _>>()?;
+            Ok(Value::Array(urls))
+        }
         "number" => value
             .as_f64()
             .filter(|number| number.is_finite())

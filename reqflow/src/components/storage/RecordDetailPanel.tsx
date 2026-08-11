@@ -31,8 +31,9 @@ function DetailValue({ field, value, record }: { field: FieldSummary; value: unk
   if (field.fieldType === "select" && typeof value === "string") return <span>{field.options.find((option) => option.id === value)?.name ?? value}</span>;
   if (field.fieldType === "multi_select") return <span>{(record.multiSelectValues[field.id] ?? []).map((id) => field.options.find((option) => option.id === id)?.name ?? id).join("、") || "—"}</span>;
   if (field.fieldType === "number") return <span>{formatNumberValue(value, field.config)}</span>;
-  if (field.fieldType === "image" && typeof value === "string" && value) return <a href={value} target="_blank" rel="noreferrer"><img src={value} alt={`${field.name}预览`} className="max-h-40 max-w-full object-contain" /></a>;
-  if ((field.fieldType === "file" || field.fieldType === "link") && typeof value === "string" && value) return <a href={value} target="_blank" rel="noreferrer" className="text-(--module-scope-action-base) underline">{field.fieldType === "file" ? fileName(value) : value}</a>;
+  if (field.fieldType === "image") return <span className="flex flex-wrap gap-1">{attachmentValues(value).map((url) => <a key={url} href={url} target="_blank" rel="noreferrer"><img src={url} alt={`${field.name}预览`} className="max-h-40 max-w-full object-contain" /></a>)}</span>;
+  if (field.fieldType === "file") return <span>{attachmentValues(value).map((url) => <a key={url} href={url} target="_blank" rel="noreferrer" className="mr-2 text-(--module-scope-action-base) underline">{fileName(url)}</a>)}</span>;
+  if (field.fieldType === "link" && typeof value === "string" && value) return <a href={value} target="_blank" rel="noreferrer" className="text-(--module-scope-action-base) underline">{value}</a>;
   return <span>{formatValue(value)}</span>;
 }
 
@@ -44,6 +45,7 @@ function formatValue(value: unknown, record?: { multiSelectValues: Record<string
 }
 
 function fileName(value: string): string { try { return decodeURIComponent(new URL(value).pathname.split("/").pop() || value); } catch { return value; } }
+function attachmentValues(value: unknown): string[] { return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : typeof value === "string" && value ? [value] : []; }
 
 function formatNumberValue(value: unknown, config: unknown): string {
   if (typeof value !== "number") return formatValue(value);

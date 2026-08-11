@@ -1,0 +1,223 @@
+
+.morfra-file-menu-popover > button {
+  width: 100%;
+}
+
+.morfra-file-menu-popover > button:hover,
+.morfra-file-menu-create button:hover {
+  background: var(--morfra-accent-subtle);
+}
+
+.morfra-file-menu-create {
+  display: block;
+  border-bottom: 1px solid var(--morfra-border-subtle);
+  margin-bottom: 4px;
+  padding: 4px 2px 8px;
+}
+
+.morfra-file-menu-create label {
+  display: block;
+  color: var(--morfra-text-tertiary);
+  font-size: 10px;
+  padding: 0 6px 4px;
+}
+
+.morfra-file-menu-create > div {
+  display: flex;
+  gap: 4px;
+}
+
+.morfra-file-menu-create input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--morfra-border-default);
+  border-radius: var(--morfra-radius-control);
+  background: var(--morfra-surface-content);
+  color: var(--morfra-text-primary);
+  font: inherit;
+  font-size: 11px;
+  outline: 0;
+  padding: 6px 7px;
+}
+
+.morfra-file-menu-create button {
+  background: var(--morfra-accent-primary);
+  color: #fff;
+  text-align: center;
+}
+
+.morfra-file-menu-popover p {
+  margin: 5px 6px 2px;
+  color: var(--morfra-status-danger);
+  font-size: 10px;
+}
+
+.morfra-wordmark-name {
+  flex: none;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.morfra-titlebar-project {
+  overflow: hidden;
+  color: var(--morfra-text-tertiary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.morfra-titlebar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.morfra-appearance-glyph {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.morfra-shell-body {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.morfra-sidebar {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: visible;
+  border-right: 1px solid var(--morfra-border-subtle);
+  background: var(--morfra-surface-sidebar);
+  padding: 14px 10px 10px;
+}
+
+.morfra-sidebar-heading,
+.morfra-sidebar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.morfra-sidebar-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 6px 8px;
+}
+
+.morfra-sidebar-list-heading .morfra-sidebar-label {
+  padding: 0;
+}
+
+.morfra-sidebar-add,
+.morfra-table-more {
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: transparent;
+  color: var(--morfra-text-tertiary);
+  cursor: pointer;
+  font: inherit;
+}
+
+.morfra-sidebar-add {
+  width: 24px;
+  height: 22px;
+  font-size: 15px;
+}
+
+.morfra-sidebar-add:hover,
+.morfra-table-more:hover {
+  background: var(--morfra-accent-subtle);
+  color: var(--morfra-accent-primary);
+}
+
+.morfra-table-actions-menu {
+  position: absolute;
+  z-index: 20;
+  top: 28px;
+  right: 0;
+  display: flex;
+  width: 104px;
+  flex-direction: column;
+  border: 1px solid var(--morfra-border-strong);
+  border-radius: var(--morfra-radius-panel);
+  background: var(--morfra-surface-overlay);
+  box-shadow: var(--morfra-shadow-panel);
+  padding: 4px;
+}
+
+.morfra-table-actions-menu button {
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: transparent;
+  color: var(--morfra-text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  padding: 6px 7px;
+  text-align: left;
+}
+
+.morfra-table-actions-menu button:hover {
+  background: var(--morfra-accent-subtle);
+}
+
+.morfra-sidebar-inline-form {
+  padding: 0 4px 6px;
+}
+
+.morfra-sidebar-inline-form input,
+.morfra-table-rename-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--morfra-focus-ring);
+  border-radius: var(--morfra-radius-control);
+  background: var(--morfra-surface-content);
+  color: var(--morfra-text-primary);
+  font: inherit;
+  font-size: 11px;
+  outline: 0;
+  padding: 6px 7px;
+}
+
+.morfra-table-list-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.morfra-table-list {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.morfra-table-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.morfra-table-row .morfra-table-item {
+  min-width: 0;
+  flex: 1;
+}
+
+.morfra-table-count {
+  color: var(--morfra-text-tertiary);
+  font-size: 10px;
+}
+
+.morfra-table-more {
+  width: 24px;
+  height: 25px;
+  flex: none;
+  font-size: 15px;
+}

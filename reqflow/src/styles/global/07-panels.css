@@ -1,0 +1,220 @@
+
+.morfra-panel-close:hover {
+  background: var(--morfra-accent-subtle);
+  color: var(--morfra-text-primary);
+}
+
+.morfra-panel-content {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+}
+
+.morfra-panel-content > .is-hidden {
+  display: none;
+}
+
+.morfra-panel-content > div > .morfra-panel-header {
+  display: none;
+}
+
+.morfra-context-empty {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  color: var(--morfra-text-tertiary);
+  text-align: center;
+}
+
+.morfra-context-empty p {
+  margin: 0;
+  color: var(--morfra-text-secondary);
+  font-size: 12px;
+}
+
+.morfra-context-empty span:last-child {
+  font-size: 11px;
+}
+
+.morfra-empty-symbol {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--morfra-border-default);
+  border-radius: 50%;
+  color: var(--morfra-accent-primary);
+  font-size: 17px;
+}
+
+.morfra-drawer-layer {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  pointer-events: none;
+}
+
+.morfra-drawer-scrim {
+  position: absolute;
+  border: 0;
+  background: var(--morfra-scrim);
+  cursor: pointer;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.morfra-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(var(--morfra-right-panel-width), calc(100% - 52px));
+  min-width: 320px;
+  max-width: 560px;
+  box-shadow: var(--morfra-shadow-panel);
+  pointer-events: auto;
+}
+
+.morfra-drawer-panel .morfra-right-panel {
+  height: 100%;
+}
+
+.morfra-sidebar-overlay {
+  position: absolute;
+  z-index: 30;
+  inset: var(--morfra-titlebar-height) 0 0;
+  pointer-events: none;
+}
+
+.morfra-sidebar-overlay-scrim {
+  position: absolute;
+  border: 0;
+  background: var(--morfra-scrim);
+  cursor: pointer;
+  inset: 0;
+  pointer-events: auto;
+}
+
+.morfra-sidebar-overlay-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(320px, calc(100% - 52px));
+  box-shadow: var(--morfra-shadow-panel);
+  pointer-events: auto;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar {
+  height: 100%;
+  align-items: stretch;
+  padding: 14px 10px 10px;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar-heading > span:first-child,
+.morfra-sidebar-overlay-panel .morfra-sidebar-count,
+.morfra-sidebar-overlay-panel .morfra-project-name {
+  display: inline;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar-section {
+  display: block;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar-create {
+  display: flex;
+}
+
+.morfra-sidebar-overlay-panel .morfra-sidebar-error {
+  display: block;
+}
+
+.morfra-sidebar-overlay-panel .morfra-project-item {
+  justify-content: flex-start;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+@media (max-width: 1199px) {
+  .morfra-sidebar {
+    align-items: center;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .morfra-sidebar-heading,
+  .morfra-sidebar-projects,
+  .morfra-sidebar-section,
+  .morfra-sidebar-create,
+  .morfra-sidebar-error {
+    width: 100%;
+  }
+
+  .morfra-sidebar-heading > span:first-child,
+  .morfra-sidebar-count,
+  .morfra-project-name,
+  .morfra-sidebar-section,
+  .morfra-sidebar-create,
+  .morfra-sidebar-error {
+    display: none;
+  }
+
+  .morfra-project-item {
+    justify-content: center;
+    padding: 8px 0;
+  }
+
+  .morfra-project-dot {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-heading > span:first-child,
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-count,
+.morfra-shell[data-sidebar-open="false"] .morfra-project-name,
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-section,
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-create,
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-error {
+  display: none;
+}
+
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar {
+  align-items: center;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+
+.morfra-shell[data-sidebar-open="false"] .morfra-project-item {
+  justify-content: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[contenteditable]:focus-visible {
+  outline: 2px solid var(--semantic-action-base) !important;
+  outline-offset: 1px;
+}
+
+.morfra-shell input:focus-visible,
+.morfra-shell select:focus-visible,
+.morfra-shell textarea:focus-visible,
+.morfra-shell [contenteditable]:focus-visible {
+  outline-color: var(--morfra-focus-ring) !important;
+}
+
+/* 正文 Tab / Block editor，数值对齐设计稿《需求管理系统原型.html》.block-editor 规则块 */
+.block-editor {
+  min-height: 220px;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--semantic-text-primary);
+  outline: none;
+}

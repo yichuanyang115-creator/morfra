@@ -60,6 +60,7 @@ pub fn run() {
             storage::record_commands::storage_update_cell,
             storage::record_commands::storage_delete_record,
             storage::record_commands::storage_apply_table_mutation,
+            storage::record_commands::storage_reorder_records,
         ])
         .setup(|app| {
             // 调试模式自动弹出 WebView devtools 面板，本机右键菜单没有触发出

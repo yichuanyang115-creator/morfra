@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { FieldSummary } from "../../types/domain";
-import { nextGridScrollTop, normalizeGridFieldIds, orderGridFieldIdsByGroup, parseGridLayout } from "./DataGrid";
+import type { FieldSummary, RecordData } from "../../types/domain";
+import { groupMoveValue, moveRecordBefore, nextGridScrollTop, normalizeGridFieldIds, normalizeGridValue, orderGridFieldIdsByGroup, parseGridLayout } from "./DataGrid";
 
 const fields: FieldSummary[] = [
   { id: "title", tableId: "table-1", groupId: null, name: "名称", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] },
@@ -45,5 +45,21 @@ describe("parseGridLayout", () => {
       { id: "group-a", tableId: "table-1", name: "阶段", position: 0 },
       { id: "group-b", tableId: "table-1", name: "负责人", position: 1 },
     ]).fieldIds).toEqual(["title", "owner", "status"]);
+  });
+
+  it("跨组写入保持多选其他选项，拖入未分组时清空", () => {
+    const tags: FieldSummary = { ...fields[1], id: "tags", fieldType: "multi_select" };
+    const record: RecordData = { id: "record", tableId: "table-1", position: 0, autoNumber: 1, createdAt: "", updatedAt: "", values: {}, multiSelectValues: { tags: ["bug", "hot", "keep"] } };
+    expect(groupMoveValue(record, tags, "bug", "done")).toEqual(["hot", "keep", "done"]);
+    expect(groupMoveValue(record, tags, "bug", "__empty__")).toEqual([]);
+  });
+
+  it("把底层记录移动到同组目标记录之前", () => {
+    expect(moveRecordBefore(["one", "two", "three"], "three", "two")).toEqual(["one", "three", "two"]);
+  });
+
+  it("将图片和文件编辑草稿规范化为多附件 URL 列表", () => {
+    const file: FieldSummary = { ...fields[1], id: "files", fieldType: "file" };
+    expect(normalizeGridValue(file, "https://a.test/one.pdf, https://a.test/two.pdf")).toEqual(["https://a.test/one.pdf", "https://a.test/two.pdf"]);
   });
 });

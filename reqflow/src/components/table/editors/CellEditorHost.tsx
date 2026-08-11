@@ -23,9 +23,9 @@ export function CellEditorHost({ field, value, label, error, onChange, onCommit,
 function TextEditor({ field, value, label, error, onChange, onCommit, onCancel }: CellEditorHostProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const raw = value === null ? "" : typeof value === "string" || typeof value === "number" ? String(value) : "";
+  const raw = Array.isArray(value) && (field.fieldType === "image" || field.fieldType === "file") ? value.filter((item): item is string => typeof item === "string").join(", ") : value === null ? "" : typeof value === "string" || typeof value === "number" ? String(value) : "";
   const multiline = field.fieldType === "text" && configBoolean(field, "multiline");
-  const type = field.fieldType === "number" || field.fieldType === "progress" ? "number" : field.fieldType === "image" || field.fieldType === "file" || field.fieldType === "link" ? "url" : "text";
+  const type = field.fieldType === "number" || field.fieldType === "progress" ? "number" : field.fieldType === "link" ? "url" : "text";
   useEffect(() => { const input = multiline ? textareaRef.current : inputRef.current; input?.focus(); }, [multiline]);
   const keyDown = (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     event.stopPropagation();

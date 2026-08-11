@@ -15,6 +15,7 @@ import {
   reorderStorageFieldGroups,
   reorderStorageFieldOptions,
   reorderStorageFields,
+  reorderStorageRecords,
   renameStorageFieldGroup,
   updateStorageField,
   updateStorageFieldOption,
@@ -46,6 +47,7 @@ interface TableDataState {
   updateCell: (recordId: string, fieldId: string, value: JsonValue) => Promise<TableDataSnapshot>;
   deleteRecord: (recordId: string) => Promise<TableDataSnapshot>;
   applyTableMutation: (tableId: string, updates: StorageCellUpdate[], newRecords?: StorageNewRecord[], deleteRecordIds?: string[]) => Promise<TableDataSnapshot>;
+  reorderRecords: (tableId: string, recordIds: string[]) => Promise<TableDataSnapshot>;
   clear: (tableId: string) => void;
 }
 
@@ -88,5 +90,6 @@ export const useTableDataStore = create<TableDataState>((set) => ({
   updateCell: (recordId, fieldId, value) => runMutation(set, () => updateStorageCell(recordId, fieldId, value)),
   deleteRecord: (recordId) => runMutation(set, () => deleteStorageRecord(recordId)),
   applyTableMutation: (tableId, updates, newRecords, deleteRecordIds) => runMutation(set, () => applyStorageTableMutation(tableId, updates, newRecords, deleteRecordIds)),
+  reorderRecords: (tableId, recordIds) => runMutation(set, () => reorderStorageRecords(tableId, recordIds)),
   clear: (tableId) => set({ dataByTable: { ...useTableDataStore.getState().dataByTable, [tableId]: undefined }, errorByTable: { ...useTableDataStore.getState().errorByTable, [tableId]: undefined } }),
 }));

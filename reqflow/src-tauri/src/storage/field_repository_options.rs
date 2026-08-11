@@ -82,16 +82,27 @@ pub fn option_usage(connection: &Connection, option_id: &str) -> Result<OptionUs
     let single_record_count: i64 = connection.query_row("SELECT COUNT(DISTINCT record_id) FROM cell_values WHERE field_id = ?1 AND json_extract(value_json, '$') = ?2", params![field_id, option_id], |row| row.get::<_, i64>(0))?;
     let multi_record_count: i64 = connection.query_row("SELECT COUNT(DISTINCT record_id) FROM multi_select_values WHERE field_id = ?1 AND option_id = ?2", params![field_id, option_id], |row| row.get::<_, i64>(0))?;
     let record_count = single_record_count + multi_record_count;
-    let view_rule_count: i64 = connection.query_row(
-        "SELECT COUNT(*) FROM view_configs WHERE instr(config_json, ?1) > 0",
-        [option_id],
-        |row| row.get(0),
-    )?;
+    let mut statement = connection.prepare("SELECT config_json FROM view_configs")?;
+    let configs = statement.query_map([], |row| row.get::<_, String>(0))?.collect::<Result<Vec<_>, _>>()?;
+    let view_rule_count = configs.iter().filter_map(|raw| serde_json::from_str::<Value>(raw).ok()).map(|config| count_option_rules(&config, &field_id, option_id)).sum();
     Ok(OptionUsage {
         record_count,
         view_rule_count,
     })
 }
+
+fn count_option_rules(value: &Value, field_id: &str, option_id: &str) -> i64 {
+    match value {
+        Value::Object(object) => {
+            let this_rule = object.get("fieldId").and_then(Value::as_str) == Some(field_id) && object.values().any(|item| value_contains_string(item, option_id));
+            if this_rule { 1 } else { object.values().map(|item| count_option_rules(item, field_id, option_id)).sum() }
+        }
+        Value::Array(items) => items.iter().map(|item| count_option_rules(item, field_id, option_id)).sum(),
+        _ => 0,
+    }
+}
+
+fn value_contains_string(value: &Value, expected: &str) -> bool { match value { Value::String(text) => text == expected, Value::Array(items) => items.iter().any(|item| value_contains_string(item, expected)), Value::Object(object) => object.values().any(|item| value_contains_string(item, expected)), _ => false } }
 
 pub fn delete_option(
     connection: &mut Connection,
@@ -168,5 +179,4 @@ pub fn restore_option(
     transaction.commit()?;
     Ok(())
 }
-
 

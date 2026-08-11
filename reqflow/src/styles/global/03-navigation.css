@@ -1,0 +1,224 @@
+
+.morfra-sidebar-undo {
+  width: 100%;
+  margin-top: 8px;
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: var(--morfra-accent-subtle);
+  color: var(--morfra-accent-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.morfra-sidebar-heading {
+  justify-content: space-between;
+  padding: 0 8px 8px;
+  color: var(--morfra-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.morfra-sidebar-count {
+  color: var(--morfra-text-tertiary);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.morfra-sidebar-projects {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.morfra-project-item,
+.morfra-table-item,
+.morfra-view-item {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: transparent;
+  color: var(--morfra-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.morfra-project-item,
+.morfra-table-item {
+  min-height: 32px;
+  padding: 6px 8px;
+}
+
+.morfra-project-item {
+  cursor: pointer;
+}
+
+.morfra-project-item:hover,
+.morfra-project-item.is-active,
+.morfra-table-item.is-active {
+  background: var(--morfra-accent-subtle);
+  color: var(--morfra-accent-primary);
+}
+
+.morfra-project-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.morfra-project-item.is-active .morfra-project-dot {
+  opacity: 1;
+}
+
+.morfra-project-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.morfra-sidebar-section {
+  display: block;
+  margin-top: 18px;
+  border-top: 1px solid var(--morfra-border-subtle);
+  padding-top: 14px;
+}
+
+.morfra-sidebar-label,
+.morfra-sidebar-empty {
+  padding: 0 8px 6px;
+  color: var(--morfra-text-tertiary);
+  font-size: 10px;
+}
+
+.morfra-table-icon,
+.morfra-view-icon {
+  width: 16px;
+  flex: none;
+  color: var(--morfra-accent-primary);
+  text-align: center;
+}
+
+.morfra-view-item {
+  padding: 6px 8px 6px 32px;
+  color: var(--morfra-text-tertiary);
+  font-size: 11px;
+}
+
+.morfra-sidebar-create {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  border-top: 1px solid var(--morfra-border-subtle);
+  padding-top: 10px;
+}
+
+.morfra-sidebar-create input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--morfra-border-default);
+  border-radius: var(--morfra-radius-control);
+  background: var(--morfra-surface-content);
+  color: var(--morfra-text-primary);
+  font: inherit;
+  font-size: 11px;
+  outline: 0;
+  padding: 6px 8px;
+}
+
+.morfra-sidebar-create button {
+  width: 28px;
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: var(--morfra-accent-primary);
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.morfra-sidebar-error {
+  margin: 8px 4px 0;
+  color: var(--morfra-status-danger);
+  font-size: 10px;
+}
+
+.morfra-main {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--morfra-surface-content);
+}
+
+.morfra-storage-embedded,
+.morfra-standalone-storage {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--morfra-surface-content);
+  color: var(--morfra-text-primary);
+}
+
+.morfra-storage-canvas {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 18px 20px 20px;
+}
+
+.morfra-storage-surface {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--morfra-border-subtle);
+  border-radius: var(--morfra-radius-panel);
+  background: var(--morfra-surface-content);
+}
+
+.morfra-sidebar-scope {
+  flex: none;
+  padding: 0 8px 4px;
+  color: var(--morfra-text-tertiary);
+  font-size: 10px;
+}
+
+.morfra-table-header {
+  display: flex;
+  min-height: 52px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--morfra-border-subtle);
+  padding: 8px 14px;
+}
+
+.morfra-table-header-main {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.morfra-table-header-kicker,
+.morfra-data-area-kicker {
+  color: var(--morfra-text-tertiary);
+  font-size: 10px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}

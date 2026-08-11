@@ -1,0 +1,222 @@
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--semantic-background-canvas);
+  color: var(--semantic-text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+}
+
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--semantic-context-soft);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--semantic-border-strong);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--semantic-text-tertiary);
+}
+
+/* 线性图标标准尺寸：icon-sm 全局统一 14px。此前该类从未定义，无尺寸 SVG
+   渲染失控（裸 SVG 达数百 px，仅靠 flex 容器挤压到 ~28px，比文字大两倍多），
+   定义为显式尺寸后所有图标与文字协调。 */
+.icon-sm {
+  width: 14px;
+  height: 14px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--semantic-action-base);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+.morfra-shell :focus-visible {
+  outline-color: var(--morfra-focus-ring);
+}
+
+/* 拖拽分隔条调整看板宽度时锁住全局光标和选中行为，避免拖着拖着突然选中一片文字。 */
+body.resizing-panel {
+  cursor: col-resize;
+  user-select: none;
+}
+body.resizing-panel * {
+  user-select: none;
+}
+
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.morfra-shell {
+  --module-scope-background-canvas: var(--morfra-surface-canvas);
+  --module-scope-background-surface: var(--morfra-surface-content);
+  --module-scope-background-elevated: var(--morfra-surface-sidebar);
+  --module-scope-text-primary: var(--morfra-text-primary);
+  --module-scope-text-secondary: var(--morfra-text-secondary);
+  --module-scope-text-tertiary: var(--morfra-text-tertiary);
+  --module-scope-text-disabled: var(--morfra-text-disabled);
+  --module-scope-border-subtle: var(--morfra-border-subtle);
+  --module-scope-border-strong: var(--morfra-border-strong);
+  --module-scope-action-strong: var(--morfra-accent-primary);
+  --module-scope-action-base: var(--morfra-focus-ring);
+  --module-scope-action-soft: var(--morfra-accent-subtle);
+  --module-scope-context-strong: var(--morfra-accent-primary);
+  --module-scope-context-soft: var(--morfra-selection-fill);
+  --module-scope-feedback-success: var(--morfra-status-success);
+  --module-scope-feedback-warning: var(--morfra-status-warning);
+  --module-scope-feedback-danger: var(--morfra-status-danger);
+  display: flex;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--morfra-surface-canvas);
+  color: var(--morfra-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+}
+
+.morfra-titlebar {
+  display: flex;
+  height: var(--morfra-titlebar-height);
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--morfra-border-subtle);
+  background: var(--morfra-surface-overlay);
+  padding: 0 10px;
+  -webkit-app-region: drag;
+}
+
+.morfra-titlebar button,
+.morfra-titlebar input,
+.morfra-titlebar a {
+  -webkit-app-region: no-drag;
+}
+
+.morfra-titlebar-button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  place-items: center;
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: transparent;
+  color: var(--morfra-text-secondary);
+  cursor: pointer;
+}
+
+.morfra-titlebar-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.morfra-titlebar-button:hover,
+.morfra-titlebar-button.is-active {
+  background: var(--morfra-accent-subtle);
+  color: var(--morfra-accent-primary);
+}
+
+.morfra-wordmark {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: baseline;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.morfra-file-menu {
+  position: relative;
+  flex: none;
+}
+
+.morfra-file-menu-trigger {
+  height: 26px;
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: transparent;
+  color: var(--morfra-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+.morfra-file-menu-trigger:hover,
+.morfra-file-menu-trigger.is-active {
+  background: var(--morfra-accent-subtle);
+  color: var(--morfra-text-primary);
+}
+
+.morfra-file-menu-popover {
+  position: absolute;
+  z-index: 50;
+  top: 30px;
+  left: 0;
+  width: 248px;
+  border: 1px solid var(--morfra-border-strong);
+  border-radius: var(--morfra-radius-panel);
+  background: var(--morfra-surface-overlay);
+  box-shadow: var(--morfra-shadow-panel);
+  padding: 6px;
+}
+
+.morfra-file-menu-popover > button,
+.morfra-file-menu-create button {
+  border: 0;
+  border-radius: var(--morfra-radius-control);
+  background: transparent;
+  color: var(--morfra-text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  padding: 7px 8px;
+}
