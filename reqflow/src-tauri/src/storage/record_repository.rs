@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 use super::connection::timestamp;
@@ -15,6 +16,27 @@ pub struct RecordBackup {
     pub record: RecordRow,
     values: Vec<CellValueRow>,
     multi_values: Vec<MultiSelectValueRow>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CellUpdate {
+    pub record_id: String,
+    pub field_id: String,
+    pub value: Value,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewRecord {
+    pub values: HashMap<String, Value>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BatchBackup {
+    pub table_id: String,
+    pub records: Vec<RecordBackup>,
+    pub created_record_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

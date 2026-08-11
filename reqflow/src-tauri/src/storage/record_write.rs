@@ -33,6 +33,7 @@ fn write_value(
     value: &Value,
 ) -> Result<(), StorageError> {
     if field.is_title == 1
+        && !value.is_null()
         && (!value.is_string() || value.as_str().unwrap_or_default().trim().is_empty())
     {
         return Err(StorageError::validation("主标题不能为空"));

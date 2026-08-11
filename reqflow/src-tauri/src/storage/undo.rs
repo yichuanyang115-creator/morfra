@@ -3,7 +3,7 @@ use rusqlite::Connection;
 use super::error::{StorageError, StorageErrorCode};
 use super::field_models::{FieldBackup, FieldGroupBackup, OptionBackup};
 use super::field_repository;
-use super::record_repository::{self, RecordBackup};
+use super::record_repository::{self, BatchBackup, RecordBackup};
 use super::repository;
 use super::table_backup::{self, DeletedTable};
 
@@ -42,6 +42,9 @@ pub enum UndoAction {
     },
     RestoreRecord {
         backup: RecordBackup,
+    },
+    RestoreBatch {
+        backup: BatchBackup,
     },
 }
 
@@ -116,6 +119,8 @@ impl UndoStack {
                 record_repository::restore_record(connection, backup)
                     .map(|()| "已撤销记录变更".to_string())
             }
+            UndoAction::RestoreBatch { backup } => record_repository::restore_batch_mutation(connection, backup)
+                .map(|()| "已撤销批量操作".to_string()),
         };
         if result.is_err() {
             self.entries.push(action);

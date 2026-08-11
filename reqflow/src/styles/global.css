@@ -1072,6 +1072,27 @@ html[data-reduced-motion="true"] *::after {
 .morfra-grid-empty-state { display: grid; min-height: 180px; place-items: center; color: var(--morfra-text-tertiary); font-size: 12px; }
 .morfra-grid-announcement { min-height: 0; color: var(--morfra-status-danger); font-size: 11px; }
 .morfra-grid-announcement button { margin-left: 8px; border: 0; border-radius: 4px; background: var(--morfra-accent-subtle); color: var(--morfra-accent-primary); cursor: pointer; font: inherit; padding: 2px 5px; }
+.morfra-grid-context-menu { position: fixed; z-index: 50; display: grid; min-width: 176px; overflow: hidden; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); padding: 4px; }
+.morfra-grid-context-menu button { display: flex; min-height: 28px; align-items: center; justify-content: space-between; gap: 18px; border: 0; border-radius: 4px; background: transparent; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 12px; padding: 4px 8px; text-align: left; }
+.morfra-grid-context-menu button:hover { background: var(--morfra-accent-subtle); }
+.morfra-grid-context-menu button:disabled { color: var(--morfra-text-disabled); cursor: not-allowed; }
+.morfra-grid-context-menu button.is-danger, .morfra-grid-dialog .is-danger { color: var(--morfra-status-danger); }
+.morfra-grid-context-menu kbd { color: var(--morfra-text-tertiary); font: inherit; font-size: 10px; }
+.morfra-grid-context-menu form { display: grid; gap: 6px; padding: 4px; font-size: 11px; }
+.morfra-grid-context-menu label { display: grid; gap: 4px; color: var(--morfra-text-secondary); }
+.morfra-grid-context-menu input { min-width: 160px; border: 1px solid var(--morfra-border-default); border-radius: 4px; background: var(--morfra-surface-canvas); color: var(--morfra-text-primary); font: inherit; padding: 5px 6px; }
+.morfra-grid-context-menu select { min-width: 160px; border: 1px solid var(--morfra-border-default); border-radius: 4px; background: var(--morfra-surface-canvas); color: var(--morfra-text-primary); font: inherit; padding: 5px 6px; }
+.morfra-grid-context-menu fieldset { display: grid; gap: 4px; border: 0; margin: 0; padding: 0; }
+.morfra-grid-context-menu fieldset label { display: flex; flex-direction: row; align-items: center; gap: 5px; color: var(--morfra-text-primary); }
+.morfra-grid-context-menu form p { margin: 0; color: var(--morfra-status-danger); font-size: 10px; }
+.morfra-grid-context-menu form div, .morfra-grid-dialog > div { display: flex; justify-content: flex-end; gap: 6px; }
+.morfra-grid-dialog-backdrop { position: fixed; z-index: 60; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, #000 24%, transparent); }
+.morfra-grid-dialog { width: min(360px, calc(100vw - 32px)); border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-panel); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); padding: 18px; }
+.morfra-grid-dialog h2 { margin: 0 0 7px; font-size: 14px; }
+.morfra-grid-dialog p { margin: 0 0 16px; color: var(--morfra-text-secondary); font-size: 12px; }
+.morfra-grid-dialog button, .morfra-grid-operation-toast button, .morfra-grid-operation-error button { border: 0; border-radius: 4px; background: var(--morfra-accent-subtle); color: var(--morfra-accent-primary); cursor: pointer; font: inherit; font-size: 11px; padding: 5px 8px; }
+.morfra-grid-operation-toast, .morfra-grid-operation-error { position: fixed; z-index: 55; bottom: 20px; left: 50%; display: flex; max-width: min(90vw, 520px); align-items: center; gap: 8px; transform: translateX(-50%); border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); color: var(--morfra-text-primary); font-size: 12px; padding: 8px 10px; }
+.morfra-grid-operation-error { border-color: var(--morfra-status-danger); }
 .morfra-data-grid-skeleton { pointer-events: none; }
 .morfra-grid-skeleton-header, .morfra-grid-skeleton-rows > div { display: grid; min-width: max-content; min-height: 40px; border-bottom: 1px solid var(--morfra-border-subtle); gap: 1px; background: var(--morfra-border-subtle); }
 .morfra-grid-skeleton-header { min-height: 64px; background: var(--morfra-border-default); }

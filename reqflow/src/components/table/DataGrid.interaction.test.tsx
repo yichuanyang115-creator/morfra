@@ -199,4 +199,12 @@ describe("DataGrid Phase 37 交互", () => {
 
     expect(useGridInteractionStore.getState().selection?.range).toEqual({ anchor: { row: 0, column: 0 }, focus: { row: 0, column: 1 } });
   });
+
+  it("在网格内使用 ⌘Z 撤销存储操作并给出反馈", async () => {
+    const onUndo = vi.fn().mockResolvedValue(undefined);
+    render(<DataGrid viewId="undo" data={data} config={config} onConfigChange={vi.fn()} onCreate={vi.fn()} onOpenDetail={vi.fn()} onUpdateCell={vi.fn()} onUndo={onUndo} />);
+    fireEvent.keyDown(screen.getByRole("grid", { name: "可编辑表格" }), { key: "z", metaKey: true });
+    await waitFor(() => expect(onUndo).toHaveBeenCalledOnce());
+    expect(screen.getByText("已撤销上次操作")).toBeInTheDocument();
+  });
 });

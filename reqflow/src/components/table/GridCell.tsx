@@ -14,7 +14,7 @@ interface GridCellProps {
   onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   onPointerEnter: (event: React.PointerEvent<HTMLDivElement>) => void;
   onDoubleClick: () => void;
-  onContextMenu: () => void;
+  onContextMenu: (event: React.MouseEvent<HTMLDivElement>) => void;
   onToggleCheckbox: () => void;
 }
 

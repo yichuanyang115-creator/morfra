@@ -125,6 +125,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   const loadTableData = useTableDataStore((state) => state.load);
   const createRecord = useTableDataStore((state) => state.createRecord);
   const updateCell = useTableDataStore((state) => state.updateCell);
+  const applyTableMutation = useTableDataStore((state) => state.applyTableMutation);
   const selectRecord = useStorageSelectionStore((state) => state.selectRecord);
   const detailOpen = useLayoutStore((state) => state.detailOpen);
   const toggleDetail = useLayoutStore((state) => state.toggleDetail);
@@ -262,7 +263,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
         <div className="morfra-data-area-heading"><div><p className="morfra-data-area-kicker">{activeView.viewType === "board" ? "看板" : "数据表"}</p><h2>{activeTable.name}</h2><p>当前视图：{activeView.name} · {tableData?.records.length ?? activeTable.recordCount} 条记录</p></div><span className="morfra-data-area-id">主标题固定首列</span></div>
         {showGridSkeleton && loadingGridLayout && <DataGridLoadingSkeleton config={loadingGridLayout} />}
         {tableDataLoading && gridLayoutReady && <div className="morfra-grid-refresh-indicator" role="status">正在刷新表格数据…</div>}
-        {tableData && gridLayout && gridLayoutViewId === activeView.id && <DataGrid viewId={activeView.id} data={tableData} config={gridLayout} onConfigChange={setGridLayoutConfig} onCreate={() => void run(() => createRecord(activeTable.id, { [activeTable.titleFieldId]: "未命名记录" }).then(() => undefined), "新建记录失败，请重试")} onUpdateCell={updateCell} onOpenDetail={(recordId) => { selectRecord(activeTable.id, recordId); setActiveRightPanel("detail"); if (!detailOpen) toggleDetail(); }} />}
+        {tableData && gridLayout && gridLayoutViewId === activeView.id && <DataGrid viewId={activeView.id} data={tableData} config={gridLayout} onConfigChange={setGridLayoutConfig} onCreate={() => void run(() => createRecord(activeTable.id, { [activeTable.titleFieldId]: "未命名记录" }).then(() => undefined), "新建记录失败，请重试")} onUpdateCell={updateCell} onApplyTableMutation={(tableId, plan, deleteRecordIds) => applyTableMutation(tableId, plan.updates, plan.newRecords, deleteRecordIds)} onUndo={async () => { await undoStorageChange(); await loadTableData(activeTable.id); }} onOpenDetail={(recordId) => { selectRecord(activeTable.id, recordId); setActiveRightPanel("detail"); if (!detailOpen) toggleDetail(); }} />}
         {!tableDataLoading && !tableData && !showGridSkeleton && <div className="morfra-storage-empty"><span aria-hidden="true">○</span><p>字段和记录暂不可用</p><small>请重试或重新打开项目。</small></div>}
         {viewConfigError && <p role="alert" className="morfra-storage-error">{viewConfigError}<button type="button" className="ml-2 underline" onClick={() => setViewConfigRetry((version) => version + 1)}>重试</button></p>}
         {detailLoadError && <p role="alert" className="morfra-storage-error">{detailLoadError}<button type="button" className="ml-2 underline" onClick={() => { if (activeTable) void loadDetailFields(activeTable.id); }}>重试</button></p>}

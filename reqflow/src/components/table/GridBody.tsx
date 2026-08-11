@@ -21,11 +21,12 @@ interface GridBodyProps {
   onExtendSelection: (point: GridPoint) => void;
   onSelectRows: (selection: GridSelection) => void;
   onStartEditing: (point: GridPoint) => void;
-  onContextCell: (point: GridPoint) => void;
+  onContextCell: (point: GridPoint, event: React.MouseEvent<HTMLElement>) => void;
+  onContextRow?: (row: number, event: React.MouseEvent<HTMLElement>) => void;
   onToggleCheckbox: (point: GridPoint) => void;
 }
 
-export function GridBody({ gridId, parentRef, layouts, records, rowHeight, selection, editing, onOpenDetail, onRenderedRecordsChange, onSelectCell, onExtendSelection, onSelectRows, onStartEditing, onContextCell, onToggleCheckbox }: GridBodyProps) {
+export function GridBody({ gridId, parentRef, layouts, records, rowHeight, selection, editing, onOpenDetail, onRenderedRecordsChange, onSelectCell, onExtendSelection, onSelectRows, onStartEditing, onContextCell, onContextRow, onToggleCheckbox }: GridBodyProps) {
   const rowVirtualizer = useVirtualizer({ count: records.length, getScrollElement: () => parentRef.current, estimateSize: () => rowHeight, overscan: 4 });
   const columnVirtualizer = useVirtualizer({ horizontal: true, count: layouts.length, getScrollElement: () => parentRef.current, estimateSize: (index) => layouts[index]?.width ?? 0, overscan: 3 });
   const virtualRows = rowVirtualizer.getVirtualItems();
@@ -41,7 +42,7 @@ export function GridBody({ gridId, parentRef, layouts, records, rowHeight, selec
           if ((event.target as HTMLElement).closest("button")) return;
           event.preventDefault();
           onSelectRows(selectRows(selection, virtualRow.index, event.metaKey ? "toggle" : event.shiftKey ? "range" : "single"));
-        }} onPointerEnter={(event) => { if (event.buttons === 1 && selection?.rows.length) onSelectRows(selectRows(selection, virtualRow.index, "range")); }}><span>{virtualRow.index + 1}</span><button type="button" aria-label={`打开第 ${virtualRow.index + 1} 条记录详情`} onClick={(event) => { event.stopPropagation(); onOpenDetail(record.id); }}>↗</button></div>
+        }} onPointerEnter={(event) => { if (event.buttons === 1 && selection?.rows.length) onSelectRows(selectRows(selection, virtualRow.index, "range")); }} onContextMenu={(event) => onContextRow?.(virtualRow.index, event)}><span>{virtualRow.index + 1}</span><button type="button" aria-label={`打开第 ${virtualRow.index + 1} 条记录详情`} onClick={(event) => { event.stopPropagation(); onOpenDetail(record.id); }}>↗</button></div>
         {renderedColumns.map((columnIndex) => {
           const layout = layouts[columnIndex];
           const virtualColumn = virtualColumns.find((item) => item.index === columnIndex);
@@ -50,7 +51,7 @@ export function GridBody({ gridId, parentRef, layouts, records, rowHeight, selec
           const selected = containsCell(selection, point);
           const active = selection?.active.row === point.row && selection.active.column === point.column;
           const isEditing = editing?.row === point.row && editing.column === point.column;
-          return <div key={layout.field.id} className={`morfra-grid-cell ${layout.frozen ? "is-frozen" : ""}`} data-column-index={columnIndex} style={layout.frozen ? { left: `var(--grid-sticky-${layout.field.id})`, width: layout.width } : { left: ROW_NUMBER_WIDTH + (virtualColumn?.start ?? left), width: layout.width }}><GridCell id={`${gridId}-cell-${point.row}-${point.column}`} field={layout.field} record={record} point={point} selected={selected} active={active} editing={isEditing} readOnly={layout.field.id.startsWith("collapsed:") || ["auto_number", "created_time", "updated_time"].includes(layout.field.fieldType)} onPointerDown={(event) => { if (event.button === 2) { onContextCell(point); return; } event.preventDefault(); onSelectCell(point, event.shiftKey); }} onPointerEnter={(event) => { if (event.buttons === 1) onExtendSelection(point); }} onDoubleClick={() => onStartEditing(point)} onContextMenu={() => onContextCell(point)} onToggleCheckbox={() => onToggleCheckbox(point)} /></div>;
+          return <div key={layout.field.id} className={`morfra-grid-cell ${layout.frozen ? "is-frozen" : ""}`} data-column-index={columnIndex} style={layout.frozen ? { left: `var(--grid-sticky-${layout.field.id})`, width: layout.width } : { left: ROW_NUMBER_WIDTH + (virtualColumn?.start ?? left), width: layout.width }}><GridCell id={`${gridId}-cell-${point.row}-${point.column}`} field={layout.field} record={record} point={point} selected={selected} active={active} editing={isEditing} readOnly={layout.field.id.startsWith("collapsed:") || ["auto_number", "created_time", "updated_time"].includes(layout.field.fieldType)} onPointerDown={(event) => { if (event.button !== 2) { event.preventDefault(); onSelectCell(point, event.shiftKey); } }} onPointerEnter={(event) => { if (event.buttons === 1) onExtendSelection(point); }} onDoubleClick={() => onStartEditing(point)} onContextMenu={(event) => onContextCell(point, event)} onToggleCheckbox={() => onToggleCheckbox(point)} /></div>;
         })}
       </div>;
     })}

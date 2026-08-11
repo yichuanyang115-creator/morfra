@@ -177,3 +177,10 @@ export async function updateStorageCell(recordId: string, fieldId: string, value
 export async function deleteStorageRecord(recordId: string): Promise<TableDataSnapshot> {
   return invoke<TableDataSnapshot>("storage_delete_record", { recordId });
 }
+
+export interface StorageCellUpdate { recordId: string; fieldId: string; value: JsonValue; }
+export interface StorageNewRecord { values: Record<string, JsonValue>; }
+
+export async function applyStorageTableMutation(tableId: string, updates: StorageCellUpdate[], newRecords: StorageNewRecord[] = [], deleteRecordIds: string[] = []): Promise<TableDataSnapshot> {
+  return invoke<TableDataSnapshot>("storage_apply_table_mutation", { tableId, updates, newRecords, deleteRecordIds });
+}

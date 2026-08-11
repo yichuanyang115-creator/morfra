@@ -2,6 +2,10 @@ use super::{create_table, create_table_for_test, initialize_blank_project, load_
 use crate::storage::connection::ProjectManifest;
 use crate::storage::migrations::{apply_pending_migrations, configure_connection};
 use crate::storage::undo::{UndoAction, UndoStack};
+use crate::storage::record_repository::{self, CellUpdate, NewRecord};
+use crate::storage::field_repository;
+use std::collections::HashMap;
+use serde_json::json;
 use crate::storage::{lifecycle, table_backup};
 
 fn database() -> (rusqlite::Connection, ProjectManifest) {
@@ -72,6 +76,56 @@ fn undo_removes_the_created_table_and_keeps_the_default_table() {
     let snapshot = load_snapshot(&connection, &manifest).expect("snapshot");
     assert_eq!(snapshot.tables.len(), 1);
     assert_eq!(snapshot.tables[0].name, "未命名表");
+}
+
+#[test]
+fn batch_mutation_is_atomic_and_undo_restores_changed_and_created_records() {
+    let (mut connection, manifest) = database();
+    let table = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].clone();
+    let mut first = HashMap::new();
+    first.insert(table.title_field_id.clone(), json!("原始记录"));
+    let record_id = record_repository::create_record(&mut connection, &table.id, first).expect("record");
+
+    let mut invalid = HashMap::new();
+    invalid.insert(table.title_field_id.clone(), json!(""));
+    let failed = record_repository::apply_batch_mutation(
+        &mut connection,
+        &table.id,
+        vec![CellUpdate { record_id: record_id.clone(), field_id: table.title_field_id.clone(), value: json!("不应写入") }],
+        vec![NewRecord { values: invalid }],
+        vec![],
+    );
+    assert!(failed.is_err());
+    let unchanged = field_repository::load_table_data(&connection, &table.id).expect("data");
+    assert_eq!(unchanged.records[0].values[&table.title_field_id], json!("原始记录"));
+
+    let mut second = HashMap::new();
+    second.insert(table.title_field_id.clone(), json!("新记录"));
+    let backup = record_repository::apply_batch_mutation(
+        &mut connection,
+        &table.id,
+        vec![CellUpdate { record_id, field_id: table.title_field_id.clone(), value: json!("已修改") }],
+        vec![NewRecord { values: second }],
+        vec![],
+    ).expect("batch");
+    let after = field_repository::load_table_data(&connection, &table.id).expect("data");
+    assert_eq!(after.records.len(), 2);
+    record_repository::restore_batch_mutation(&mut connection, &backup).expect("undo batch");
+    let restored = field_repository::load_table_data(&connection, &table.id).expect("data");
+    assert_eq!(restored.records.len(), 1);
+    assert_eq!(restored.records[0].values[&table.title_field_id], json!("原始记录"));
+}
+
+#[test]
+fn clearing_an_existing_title_cell_is_allowed_after_record_creation() {
+    let (mut connection, manifest) = database();
+    let table = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].clone();
+    let mut values = HashMap::new();
+    values.insert(table.title_field_id.clone(), json!("待清空标题"));
+    let record_id = record_repository::create_record(&mut connection, &table.id, values).expect("record");
+    record_repository::update_cell(&mut connection, &record_id, &table.title_field_id, serde_json::Value::Null).expect("clear title");
+    let data = field_repository::load_table_data(&connection, &table.id).expect("data");
+    assert_eq!(data.records[0].values[&table.title_field_id], serde_json::Value::Null);
 }
 
 #[test]

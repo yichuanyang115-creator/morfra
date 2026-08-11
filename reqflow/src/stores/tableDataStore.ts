@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import {
+  applyStorageTableMutation,
   createStorageField,
   createStorageFieldGroup,
   createStorageFieldOption,
@@ -19,6 +20,7 @@ import {
   updateStorageFieldOption,
   updateStorageCell,
 } from "../lib/ipc/storageClient";
+import type { StorageCellUpdate, StorageNewRecord } from "../lib/ipc/storageClient";
 import type { FieldType, JsonValue, OptionUsage, TableDataSnapshot } from "../types/domain";
 
 interface TableDataState {
@@ -43,6 +45,7 @@ interface TableDataState {
   createRecord: (tableId: string, values: Record<string, JsonValue>) => Promise<TableDataSnapshot>;
   updateCell: (recordId: string, fieldId: string, value: JsonValue) => Promise<TableDataSnapshot>;
   deleteRecord: (recordId: string) => Promise<TableDataSnapshot>;
+  applyTableMutation: (tableId: string, updates: StorageCellUpdate[], newRecords?: StorageNewRecord[], deleteRecordIds?: string[]) => Promise<TableDataSnapshot>;
   clear: (tableId: string) => void;
 }
 
@@ -84,5 +87,6 @@ export const useTableDataStore = create<TableDataState>((set) => ({
   createRecord: (tableId, values) => runMutation(set, () => createStorageRecord(tableId, values)),
   updateCell: (recordId, fieldId, value) => runMutation(set, () => updateStorageCell(recordId, fieldId, value)),
   deleteRecord: (recordId) => runMutation(set, () => deleteStorageRecord(recordId)),
+  applyTableMutation: (tableId, updates, newRecords, deleteRecordIds) => runMutation(set, () => applyStorageTableMutation(tableId, updates, newRecords, deleteRecordIds)),
   clear: (tableId) => set({ dataByTable: { ...useTableDataStore.getState().dataByTable, [tableId]: undefined }, errorByTable: { ...useTableDataStore.getState().errorByTable, [tableId]: undefined } }),
 }));
