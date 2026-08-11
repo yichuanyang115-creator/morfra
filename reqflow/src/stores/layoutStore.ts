@@ -72,7 +72,7 @@ function readPreferences(): Partial<LayoutPreferences> {
 function persist(state: LayoutPreferences): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, detailOpen: false }));
   } catch {
     // 偏好保存失败不阻断当前窗口操作；下一次启动回到安全默认值。
   }
@@ -82,7 +82,7 @@ function normalizePreferences(value: Partial<LayoutPreferences>): LayoutPreferen
   return {
     sidebarOpen: value.sidebarOpen !== false,
     sidebarWidth: Number.isFinite(value.sidebarWidth) ? Math.min(Math.max(value.sidebarWidth as number, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH) : SIDEBAR_DEFAULT_WIDTH,
-    detailOpen: value.detailOpen === true,
+    detailOpen: false,
     detailWidth: Number.isFinite(value.detailWidth) ? Math.min(Math.max(value.detailWidth as number, DETAIL_MIN_WIDTH), DETAIL_MAX_WIDTH) : DETAIL_DEFAULT_WIDTH,
     aiOpen: value.aiOpen === true,
     aiWidth: Number.isFinite(value.aiWidth) ? Math.min(Math.max(value.aiWidth as number, AI_MIN_WIDTH), AI_MAX_WIDTH) : AI_DEFAULT_WIDTH,

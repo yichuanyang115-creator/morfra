@@ -144,6 +144,11 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   }, [activeView, tableData?.fields, viewConfigRetry]);
 
   useEffect(() => { if (activeTable && detailFields === undefined) loadDetailFields(activeTable.id); }, [activeTable, detailFields, loadDetailFields]);
+  useEffect(() => {
+    const openDetailFieldSettings = () => setDetailFieldsOpen(true);
+    window.addEventListener("open-storage-detail-field-settings", openDetailFieldSettings);
+    return () => window.removeEventListener("open-storage-detail-field-settings", openDetailFieldSettings);
+  }, []);
 
   function setGridLayoutConfig(next: GridLayoutConfig) {
     if (!activeView || !tableData || gridLayoutViewId !== activeView.id) return;
@@ -226,7 +231,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
 
   const mainContent = <main className="morfra-storage-canvas" aria-label="Morfra 项目工作区">
     {project && activeTable && activeView ? <section className="morfra-storage-surface">
-      <TableHeader table={{ ...activeTable, recordCount: tableData?.records.length ?? activeTable.recordCount }} onRename={(name) => run(() => actions.renameTable(activeTable.id, name), "表重命名失败，请重试")} onOpenFieldManager={() => setFieldManagerOpen(true)} onOpenDetailFields={() => setDetailFieldsOpen(true)} />
+      <TableHeader table={{ ...activeTable, recordCount: tableData?.records.length ?? activeTable.recordCount }} onRename={(name) => run(() => actions.renameTable(activeTable.id, name), "表重命名失败，请重试")} onOpenFieldManager={() => setFieldManagerOpen(true)} />
       <ViewTabBar tableId={activeTable.id} views={activeTable.views} activeViewId={activeView.id} onSelect={(id) => setActiveView(activeTable.id, id)} onCreate={(name, type) => run(() => actions.createView(activeTable.id, name, type), "新建视图失败，请重试")} onRename={(id, name) => run(() => actions.renameView(id, name), "视图重命名失败，请重试")} onDuplicate={(id, name) => run(() => actions.duplicateView(id, name), "复制视图失败，请重试")} onDelete={(id) => run(() => actions.deleteView(id), "删除视图失败，请重试")} onReorder={(ids) => run(() => actions.reorderViews(activeTable.id, ids), "视图顺序保存失败，请重试")} />
       <ViewToolbar view={activeView} fields={tableData?.fields} visibleFieldCount={gridLayout?.fieldIds.length} pipeline={gridLayout?.pipeline ?? EMPTY_VIEW_PIPELINE} search={gridSearch} rowHeight={gridLayout?.rowHeight} onSearchChange={setGridSearch} onRowHeightChange={(rowHeight) => { if (gridLayout) setGridLayoutConfig({ ...gridLayout, rowHeight }); }} onPipelineChange={changePipeline} onOpenFieldDisplay={() => setFieldDisplayOpen(true)} boardMode={activeView.viewType === "board"} />
       <div className="morfra-storage-data-area">

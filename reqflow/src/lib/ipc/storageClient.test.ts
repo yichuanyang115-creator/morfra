@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { createStorageProject, openStorageProject } from "./storageClient";
+import { createStorageProject, getStorageDetailTabs, loadStorageRecordDetailContent, openStorageProject, saveStorageRecordDetailContent } from "./storageClient";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
@@ -38,5 +38,18 @@ describe("storageClient", () => {
     expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(2, "storage_open_project", {
       path: "/tmp/morfra",
     });
+    await createStorageProject({ path: "/tmp/requirements", name: "需求项目", template: "requirements" });
+    expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(3, "storage_create_project", { path: "/tmp/requirements", name: "需求项目", template: "requirements" });
+  });
+
+  it("uses typed record-detail commands for the fixed requirement tabs", async () => {
+    vi.mocked(invoke).mockResolvedValue([]);
+    await getStorageDetailTabs("table-1");
+    await loadStorageRecordDetailContent("record-1");
+    const content = { body: "背景", deliverables: [], tasks: [], acceptance: [] };
+    await saveStorageRecordDetailContent("record-1", content);
+    expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(1, "storage_get_detail_tabs", { tableId: "table-1" });
+    expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(2, "storage_load_record_detail_content", { recordId: "record-1" });
+    expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(3, "storage_save_record_detail_content", { recordId: "record-1", content });
   });
 });

@@ -114,6 +114,9 @@ pub fn update_field(
     )?;
     if current.field_type != field_type {
         convert_field_values(&transaction, &current, field_type)?;
+        if current.field_type == "select" && field_type != "select" {
+            transaction.execute("UPDATE table_configs SET activity_field_id = NULL WHERE table_id = ?1 AND activity_field_id = ?2", params![current.table_id, field_id])?;
+        }
     }
     transaction.execute("UPDATE fields SET name = ?1, field_type = ?2, group_id = ?3, config_json = ?4, updated_at = ?5 WHERE id = ?6", params![name, field_type, group_id, normalize_field_config(field_type, config)?, timestamp(), field_id])?;
     touch_project(&transaction)?;
@@ -295,5 +298,4 @@ pub fn move_field(
     transaction.commit()?;
     Ok(backup)
 }
-
 

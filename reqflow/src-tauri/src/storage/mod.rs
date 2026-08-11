@@ -1,7 +1,9 @@
 pub mod backup;
+pub mod activity_repository;
 pub mod benchmark;
 pub mod commands;
 pub mod connection;
+pub mod detail_content_repository;
 pub mod domain;
 pub mod error;
 pub mod field_commands;

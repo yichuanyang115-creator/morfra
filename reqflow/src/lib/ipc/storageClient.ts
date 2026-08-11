@@ -1,5 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import type { BackupInfo, BenchmarkReport, FieldType, JsonValue, OptionUsage, ProjectSnapshot, TableDataSnapshot } from "../../types/domain";
+import type { ActivityBinding, ActivityComment, ActivityEvent, BackupInfo, BenchmarkReport, FieldType, JsonValue, OptionUsage, ProjectSnapshot, RecordDetailContent, RecordDetailContentInput, StorageDetailTab, TableDataSnapshot } from "../../types/domain";
 
 export function isTauriRuntime(): boolean {
   try {
@@ -16,10 +16,11 @@ export function isTauriRuntime(): boolean {
 export interface CreateProjectInput {
   path: string;
   name: string;
+  template?: "requirements";
 }
 
 export async function createStorageProject(input: CreateProjectInput): Promise<ProjectSnapshot> {
-  return invoke<ProjectSnapshot>("storage_create_project", { path: input.path, name: input.name });
+  return invoke<ProjectSnapshot>("storage_create_project", { path: input.path, name: input.name, ...(input.template ? { template: input.template } : {}) });
 }
 
 export async function openStorageProject(path: string): Promise<ProjectSnapshot> {
@@ -185,6 +186,16 @@ export async function reorderStorageRecords(tableId: string, recordIds: string[]
 export async function moveStorageBoardCard(viewId: string, recordId: string, fieldId: string, value: JsonValue, boardConfig: JsonValue): Promise<TableDataSnapshot> {
   return invoke<TableDataSnapshot>("storage_move_board_card", { viewId, recordId, fieldId, value, boardConfig });
 }
+
+export async function getStorageActivityBinding(tableId: string): Promise<ActivityBinding> { return invoke<ActivityBinding>("storage_get_activity_binding", { tableId }); }
+export async function updateStorageActivityBinding(tableId: string, fieldId: string | null): Promise<ActivityBinding> { return invoke<ActivityBinding>("storage_update_activity_binding", { tableId, fieldId }); }
+export async function loadStorageActivityEvents(recordId: string): Promise<ActivityEvent[]> { return invoke<ActivityEvent[]>("storage_load_activity_events", { recordId }); }
+export async function updateStorageActivityNote(eventId: string, note: string | null): Promise<void> { return invoke<void>("storage_update_activity_note", { eventId, note }); }
+export async function createStorageActivityComment(eventId: string, content: string): Promise<ActivityComment> { return invoke<ActivityComment>("storage_create_activity_comment", { eventId, content }); }
+export async function deleteStorageActivityEvent(eventId: string): Promise<void> { return invoke<void>("storage_delete_activity_event", { eventId }); }
+export async function getStorageDetailTabs(tableId: string): Promise<StorageDetailTab[]> { return invoke<StorageDetailTab[]>("storage_get_detail_tabs", { tableId }); }
+export async function loadStorageRecordDetailContent(recordId: string): Promise<RecordDetailContent> { return invoke<RecordDetailContent>("storage_load_record_detail_content", { recordId }); }
+export async function saveStorageRecordDetailContent(recordId: string, content: RecordDetailContentInput): Promise<RecordDetailContent> { return invoke<RecordDetailContent>("storage_save_record_detail_content", { recordId, content }); }
 
 export interface StorageCellUpdate { recordId: string; fieldId: string; value: JsonValue; }
 export interface StorageNewRecord { values: Record<string, JsonValue>; }

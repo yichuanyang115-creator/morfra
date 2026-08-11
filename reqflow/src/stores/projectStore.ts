@@ -95,7 +95,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createProject: async (name, template) => {
     if (isTauriRuntime()) {
-      const project = await createStorageProjectFromName(name);
+      const project = await createStorageProjectFromName(name, template?.id === "reqflow" ? "requirements" : undefined);
       set({ projects: [project, ...get().projects], currentProjectId: project.id, canUndo: false });
       return;
     }

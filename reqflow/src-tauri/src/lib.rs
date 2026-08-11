@@ -62,6 +62,15 @@ pub fn run() {
             storage::record_commands::storage_apply_table_mutation,
             storage::record_commands::storage_reorder_records,
             storage::record_commands::storage_move_board_card,
+            storage::record_commands::storage_get_activity_binding,
+            storage::record_commands::storage_update_activity_binding,
+            storage::record_commands::storage_load_activity_events,
+            storage::record_commands::storage_update_activity_note,
+            storage::record_commands::storage_create_activity_comment,
+            storage::record_commands::storage_delete_activity_event,
+            storage::record_commands::storage_get_detail_tabs,
+            storage::record_commands::storage_load_record_detail_content,
+            storage::record_commands::storage_save_record_detail_content,
         ])
         .setup(|app| {
             // 调试模式自动弹出 WebView devtools 面板，本机右键菜单没有触发出

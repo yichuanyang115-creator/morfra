@@ -79,4 +79,6 @@ pub struct OptionBackup {
     pub values: Vec<CellValueRow>,
     pub multi_values: Vec<MultiSelectValueRow>,
     pub view_configs: Vec<ViewConfigRow>,
+    /// 仅记录本次选项替换/清空产生的活动节点；撤销选项变更时必须一起移除。
+    pub activity_event_ids: Vec<String>,
 }

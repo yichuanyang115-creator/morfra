@@ -41,6 +41,7 @@ pub fn capture_option(
             connection,
             &table_id_for_field_read(connection, &option.field_id)?,
         )?,
+        activity_event_ids: Vec::new(),
         option,
     })
 }
@@ -158,4 +159,3 @@ fn restore_view_configs(
     }
     Ok(())
 }
-

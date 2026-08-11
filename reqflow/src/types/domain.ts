@@ -39,7 +39,7 @@ export interface FieldGroupSummary {
 
 export interface FieldOptionSummary {
   id: string;
-  fieldId: string;
+  fieldId: string | null;
   name: string;
   color: string;
   position: number;
@@ -106,3 +106,29 @@ export interface BackupInfo {
   id: string;
   createdAt: string;
 }
+
+export interface ActivityEvent {
+  id: string;
+  recordId: string;
+  fieldId: string;
+  fieldNameSnapshot: string;
+  fromValueSnapshot: string | null;
+  toValueSnapshot: string | null;
+  occurredAt: string;
+  note: string | null;
+  comments: ActivityComment[];
+}
+
+export interface ActivityComment { id: string; eventId: string; content: string; createdAt: string; }
+export interface ActivityBinding { enabled: boolean; fieldId: string | null; }
+
+export interface StorageDetailTab { id: string; name: string; renderer: "body" | "deliverables" | "tasks" | "acceptance" | "activity"; visible: boolean; }
+
+export interface RecordDetailContent {
+  recordId: string;
+  body: string;
+  deliverables: import("./models").Deliverable[];
+  tasks: import("./models").Task[];
+  acceptance: import("./models").AcceptanceCriterion[];
+}
+export type RecordDetailContentInput = Omit<RecordDetailContent, "recordId">;

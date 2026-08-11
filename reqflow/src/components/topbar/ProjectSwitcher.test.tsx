@@ -148,11 +148,11 @@ describe("ProjectSwitcher（REQ-018/FLOW-009 多项目管理）", () => {
 
   it("新建项目选择 reqflow 模板后写入完整的模板 Schema", async () => {
     useTemplateStore.setState({
-      templates: [{ id: "reqflow", name: "reqflow", schemaSnapshot: (await import("../../lib/schemaDefaults")).reqflowTemplateSnapshot() }],
+      templates: [{ id: "reqflow", name: "需求管理模板", schemaSnapshot: (await import("../../lib/schemaDefaults")).reqflowTemplateSnapshot() }],
     });
     render(<ProjectSwitcher onClose={vi.fn()} />);
 
-    await userEvent.click(screen.getByRole("radio", { name: "reqflow" }));
+    await userEvent.click(screen.getByRole("radio", { name: /需求管理模板/ }));
     await userEvent.type(screen.getByPlaceholderText("新建项目名称"), "模板项目");
     await userEvent.click(screen.getByLabelText("创建"));
 

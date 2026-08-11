@@ -34,7 +34,7 @@ describe("templateStore（REQ-028 模板系统）", () => {
     await useTemplateStore.getState().load();
 
     const [template] = useTemplateStore.getState().templates;
-    expect(template.name).toBe("reqflow");
+    expect(template.name).toBe("需求管理模板");
     expect(template.schemaSnapshot.stageOptions).toHaveLength(7);
     expect(template.schemaSnapshot.attributes.length).toBeGreaterThan(0);
     expect(template.schemaSnapshot.tabs.map((tab) => tab.renderer)).toEqual(["body", "deliverables", "tasks", "acceptance", "activity"]);

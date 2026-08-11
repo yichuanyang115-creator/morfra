@@ -110,7 +110,7 @@ pub fn delete_option(
     mode: &str,
     replacement_id: Option<&str>,
 ) -> Result<OptionBackup, StorageError> {
-    let backup = capture_option(connection, option_id)?;
+    let mut backup = capture_option(connection, option_id)?;
     let usage = option_usage(connection, option_id)?;
     if usage.record_count > 0 || usage.view_rule_count > 0 {
         match mode {
@@ -130,7 +130,15 @@ pub fn delete_option(
         }
     }
     let transaction = connection.transaction()?;
+    let field = load_field_row_tx(&transaction, &backup.option.field_id)?;
+    let affected_records = select_records_using_option(&transaction, &backup.option)?;
     rewrite_option_values(&transaction, &backup.option, mode, replacement_id)?;
+    for record_id in affected_records {
+        let next = if mode == "replace" { replacement_id.map(|id| Value::String(id.to_string())).unwrap_or(Value::Null) } else { Value::Null };
+        if let Some(event_id) = activity_repository::track_select_change_with_id(&transaction, &record_id, &field, &Value::String(backup.option.id.clone()), &next)? {
+            backup.activity_event_ids.push(event_id);
+        }
+    }
     clean_field_references(
         &transaction,
         &table_id_for_field(&transaction, &backup.option.field_id)?,
@@ -150,11 +158,19 @@ pub fn delete_option(
     Ok(backup)
 }
 
+fn select_records_using_option(transaction: &Transaction<'_>, option: &FieldOptionRow) -> Result<Vec<String>, StorageError> {
+    if option.field_id.is_empty() { return Ok(Vec::new()); }
+    transaction.prepare("SELECT record_id FROM cell_values WHERE field_id = ?1 AND json_extract(value_json, '$') = ?2")?.query_map(params![option.field_id, option.id], |row| row.get(0))?.collect::<Result<Vec<_>, _>>().map_err(StorageError::from)
+}
+
 pub fn restore_option(
     connection: &mut Connection,
     backup: &OptionBackup,
 ) -> Result<(), StorageError> {
     let transaction = connection.transaction()?;
+    for event_id in &backup.activity_event_ids {
+        transaction.execute("DELETE FROM activity_events WHERE id = ?1", [event_id])?;
+    }
     transaction.execute(
         "DELETE FROM field_options WHERE id = ?1",
         [&backup.option.id],
@@ -179,4 +195,3 @@ pub fn restore_option(
     transaction.commit()?;
     Ok(())
 }
-

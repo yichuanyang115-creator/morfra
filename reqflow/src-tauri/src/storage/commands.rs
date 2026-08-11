@@ -32,10 +32,11 @@ pub(crate) fn active_project_path(state: &Mutex<StorageState>) -> Result<PathBuf
 pub fn storage_create_project(
     path: String,
     name: String,
+    template: Option<String>,
     state: State<'_, Mutex<StorageState>>,
 ) -> Result<ProjectSnapshot, StorageError> {
     let root = PathBuf::from(&path);
-    let snapshot = connection::create_project(&root, &name)?;
+    let snapshot = connection::create_project_with_template(&root, &name, template.as_deref())?;
     let mut session = state.lock().map_err(|_| {
         StorageError::new(StorageErrorCode::DatabaseError, "项目会话状态不可用", true)
     })?;

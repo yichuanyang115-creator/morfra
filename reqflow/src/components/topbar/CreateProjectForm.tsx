@@ -3,6 +3,7 @@ import type { SchemaTemplate } from "../../types/templates";
 import { useProjectStore } from "../../stores/projectStore";
 import { useTemplateStore } from "../../stores/templateStore";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
+import { REQUIREMENT_MANAGEMENT_TEMPLATE } from "../../lib/templates/requirementManagement";
 
 interface CreateProjectFormProps {
   onCreated: () => void;
@@ -104,7 +105,7 @@ export function CreateProjectForm({ onCreated }: CreateProjectFormProps) {
                     onChange={() => setSelectedTemplateId(template.id)}
                     className="mr-1.5"
                   />
-                  {template.name}
+                  {template.name}{template.id === REQUIREMENT_MANAGEMENT_TEMPLATE.id && <span className="ml-1 text-[10px] text-(--module-scope-text-tertiary)">· {REQUIREMENT_MANAGEMENT_TEMPLATE.description}</span>}
                 </label>
               )}
               <button

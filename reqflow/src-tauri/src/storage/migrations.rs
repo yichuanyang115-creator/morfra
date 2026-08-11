@@ -16,6 +16,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
         3,
         include_str!("../../migrations/003_phase35_detail_config.sql"),
     ),
+    (4, include_str!("../../migrations/004_phase41_activity.sql")),
 ];
 
 pub fn configure_connection(connection: &Connection) -> Result<(), StorageError> {
@@ -159,7 +160,7 @@ fn create_online_backup(
 mod tests {
     use rusqlite::Connection;
 
-    use super::{apply_pending_migrations, configure_connection};
+    use super::{apply_pending_migrations, configure_connection, MIGRATIONS};
 
     #[test]
     fn creates_schema_and_records_version_once() {
@@ -172,7 +173,7 @@ mod tests {
                 row.get(0)
             })
             .expect("version");
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
         let has_group_column: i64 = connection
             .query_row(
                 "SELECT COUNT(*) FROM pragma_table_info('fields') WHERE name = 'group_id'",
@@ -181,5 +182,31 @@ mod tests {
             )
             .expect("fields schema");
         assert_eq!(has_group_column, 1);
+    }
+
+    #[test]
+    fn upgrades_an_existing_phase_35_database_without_losing_detail_configuration() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        configure_connection(&connection).expect("configure");
+        connection.execute_batch("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);").expect("migration ledger");
+        for (version, sql) in MIGRATIONS.iter().take(3) {
+            connection.execute_batch(sql).expect("phase 35 schema");
+            connection.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (?1, 'before-phase-41')", [version]).expect("migration version");
+        }
+        connection.execute_batch("INSERT INTO project_meta (id, project_id, name, format_version, created_at, updated_at) VALUES ('project', 'existing-project', 'Existing', 1, 'before-phase-41', 'before-phase-41');\
+            INSERT INTO data_tables (id, project_id, name, position, created_at, updated_at) VALUES ('existing-table', 'project', 'Existing table', 0, 'before-phase-41', 'before-phase-41');\
+            INSERT INTO table_configs (table_id, detail_field_ids_json, updated_at) VALUES ('existing-table', '[\"field-priority\"]', 'before-phase-41');").expect("existing detail settings");
+
+        apply_pending_migrations(&mut connection, None).expect("upgrade phase 41");
+
+        let row: (String, Option<String>, i64, String) = connection.query_row(
+            "SELECT detail_field_ids_json, activity_field_id, activity_tab_enabled, detail_tabs_json FROM table_configs WHERE table_id = 'existing-table'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        ).expect("upgraded configuration");
+        assert_eq!(row.0, "[\"field-priority\"]");
+        assert_eq!(row.1, None);
+        assert_eq!(row.2, 0);
+        assert_eq!(row.3, "[]");
     }
 }

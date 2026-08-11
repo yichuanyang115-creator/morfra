@@ -126,7 +126,9 @@ pub fn update_cell(
             "字段与记录不属于同一张表",
         ));
     }
+    let old_value = stored_value(&transaction, record_id, field_id)?;
     write_value(&transaction, record_id, &field, &value)?;
+    activity_repository::track_select_change(&transaction, record_id, &field, &old_value, &stored_value(&transaction, record_id, field_id)?)?;
     let now = timestamp();
     transaction.execute(
         "UPDATE records SET updated_at = ?1 WHERE id = ?2",
@@ -178,7 +180,9 @@ pub fn apply_batch_mutation(
         let field = field_map
             .get(&update.field_id)
             .ok_or_else(|| StorageError::validation("目标字段不存在或不属于当前表"))?;
+        let old_value = stored_value(&transaction, &update.record_id, &update.field_id)?;
         write_value(&transaction, &update.record_id, field, &update.value)?;
+        activity_repository::track_select_change(&transaction, &update.record_id, field, &old_value, &stored_value(&transaction, &update.record_id, &update.field_id)?)?;
         transaction.execute(
             "UPDATE records SET updated_at = ?1 WHERE id = ?2",
             params![timestamp(), update.record_id],
@@ -249,6 +253,8 @@ pub fn restore_batch_mutation(
         for value in &record_backup.multi_values {
             transaction.execute("INSERT INTO multi_select_values (record_id, field_id, option_id, position) VALUES (?1, ?2, ?3, ?4)", params![value.record_id, value.field_id, value.option_id, value.position])?;
         }
+        restore_activity_events(&transaction, &record_backup.activity_events)?;
+        restore_detail_content(&transaction, &record_backup.record.id, record_backup.detail_content.as_ref())?;
     }
     touch_project(&transaction)?;
     transaction.commit()?;
@@ -280,6 +286,8 @@ pub fn restore_record(
     for value in &backup.multi_values {
         transaction.execute("INSERT INTO multi_select_values (record_id, field_id, option_id, position) VALUES (?1, ?2, ?3, ?4)", params![value.record_id, value.field_id, value.option_id, value.position])?;
     }
+    restore_activity_events(&transaction, &backup.activity_events)?;
+    restore_detail_content(&transaction, &backup.record.id, backup.detail_content.as_ref())?;
     touch_project(&transaction)?;
     transaction.commit()?;
     Ok(())
@@ -323,7 +331,9 @@ pub fn move_board_card(
         .as_object_mut()
         .ok_or_else(|| StorageError::validation("视图配置损坏"))?
         .insert("board".to_string(), board_config);
+    let old_value = stored_value(&transaction, record_id, field_id)?;
     write_value(&transaction, record_id, &field, &value)?;
+    activity_repository::track_select_change(&transaction, record_id, &field, &old_value, &stored_value(&transaction, record_id, field_id)?)?;
     transaction.execute(
         "UPDATE records SET updated_at = ?1 WHERE id = ?2",
         params![timestamp(), record_id],
@@ -361,6 +371,8 @@ pub fn restore_board_move(
     for value in &backup.record.multi_values {
         transaction.execute("INSERT INTO multi_select_values (record_id, field_id, option_id, position) VALUES (?1, ?2, ?3, ?4)", params![value.record_id, value.field_id, value.option_id, value.position])?;
     }
+    restore_activity_events(&transaction, &backup.record.activity_events)?;
+    restore_detail_content(&transaction, &backup.record.record.id, backup.record.detail_content.as_ref())?;
     transaction.execute(
         "UPDATE view_configs SET config_json = ?1, updated_at = ?2 WHERE view_id = ?3",
         params![backup.config_json, timestamp(), backup.view_id],
@@ -399,9 +411,33 @@ pub fn capture_record(
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
+    let mut events_statement = connection.prepare("SELECT id, record_id, field_id, field_name_snapshot, from_value_snapshot, to_value_snapshot, occurred_at, note FROM activity_events WHERE record_id = ?1")?;
+    let activity_events = events_statement.query_map([record_id], |row| Ok((row.get::<_, String>(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?)))?.map(|event| { let (id, record_id, field_id, field_name_snapshot, from_value_snapshot, to_value_snapshot, occurred_at, note) = event?; Ok(ActivityEventRow { comments: load_activity_comments(connection, &id)?, id, record_id, field_id, field_name_snapshot, from_value_snapshot, to_value_snapshot, occurred_at, note }) }).collect::<Result<Vec<_>, StorageError>>()?;
+    let detail_content = connection.query_row("SELECT body, deliverables_json, tasks_json, acceptance_json, created_at, updated_at FROM record_detail_contents WHERE record_id = ?1", [record_id], |row| Ok(RecordDetailContentRow { body: row.get(0)?, deliverables_json: row.get(1)?, tasks_json: row.get(2)?, acceptance_json: row.get(3)?, created_at: row.get(4)?, updated_at: row.get(5)? })).optional()?;
     Ok(RecordBackup {
         record,
         values,
         multi_values,
+        activity_events,
+        detail_content,
     })
 }
+
+fn stored_value(transaction: &Transaction<'_>, record_id: &str, field_id: &str) -> Result<Value, StorageError> {
+    let value: Option<String> = transaction.query_row("SELECT value_json FROM cell_values WHERE record_id = ?1 AND field_id = ?2", params![record_id, field_id], |row| row.get(0)).optional()?;
+    value.map(|raw| serde_json::from_str(&raw).map_err(StorageError::from)).transpose().map(|value| value.unwrap_or(Value::Null))
+}
+
+fn restore_activity_events(transaction: &Transaction<'_>, events: &[ActivityEventRow]) -> Result<(), StorageError> {
+    for event in events { transaction.execute("INSERT INTO activity_events (id, record_id, field_id, field_name_snapshot, from_value_snapshot, to_value_snapshot, occurred_at, note) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", params![event.id, event.record_id, event.field_id, event.field_name_snapshot, event.from_value_snapshot, event.to_value_snapshot, event.occurred_at, event.note])?; for comment in &event.comments { transaction.execute("INSERT INTO activity_comments (id, event_id, content, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)", params![comment.id, comment.event_id, comment.content, comment.created_at, comment.updated_at])?; } }
+    Ok(())
+}
+
+fn restore_detail_content(transaction: &Transaction<'_>, record_id: &str, content: Option<&RecordDetailContentRow>) -> Result<(), StorageError> {
+    if let Some(content) = content {
+        transaction.execute("INSERT INTO record_detail_contents (record_id, body, deliverables_json, tasks_json, acceptance_json, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)", params![record_id, content.body, content.deliverables_json, content.tasks_json, content.acceptance_json, content.created_at, content.updated_at])?;
+    }
+    Ok(())
+}
+
+fn load_activity_comments(connection: &Connection, event_id: &str) -> Result<Vec<ActivityCommentRow>, StorageError> { let mut statement = connection.prepare("SELECT id, event_id, content, created_at, updated_at FROM activity_comments WHERE event_id = ?1")?; let rows = statement.query_map([event_id], |row| Ok(ActivityCommentRow { id: row.get(0)?, event_id: row.get(1)?, content: row.get(2)?, created_at: row.get(3)?, updated_at: row.get(4)? }))?; rows.collect::<Result<Vec<_>, _>>().map_err(StorageError::from) }

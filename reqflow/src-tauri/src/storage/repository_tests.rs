@@ -1,4 +1,4 @@
-use super::{create_table, create_table_for_test, initialize_blank_project, load_snapshot};
+use super::{apply_requirement_template, create_table, create_table_for_test, initialize_blank_project, load_snapshot};
 use crate::storage::connection::ProjectManifest;
 use crate::storage::migrations::{apply_pending_migrations, configure_connection};
 use crate::storage::undo::{UndoAction, UndoStack};
@@ -6,7 +6,7 @@ use crate::storage::record_repository::{self, CellUpdate, NewRecord};
 use crate::storage::field_repository;
 use std::collections::HashMap;
 use serde_json::json;
-use crate::storage::{lifecycle, table_backup};
+use crate::storage::{detail_content_repository, lifecycle, table_backup};
 
 fn database() -> (rusqlite::Connection, ProjectManifest) {
     let mut connection = rusqlite::Connection::open_in_memory().expect("database");
@@ -30,6 +30,21 @@ fn blank_project_has_one_title_field_and_table_view() {
     assert_eq!(snapshot.tables.len(), 1);
     assert_eq!(snapshot.tables[0].views[0].view_type, "table");
     assert_eq!(snapshot.tables[0].record_count, 0);
+}
+
+#[test]
+fn requirement_template_uses_normal_fields_and_visible_activity_binding() {
+    let (mut connection, manifest) = database();
+    let table_id = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].id.clone();
+    let snapshot = apply_requirement_template(&mut connection, &manifest, &table_id).expect("template");
+    let table = &snapshot.tables[0];
+    assert_eq!(snapshot.tables.len(), 1);
+    assert!(table.views.iter().any(|view| view.view_type == "board"));
+    let stage: String = connection.query_row("SELECT id FROM fields WHERE table_id = ?1 AND name = '阶段' AND field_type = 'select'", [&table_id], |row| row.get(0)).expect("stage");
+    let binding: String = connection.query_row("SELECT activity_field_id FROM table_configs WHERE table_id = ?1", [&table_id], |row| row.get(0)).expect("binding");
+    assert_eq!(binding, stage);
+    let tabs = detail_content_repository::load_detail_tabs(&connection, &table_id).expect("tabs");
+    assert_eq!(tabs.iter().map(|tab| tab.renderer.as_str()).collect::<Vec<_>>(), vec!["body", "deliverables", "tasks", "acceptance", "activity"]);
 }
 
 #[test]

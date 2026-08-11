@@ -117,7 +117,7 @@ describe("projectStore CRUD（REQ-018/FLOW-009 多项目管理）", () => {
     expect(blankSchema.attributes).toHaveLength(0);
     expect(blankSchema.tabs).toHaveLength(0);
 
-    await createProject("模板项目", { id: "reqflow", name: "reqflow", schemaSnapshot: reqflowTemplateSnapshot() });
+    await createProject("模板项目", { id: "reqflow", name: "需求管理模板", schemaSnapshot: reqflowTemplateSnapshot() });
     const templated = useProjectStore.getState().projects[1];
     const schema = JSON.parse(files.get(`/app-local-data/projects/${templated.id}/schema.json`) ?? "{}") as { stageOptions: unknown[]; viewPreferences: { columnWidths: Record<string, number> } };
     expect(schema.stageOptions).toHaveLength(7);

@@ -5,6 +5,7 @@ import { templatePath, templatesInitializedPath, templatesRootDir } from "../lib
 import { reqflowTemplateSnapshot, schemaSnapshot } from "../lib/schemaDefaults";
 import type { Schema } from "../types/schema";
 import type { SchemaTemplate } from "../types/templates";
+import { REQUIREMENT_MANAGEMENT_TEMPLATE } from "../lib/templates/requirementManagement";
 
 const REQFLOW_TEMPLATE_ID = "reqflow";
 
@@ -54,7 +55,7 @@ async function loadTemplates(): Promise<SchemaTemplate[]> {
 
   const initializedPath = await templatesInitializedPath();
   if ((await readFile(initializedPath)) === null) {
-    await persist({ id: REQFLOW_TEMPLATE_ID, name: "reqflow", schemaSnapshot: reqflowTemplateSnapshot() });
+    await persist({ id: REQFLOW_TEMPLATE_ID, name: REQUIREMENT_MANAGEMENT_TEMPLATE.name, schemaSnapshot: reqflowTemplateSnapshot() });
     await writeFile(initializedPath, "initialized\n");
   }
 

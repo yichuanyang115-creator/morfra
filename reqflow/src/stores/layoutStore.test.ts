@@ -36,4 +36,15 @@ describe("layoutStore", () => {
 
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}")).toMatchObject({ detailWidth: 720, aiWidth: 320 });
   });
+
+  it("记录详情只在本次运行保留，重启后始终关闭", () => {
+    useLayoutStore.setState({ hydrated: true });
+    useLayoutStore.getState().toggleDetail();
+    expect(useLayoutStore.getState().detailOpen).toBe(true);
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}").detailOpen).toBe(false);
+
+    useLayoutStore.setState({ ...DEFAULT_LAYOUT_PREFERENCES, hydrated: false });
+    useLayoutStore.getState().hydrate();
+    expect(useLayoutStore.getState().detailOpen).toBe(false);
+  });
 });

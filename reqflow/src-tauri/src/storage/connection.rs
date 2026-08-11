@@ -80,10 +80,15 @@ pub struct OpenProject {
     pub connection: Connection,
 }
 
+#[cfg(test)]
 pub fn create_project(
     root: &Path,
     name: &str,
 ) -> Result<repository::ProjectSnapshot, StorageError> {
+    create_project_with_template(root, name, None)
+}
+
+pub fn create_project_with_template(root: &Path, name: &str, template: Option<&str>) -> Result<repository::ProjectSnapshot, StorageError> {
     let paths = ProjectPaths::new(root.to_path_buf())?;
     validate_project_name(name)?;
     let root_was_new = !paths.root.exists();
@@ -100,7 +105,8 @@ pub fn create_project(
         let manifest = new_manifest(name.trim());
         write_manifest(&paths.manifest, &manifest)?;
         let mut connection = open_connection(&paths)?;
-        repository::initialize_blank_project(&mut connection, &manifest)
+        let snapshot = repository::initialize_blank_project(&mut connection, &manifest)?;
+        if template == Some("requirements") { repository::apply_requirement_template(&mut connection, &manifest, &snapshot.tables[0].id) } else { Ok(snapshot) }
     })();
     if result.is_err() {
         cleanup_failed_creation(&paths, root_was_new);

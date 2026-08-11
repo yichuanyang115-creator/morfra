@@ -43,9 +43,9 @@ export function storageProject(path: string, snapshot: ProjectSnapshot): Project
   return { id: snapshot.manifest.id, name: snapshot.manifest.name, sources: [], storagePath: path, storageSnapshot: snapshot };
 }
 
-export async function createStorageProjectFromName(name: string): Promise<Project> {
+export async function createStorageProjectFromName(name: string, template?: "requirements"): Promise<Project> {
   const path = await projectDir(nanoid());
-  const snapshot = await createStorageProject({ path, name });
+  const snapshot = await createStorageProject({ path, name, template });
   await touchRecentProject({ id: snapshot.manifest.id, path, name: snapshot.manifest.name });
   return storageProject(path, snapshot);
 }
