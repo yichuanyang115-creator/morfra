@@ -7,7 +7,7 @@ use rusqlite::{backup::Backup, Connection};
 use serde::{Deserialize, Serialize};
 
 use super::connection::{
-    read_manifest, timestamp, ProjectManifest, ProjectPaths, DATABASE_FILE, PROJECT_MANIFEST_FILE,
+    read_manifest, timestamp, ProjectManifest, ProjectPaths, ATTACHMENTS_DIRECTORY, DATABASE_FILE, PROJECT_MANIFEST_FILE,
 };
 use super::error::{StorageError, StorageErrorCode};
 use super::{migrations, repository};
@@ -67,9 +67,11 @@ pub fn restore_project(paths: &ProjectPaths, backup_id: &str) -> Result<(), Stor
     let backup_path = backup_directory(paths, backup_id)?;
     let backup_manifest_path = backup_path.join(PROJECT_MANIFEST_FILE);
     let backup_database_path = backup_path.join(DATABASE_FILE);
+    let backup_attachments_path = backup_path.join(ATTACHMENTS_DIRECTORY);
     let backup_manifest = read_manifest(&backup_manifest_path)?;
     super::connection::validate_manifest(&backup_manifest)?;
     verify_backup(&backup_database_path, &backup_manifest)?;
+    if !backup_attachments_path.is_dir() { return Err(StorageError::new(StorageErrorCode::InvalidProjectManifest, "备份附件目录不完整，已取消恢复", false)); }
 
     let current_manifest = read_manifest(&paths.manifest)?;
     let current_connection = Connection::open(&paths.database)?;
@@ -86,13 +88,27 @@ pub fn restore_project(paths: &ProjectPaths, backup_id: &str) -> Result<(), Stor
 
     let temporary_database = paths.root.join("morfra.restore.sqlite3.tmp");
     let temporary_manifest = paths.root.join("project.json.restore.tmp");
+    let temporary_attachments = paths.root.join("attachments.restore.tmp");
+    let previous_database = paths.root.join("morfra.sqlite3.restore.previous");
+    let previous_manifest = paths.root.join("project.json.restore.previous");
+    let previous_attachments = paths.root.join("attachments.restore.previous");
     let _ = fs::remove_file(&temporary_database);
     let _ = fs::remove_file(&temporary_manifest);
+    let _ = fs::remove_dir_all(&temporary_attachments);
+    let _ = fs::remove_file(&previous_database);
+    let _ = fs::remove_file(&previous_manifest);
+    let _ = fs::remove_dir_all(&previous_attachments);
     let restore_result = (|| {
         restore_database(&backup_database_path, &temporary_database)?;
         fs::copy(&backup_manifest_path, &temporary_manifest)?;
+        copy_directory(&backup_attachments_path, &temporary_attachments)?;
+        fs::rename(&paths.database, &previous_database)?;
+        fs::rename(&paths.manifest, &previous_manifest)?;
+        fs::rename(&paths.attachments, &previous_attachments)?;
         fs::rename(&temporary_database, &paths.database)?;
         fs::rename(&temporary_manifest, &paths.manifest)?;
+        fs::rename(&temporary_attachments, &paths.attachments)?;
+        verify_backup(&paths.database, &backup_manifest)?;
         Ok::<(), StorageError>(())
     })();
     if let Err(error) = restore_result {
@@ -107,12 +123,17 @@ pub fn restore_project(paths: &ProjectPaths, backup_id: &str) -> Result<(), Stor
                 pre_restore_path.join(PROJECT_MANIFEST_FILE),
                 &rollback_manifest,
             )?;
-            fs::rename(rollback_database, &paths.database)?;
-            fs::rename(rollback_manifest, &paths.manifest)?;
+            let _ = fs::remove_file(&paths.database);
+            let _ = fs::remove_file(&paths.manifest);
+            let _ = fs::remove_dir_all(&paths.attachments);
+            if previous_database.exists() { fs::rename(&previous_database, &paths.database)?; } else { fs::rename(rollback_database, &paths.database)?; }
+            if previous_manifest.exists() { fs::rename(&previous_manifest, &paths.manifest)?; } else { fs::rename(rollback_manifest, &paths.manifest)?; }
+            if previous_attachments.exists() { fs::rename(&previous_attachments, &paths.attachments)?; } else { copy_directory(&pre_restore_path.join(ATTACHMENTS_DIRECTORY), &paths.attachments)?; }
             Ok::<(), StorageError>(())
         })();
         let _ = fs::remove_file(&temporary_database);
         let _ = fs::remove_file(&temporary_manifest);
+        let _ = fs::remove_dir_all(&temporary_attachments);
         if rollback_result.is_err() {
             return Err(StorageError::new(
                 StorageErrorCode::IoError,
@@ -122,6 +143,9 @@ pub fn restore_project(paths: &ProjectPaths, backup_id: &str) -> Result<(), Stor
         }
         return Err(error);
     }
+    let _ = fs::remove_file(previous_database);
+    let _ = fs::remove_file(previous_manifest);
+    let _ = fs::remove_dir_all(previous_attachments);
     retain_latest(paths)?;
     Ok(())
 }
@@ -149,6 +173,7 @@ fn create_backup_with_id(
             directory.join(PROJECT_MANIFEST_FILE),
             serde_json::to_vec_pretty(manifest)?,
         )?;
+        copy_directory(&paths.attachments, &directory.join(ATTACHMENTS_DIRECTORY))?;
         Ok::<(), StorageError>(())
     })();
     if result.is_err() {
@@ -186,20 +211,24 @@ fn restore_database(source_path: &Path, destination_path: &Path) -> Result<(), S
     Ok(())
 }
 
-fn retain_latest(paths: &ProjectPaths) -> Result<(), StorageError> {
+pub(crate) fn retain_latest(paths: &ProjectPaths) -> Result<(), StorageError> {
     let mut directories = fs::read_dir(&paths.backups)?
         .filter_map(Result::ok)
-        .map(|entry| entry.path())
+        .map(|entry| {
+            let path = entry.path();
+            let modified = entry.metadata().ok().and_then(|metadata| metadata.modified().ok()).unwrap_or(SystemTime::UNIX_EPOCH);
+            (path, modified)
+        })
         .filter(|path| {
-            path.is_dir()
-                && path
+            path.0.is_dir()
+                && path.0
                     .file_name()
                     .is_some_and(|name| name.to_string_lossy().starts_with("backup-"))
         })
         .collect::<Vec<_>>();
-    directories.sort();
+    directories.sort_by(|left, right| right.1.cmp(&left.1));
     let remove_count = directories.len().saturating_sub(MAX_BACKUPS);
-    for directory in directories.into_iter().take(remove_count) {
+    for (directory, _) in directories.into_iter().skip(MAX_BACKUPS).take(remove_count) {
         fs::remove_dir_all(directory)?;
     }
     Ok(())
@@ -229,6 +258,16 @@ fn backup_directory(paths: &ProjectPaths, backup_id: &str) -> Result<PathBuf, St
     Ok(paths.backups.join(backup_id))
 }
 
+fn copy_directory(source: &Path, destination: &Path) -> Result<(), StorageError> {
+    fs::create_dir_all(destination)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let target = destination.join(entry.file_name());
+        if entry.file_type()?.is_dir() { copy_directory(&entry.path(), &target)?; } else if entry.file_type()?.is_file() { fs::copy(entry.path(), target)?; }
+    }
+    Ok(())
+}
+
 fn day_number() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -241,8 +280,8 @@ fn day_number() -> u64 {
 mod tests {
     use std::fs;
 
-    use super::{create_manual_backup, list_backups, restore_project};
-    use crate::storage::connection::{create_project, open_project, ProjectPaths};
+    use super::{create_manual_backup, ensure_daily_backup, list_backups, restore_project};
+    use crate::storage::connection::{create_project, open_project, ProjectPaths, DATABASE_FILE};
     use crate::storage::repository;
 
     fn project_root(label: &str) -> std::path::PathBuf {
@@ -264,6 +303,16 @@ mod tests {
     }
 
     #[test]
+    fn only_creates_one_daily_backup_per_open_day() {
+        let root = project_root("daily"); let _ = fs::remove_dir_all(&root); create_project(&root, "备份测试").expect("create");
+        let opened = open_project(&root).expect("open"); let paths = ProjectPaths::existing(&root).expect("paths");
+        ensure_daily_backup(&paths, &opened.manifest, &opened.connection).expect("daily backup");
+        ensure_daily_backup(&paths, &opened.manifest, &opened.connection).expect("same day no duplicate");
+        assert_eq!(list_backups(&paths).expect("list").iter().filter(|backup| backup.id.starts_with("backup-daily-")).count(), 1);
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
     fn restore_reverts_database_and_manifest_from_backup() {
         let root = project_root("restore");
         let _ = fs::remove_dir_all(&root);
@@ -281,6 +330,18 @@ mod tests {
         let snapshot =
             repository::load_snapshot(&reopened.connection, &reopened.manifest).expect("snapshot");
         assert_eq!(snapshot.tables.len(), 1);
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn corrupt_backup_never_replaces_the_current_project() {
+        let root = project_root("corrupt"); let _ = fs::remove_dir_all(&root);
+        create_project(&root, "恢复测试").expect("create");
+        let opened = open_project(&root).expect("open"); let paths = ProjectPaths::existing(&root).expect("paths");
+        let stable = create_manual_backup(&paths, &opened.manifest, &opened.connection).expect("backup");
+        fs::write(paths.backups.join(&stable.id).join(DATABASE_FILE), "not sqlite").expect("corrupt");
+        assert!(restore_project(&paths, &stable.id).is_err());
+        assert!(open_project(&root).is_ok());
         fs::remove_dir_all(root).expect("cleanup");
     }
 }

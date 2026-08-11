@@ -107,6 +107,17 @@ export interface BackupInfo {
   createdAt: string;
 }
 
+export interface StorageAttachment {
+  id: string;
+  recordId: string;
+  fieldId: string;
+  relativePath: string;
+  originalName: string;
+  mediaType: string | null;
+  byteSize: number;
+  createdAt: string;
+}
+
 export interface ActivityEvent {
   id: string;
   recordId: string;

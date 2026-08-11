@@ -125,6 +125,9 @@ fn capture(transaction: &Transaction<'_>, table_id: &str) -> Result<DeletedTable
     })? {
         multi_values.push(row?);
     }
+    let mut attachments = Vec::new();
+    let mut statement = transaction.prepare("SELECT a.id, a.record_id, a.field_id, a.relative_path, a.original_name, a.media_type, a.byte_size, a.created_at FROM attachments a JOIN records r ON r.id = a.record_id WHERE r.table_id = ?1 ORDER BY a.created_at")?;
+    for row in statement.query_map([table_id], |row| Ok(AttachmentRow { id: row.get(0)?, record_id: row.get(1)?, field_id: row.get(2)?, relative_path: row.get(3)?, original_name: row.get(4)?, media_type: row.get(5)?, byte_size: row.get(6)?, created_at: row.get(7)? }))? { attachments.push(row?); }
     Ok(DeletedTable {
         table,
         table_config_json: table_config.0,
@@ -137,6 +140,6 @@ fn capture(transaction: &Transaction<'_>, table_id: &str) -> Result<DeletedTable
         records,
         values,
         multi_values,
+        attachments,
     })
 }
-

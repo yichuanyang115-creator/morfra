@@ -98,6 +98,9 @@ pub fn restore_table(
             (&value.record_id, &value.field_id, &value.option_id, value.position),
         )?;
     }
+    for attachment in &backup.attachments {
+        transaction.execute("INSERT INTO attachments (id, record_id, field_id, relative_path, original_name, media_type, byte_size, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", (&attachment.id, &attachment.record_id, &attachment.field_id, &attachment.relative_path, &attachment.original_name, &attachment.media_type, attachment.byte_size, &attachment.created_at))?;
+    }
     transaction.execute(
         "UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'",
         [timestamp()],
@@ -105,5 +108,4 @@ pub fn restore_table(
     transaction.commit()?;
     Ok(())
 }
-
 

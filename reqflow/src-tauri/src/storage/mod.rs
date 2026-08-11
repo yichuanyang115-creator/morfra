@@ -1,4 +1,5 @@
 pub mod backup;
+pub mod attachments;
 pub mod activity_repository;
 pub mod benchmark;
 pub mod commands;

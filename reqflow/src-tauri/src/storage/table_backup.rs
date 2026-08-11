@@ -16,6 +16,7 @@ pub struct DeletedTable {
     records: Vec<RecordRow>,
     values: Vec<CellValueRow>,
     multi_values: Vec<MultiSelectValueRow>,
+    attachments: Vec<AttachmentRow>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,6 +101,8 @@ struct CellValueRow {
     value_json: String,
     updated_at: String,
 }
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct AttachmentRow { id: String, record_id: String, field_id: String, relative_path: String, original_name: String, media_type: Option<String>, byte_size: i64, created_at: String }
 
 include!("table_backup_mutations.rs");
 include!("table_backup_capture.rs");

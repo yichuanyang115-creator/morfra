@@ -1,5 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import type { ActivityBinding, ActivityComment, ActivityEvent, BackupInfo, BenchmarkReport, FieldType, JsonValue, OptionUsage, ProjectSnapshot, RecordDetailContent, RecordDetailContentInput, StorageDetailTab, TableDataSnapshot } from "../../types/domain";
+import type { ActivityBinding, ActivityComment, ActivityEvent, BackupInfo, BenchmarkReport, FieldType, JsonValue, OptionUsage, ProjectSnapshot, RecordDetailContent, RecordDetailContentInput, StorageAttachment, StorageDetailTab, TableDataSnapshot } from "../../types/domain";
 
 export function isTauriRuntime(): boolean {
   try {
@@ -106,6 +106,11 @@ export async function listStorageBackups(): Promise<BackupInfo[]> {
 export async function restoreStorageProject(backupId: string): Promise<ProjectSnapshot> {
   return invoke<ProjectSnapshot>("storage_restore_project", { backupId });
 }
+export async function addStorageAttachment(recordId: string, fieldId: string, sourcePath: string): Promise<StorageAttachment> { return invoke<StorageAttachment>("storage_add_attachment", { recordId, fieldId, sourcePath }); }
+export async function listStorageAttachments(recordId: string, fieldId: string): Promise<StorageAttachment[]> { return invoke<StorageAttachment[]>("storage_list_attachments", { recordId, fieldId }); }
+export async function removeStorageAttachment(attachmentId: string): Promise<void> { return invoke<void>("storage_remove_attachment", { attachmentId }); }
+export async function replaceStorageAttachment(attachmentId: string, sourcePath: string): Promise<StorageAttachment> { return invoke<StorageAttachment>("storage_replace_attachment", { attachmentId, sourcePath }); }
+export async function storageAttachmentPath(attachmentId: string): Promise<string> { return invoke<string>("storage_attachment_path", { attachmentId }); }
 
 export async function loadStorageTableData(tableId: string): Promise<TableDataSnapshot> {
   return invoke<TableDataSnapshot>("storage_load_table_data", { tableId });

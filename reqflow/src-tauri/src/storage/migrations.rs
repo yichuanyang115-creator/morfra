@@ -17,6 +17,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
         include_str!("../../migrations/003_phase35_detail_config.sql"),
     ),
     (4, include_str!("../../migrations/004_phase41_activity.sql")),
+    (5, include_str!("../../migrations/005_phase42_attachments.sql")),
 ];
 
 pub fn configure_connection(connection: &Connection) -> Result<(), StorageError> {
@@ -134,8 +135,9 @@ fn create_online_backup(
     version: i64,
 ) -> Result<(), StorageError> {
     std::fs::create_dir_all(backups_dir)?;
-    let destination_path =
-        backups_dir.join(format!("pre-migration-v{version}-{}.sqlite3", timestamp()));
+    let directory = backups_dir.join(format!("backup-pre-migration-v{version}-{}", timestamp()));
+    std::fs::create_dir_all(&directory)?;
+    let destination_path = directory.join("morfra.sqlite3");
     let mut destination = Connection::open(&destination_path)?;
     let backup = Backup::new(source, &mut destination).map_err(|_| {
         StorageError::new(
@@ -144,7 +146,7 @@ fn create_online_backup(
             true,
         )
     })?;
-    backup
+    let result = backup
         .run_to_completion(100, Duration::from_millis(1), None)
         .map_err(|_| {
             StorageError::new(
@@ -152,7 +154,21 @@ fn create_online_backup(
                 "数据库升级前保护备份失败",
                 true,
             )
-        })?;
+        });
+    if result.is_err() { let _ = std::fs::remove_dir_all(&directory); }
+    result?;
+    let root = backups_dir.parent().ok_or_else(|| StorageError::new(StorageErrorCode::MigrationFailed, "数据库升级前保护备份路径无效", true))?;
+    let manifest = root.join("project.json");
+    if !manifest.is_file() { let _ = std::fs::remove_dir_all(&directory); return Err(StorageError::new(StorageErrorCode::MigrationFailed, "数据库升级前缺少可恢复项目元信息", true)); }
+    std::fs::copy(manifest, directory.join("project.json"))?;
+    copy_directory(&root.join("attachments"), &directory.join("attachments"))?;
+    super::backup::retain_latest(&super::connection::ProjectPaths::existing(root)?)?;
+    Ok(())
+}
+
+fn copy_directory(source: &Path, destination: &Path) -> Result<(), StorageError> {
+    std::fs::create_dir_all(destination)?;
+    for entry in std::fs::read_dir(source)? { let entry = entry?; let target = destination.join(entry.file_name()); if entry.file_type()?.is_dir() { copy_directory(&entry.path(), &target)?; } else if entry.file_type()?.is_file() { std::fs::copy(entry.path(), target)?; } }
     Ok(())
 }
 
@@ -173,7 +189,7 @@ mod tests {
                 row.get(0)
             })
             .expect("version");
-        assert_eq!(version, 4);
+        assert_eq!(version, 5);
         let has_group_column: i64 = connection
             .query_row(
                 "SELECT COUNT(*) FROM pragma_table_info('fields') WHERE name = 'group_id'",

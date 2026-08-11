@@ -12,6 +12,7 @@ pub enum StorageErrorCode {
     MigrationFailed,
     DatabaseError,
     IoError,
+    AttachmentMissing,
     ValidationError,
     UndoUnavailable,
 }

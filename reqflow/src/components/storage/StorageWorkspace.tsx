@@ -8,12 +8,13 @@ import { ViewTabBar } from "../workspace/ViewTabBar";
 import { ViewToolbar } from "../workspace/ViewToolbar";
 import { FieldManager } from "../fields/FieldManager";
 import { FieldDisplayManager } from "../fields/FieldDisplayManager";
+import { BackupSettings } from "../settings/BackupSettings";
 import { useTableDataStore } from "../../stores/tableDataStore";
 import { useStorageSelectionStore } from "../../stores/storageSelectionStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { getStorageViewConfig, updateStorageViewConfig } from "../../lib/ipc/storageClient";
 import { DataGrid, DataGridLoadingSkeleton, normalizeGridFieldIds, normalizeGridGroupOrder, orderGridFieldIdsByGroup, parseGridLayout, type GridLayoutConfig } from "../table/DataGrid";
-import type { JsonValue } from "../../types/domain";
+import type { JsonValue, ProjectSnapshot } from "../../types/domain";
 import { EMPTY_VIEW_PIPELINE, runViewPipeline, type ViewPipelineConfig } from "../../lib/table/viewPipeline";
 import { uniqueProjectedRecordCount } from "../../lib/table/groupProjection";
 import { GroupBar } from "../table/tools/GroupBar";
@@ -45,6 +46,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   const setActiveTable = useWorkspaceStore((state) => state.setActiveTable);
   const setActiveView = useWorkspaceStore((state) => state.setActiveView);
   const [fieldManagerOpen, setFieldManagerOpen] = useState(false);
+  const [backupSettingsOpen, setBackupSettingsOpen] = useState(false);
   const [fieldDisplayOpen, setFieldDisplayOpen] = useState(false);
   const [fieldDisplayIds, setFieldDisplayIds] = useState<string[] | null>(null);
   const [gridLayout, setGridLayout] = useState<GridLayoutConfig | null>(null);
@@ -231,7 +233,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
 
   const mainContent = <main className="morfra-storage-canvas" aria-label="Morfra 项目工作区">
     {project && activeTable && activeView ? <section className="morfra-storage-surface">
-      <TableHeader table={{ ...activeTable, recordCount: tableData?.records.length ?? activeTable.recordCount }} onRename={(name) => run(() => actions.renameTable(activeTable.id, name), "表重命名失败，请重试")} onOpenFieldManager={() => setFieldManagerOpen(true)} />
+      <TableHeader table={{ ...activeTable, recordCount: tableData?.records.length ?? activeTable.recordCount }} onRename={(name) => run(() => actions.renameTable(activeTable.id, name), "表重命名失败，请重试")} onOpenFieldManager={() => setFieldManagerOpen(true)} onOpenBackupSettings={() => setBackupSettingsOpen(true)} />
       <ViewTabBar tableId={activeTable.id} views={activeTable.views} activeViewId={activeView.id} onSelect={(id) => setActiveView(activeTable.id, id)} onCreate={(name, type) => run(() => actions.createView(activeTable.id, name, type), "新建视图失败，请重试")} onRename={(id, name) => run(() => actions.renameView(id, name), "视图重命名失败，请重试")} onDuplicate={(id, name) => run(() => actions.duplicateView(id, name), "复制视图失败，请重试")} onDelete={(id) => run(() => actions.deleteView(id), "删除视图失败，请重试")} onReorder={(ids) => run(() => actions.reorderViews(activeTable.id, ids), "视图顺序保存失败，请重试")} />
       <ViewToolbar view={activeView} fields={tableData?.fields} visibleFieldCount={gridLayout?.fieldIds.length} pipeline={gridLayout?.pipeline ?? EMPTY_VIEW_PIPELINE} search={gridSearch} rowHeight={gridLayout?.rowHeight} onSearchChange={setGridSearch} onRowHeightChange={(rowHeight) => { if (gridLayout) setGridLayoutConfig({ ...gridLayout, rowHeight }); }} onPipelineChange={changePipeline} onOpenFieldDisplay={() => setFieldDisplayOpen(true)} boardMode={activeView.viewType === "board"} />
       <div className="morfra-storage-data-area">
@@ -249,6 +251,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
     </section> : <div className="morfra-storage-empty morfra-storage-empty-project"><span aria-hidden="true">□</span><p>没有打开的项目</p><small>从文件菜单打开本地项目，或从项目切换器创建空白项目。</small></div>}
     {error && <p role="alert" className="morfra-storage-error">{error}{activeTable && <button type="button" className="ml-2 underline" onClick={() => { setError(null); void loadTableData(activeTable.id).catch(() => setError("字段和记录读取失败，请重试")); }}>重试</button>}</p>}
     {fieldManagerOpen && tableData && <FieldManager tableId={activeTable.id} data={tableData} onClose={() => setFieldManagerOpen(false)} onError={setError} />}
+    {backupSettingsOpen && <BackupSettings onClose={() => setBackupSettingsOpen(false)} onRestored={async (snapshot: ProjectSnapshot) => { useProjectStore.setState((state) => ({ projects: state.projects.map((item) => item.id === snapshot.manifest.id ? { ...item, name: snapshot.manifest.name, storageSnapshot: snapshot } : item) })); const firstTable = snapshot.tables[0]; if (firstTable) { setActiveTable(snapshot.manifest.id, firstTable.id); await loadTableData(firstTable.id); } }} />}
     {fieldDisplayOpen && tableData && fieldDisplayIds && gridLayout && gridLayoutViewId === activeView?.id && <FieldDisplayManager fields={tableData.fields} groups={tableData.groups} selectedIds={fieldDisplayIds} groupOrder={gridLayout.groupOrder} onChange={(fieldIds, groupOrder) => setGridLayoutConfig({ ...gridLayout, fieldIds, groupOrder: groupOrder ?? gridLayout.groupOrder })} onReset={() => setGridLayoutConfig(resetGridFieldLayout(gridLayout, tableData.fields.map((field) => field.id)))} onClose={() => setFieldDisplayOpen(false)} />}
     {detailFieldsOpen && tableData && detailFields && <FieldDisplayManager fields={tableData.fields.filter((field) => !field.isTitle)} selectedIds={detailFields} title="详情显示字段" description="只影响记录详情属性栏，不联动表格字段显示。" onChange={(fieldIds) => { void setDetailFields(activeTable.id, fieldIds).catch(() => setError("详情字段保存失败，已恢复")); }} onClose={() => setDetailFieldsOpen(false)} />}
   </main>;

@@ -7,6 +7,7 @@ import type { FieldSummary, RecordDetailContent, StorageDetailTab } from "../../
 import { FIELD_TYPE_LABELS } from "../fields/FieldEditor";
 import { ActivityFieldBinding } from "../settings/ActivityFieldBinding";
 import { StorageRecordDetailTabs } from "../detail/tabs/StorageRecordDetailTabs";
+import { AttachmentCell } from "../fields/AttachmentCell";
 import {
   createStorageActivityComment,
   deleteStorageActivityEvent,
@@ -26,6 +27,7 @@ export function StorageRecordDetailPanel() {
   const detailFieldsByTable = useStorageSelectionStore((state) => state.detailFieldsByTable);
   const loadDetailFields = useStorageSelectionStore((state) => state.loadDetailFields);
   const updateCell = useTableDataStore((state) => state.updateCell);
+  const reloadTable = useTableDataStore((state) => state.load);
   const tableId = project ? activeTableByProject[project.id] ?? project.storageSnapshot?.tables[0]?.id : undefined;
   const data = tableId ? dataByTable[tableId] : undefined;
   const selectedId = tableId ? selectedByTable[tableId] : undefined;
@@ -114,7 +116,7 @@ export function StorageRecordDetailPanel() {
   return (
     <div className="space-y-5 px-4 py-5" data-testid="storage-record-detail">
       <DetailHeader title={formatValue(record.values[titleField.id]) || "未命名记录"} autoNumber={record.autoNumber} updatedAt={record.updatedAt} />
-      {fields.length > 0 ? <DetailProperties fields={fields} record={record} selectedValues={selectedValues} onUpdate={updateCell} /> : null}
+      {fields.length > 0 ? <DetailProperties fields={fields} record={record} selectedValues={selectedValues} onUpdate={updateCell} onAttachmentsChanged={() => reloadTable(tableId!)} /> : null}
       {tabsError ? <p role="alert" className="text-[12px] text-(--module-scope-feedback-danger)">{tabsError}<button type="button" className="ml-2 underline" onClick={() => setTabsLoadRetry((value) => value + 1)}>重试</button></p> : null}
       {content ? <StorageRecordDetailTabs tabs={tabs} content={content} contentLoading={contentLoading} events={events} eventsLoading={eventsLoading} eventsError={eventsError} onSaveContent={saveContent} onOpenActivitySettings={() => setActivityOpen(true)} onUpdateActivityNote={async (id, note) => { await updateStorageActivityNote(id, note); await refreshEvents(); }} onAddActivityComment={async (id, comment) => { await createStorageActivityComment(id, comment); await refreshEvents(); }} onDeleteActivityEvent={async (id) => { await deleteStorageActivityEvent(id); await refreshEvents(); }} /> : null}
       {contentError ? <p role="alert" className="text-[12px] text-(--module-scope-feedback-danger)">{contentError}</p> : null}
@@ -127,8 +129,8 @@ function DetailHeader({ title, autoNumber, updatedAt }: { title: string; autoNum
   return <header><div className="flex items-start justify-between gap-2"><div><p className="m-0 text-[10px] uppercase tracking-widest text-(--module-scope-text-tertiary)">记录详情</p><h2 className="m-0 mt-2 text-[18px] font-semibold text-(--module-scope-text-primary)">{title}</h2></div><button type="button" className="text-[11px]" onClick={() => window.dispatchEvent(new CustomEvent("open-storage-detail-field-settings"))}>显示字段</button></div><p className="m-0 mt-1 text-[11px] text-(--module-scope-text-tertiary)">#{autoNumber} · {updatedAt}</p></header>;
 }
 
-function DetailProperties({ fields, record, selectedValues, onUpdate }: { fields: FieldSummary[]; record: { id: string; values: Record<string, unknown>; multiSelectValues: Record<string, string[]> }; selectedValues: Record<string, string>; onUpdate: (recordId: string, fieldId: string, value: import("../../types/domain").JsonValue) => Promise<unknown> }) {
-  return <dl className="space-y-4 border-t border-(--module-scope-border-subtle) pt-4">{fields.map((field) => <div key={field.id}><dt className="text-[10px] text-(--module-scope-text-tertiary)">{field.name} · {FIELD_TYPE_LABELS[field.fieldType]}</dt><dd className="m-0 mt-1 flex items-start justify-between gap-2 break-words text-[12px] text-(--module-scope-text-primary)">{field.fieldType === "select" ? <select aria-label={`编辑${field.name}`} value={selectedValues[field.id]} onChange={(event) => void onUpdate(record.id, field.id, event.target.value || null)}><option value="">空</option>{field.options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select> : <><DetailValue field={field} value={record.values[field.id]} record={record} /><button type="button" aria-label={`编辑${field.name}`} onClick={() => { const next = window.prompt(`编辑${field.name}`, formatValue(record.values[field.id])); if (next !== null) void onUpdate(record.id, field.id, next); }}>编辑</button></>}</dd></div>)}</dl>;
+function DetailProperties({ fields, record, selectedValues, onUpdate, onAttachmentsChanged }: { fields: FieldSummary[]; record: { id: string; values: Record<string, unknown>; multiSelectValues: Record<string, string[]> }; selectedValues: Record<string, string>; onUpdate: (recordId: string, fieldId: string, value: import("../../types/domain").JsonValue) => Promise<unknown>; onAttachmentsChanged: () => Promise<unknown> }) {
+  return <dl className="space-y-4 border-t border-(--module-scope-border-subtle) pt-4">{fields.map((field) => <div key={field.id}><dt className="text-[10px] text-(--module-scope-text-tertiary)">{field.name} · {FIELD_TYPE_LABELS[field.fieldType]}</dt><dd className="m-0 mt-1 flex items-start justify-between gap-2 break-words text-[12px] text-(--module-scope-text-primary)">{field.fieldType === "image" || field.fieldType === "file" ? <AttachmentCell recordId={record.id} fieldId={field.id} image={field.fieldType === "image"} onChanged={async () => { await onAttachmentsChanged(); }} /> : field.fieldType === "select" ? <select aria-label={`编辑${field.name}`} value={selectedValues[field.id]} onChange={(event) => void onUpdate(record.id, field.id, event.target.value || null)}><option value="">空</option>{field.options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select> : <><DetailValue field={field} value={record.values[field.id]} record={record} /><button type="button" aria-label={`编辑${field.name}`} onClick={() => { const next = window.prompt(`编辑${field.name}`, formatValue(record.values[field.id])); if (next !== null) void onUpdate(record.id, field.id, next); }}>编辑</button></>}</dd></div>)}</dl>;
 }
 
 function emptyDetailContent(recordId: string): RecordDetailContent { return { recordId, body: "", deliverables: [], tasks: [], acceptance: [] }; }
