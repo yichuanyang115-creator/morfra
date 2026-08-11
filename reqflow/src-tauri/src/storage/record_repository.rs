@@ -40,6 +40,13 @@ pub struct BatchBackup {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoardMoveBackup {
+    pub record: RecordBackup,
+    view_id: String,
+    config_json: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct RecordRow {
     id: String,
     pub table_id: String,

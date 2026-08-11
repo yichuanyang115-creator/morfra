@@ -74,6 +74,38 @@
 .morfra-grid-no-results { display: flex; align-items: center; gap: 8px; border: 1px solid var(--morfra-border-subtle); background: var(--morfra-surface-content); color: var(--morfra-text-secondary); font-size: 11px; padding: 8px 10px; }
 .morfra-grid-no-results button { border: 0; background: transparent; color: var(--morfra-accent-primary); cursor: pointer; font: inherit; }
 
+.morfra-kanban { display: flex; min-height: 0; flex: 1; flex-direction: column; border: 1px solid var(--morfra-border-subtle); background: var(--morfra-surface-content); }
+.morfra-kanban-controls { display: flex; min-height: 38px; flex: none; align-items: center; gap: 7px; overflow-x: auto; border-bottom: 1px solid var(--morfra-border-subtle); color: var(--morfra-text-secondary); font-size: 11px; padding: 6px 8px; }
+.morfra-kanban-controls label, .morfra-kanban-fields { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.morfra-kanban-controls select { max-width: 148px; border: 1px solid var(--morfra-border-subtle); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-canvas); color: var(--morfra-text-primary); font: inherit; padding: 3px 5px; }
+.morfra-kanban-fields { position: relative; }
+.morfra-kanban-fields[open] { position: relative; z-index: 4; display: grid; min-width: 132px; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-panel); background: var(--morfra-surface-overlay); box-shadow: var(--morfra-shadow-panel); padding: 6px; }
+.morfra-kanban-fields summary { cursor: pointer; }
+.morfra-kanban-fields label { display: flex; gap: 5px; padding: 2px 0; }
+.morfra-kanban-count { margin-left: auto; white-space: nowrap; }
+.morfra-kanban-undo { display: inline-flex; align-items: center; gap: 4px; color: var(--morfra-text-secondary); white-space: nowrap; }
+.morfra-kanban-undo button { border: 0; background: transparent; color: var(--morfra-accent-primary); cursor: pointer; font: inherit; padding: 0; }
+.morfra-kanban-controls > button, .morfra-kanban-add { flex: none; border: 0; border-radius: var(--morfra-radius-control); background: var(--morfra-surface-canvas); color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 11px; padding: 4px 6px; }
+.morfra-kanban-viewport { min-height: 0; flex: 1; overflow: auto; }
+.morfra-kanban-columns { min-width: max-content; min-height: 100%; padding: 10px; }
+.morfra-kanban-column { position: absolute; top: 10px; bottom: 10px; display: flex; min-height: 120px; flex: none; flex-direction: column; border: 1px solid var(--morfra-border-subtle); background: var(--morfra-surface-canvas); }
+.morfra-kanban-column.is-collapsed { min-height: 120px; }
+.morfra-kanban-column > header { display: flex; min-height: 34px; align-items: center; gap: 6px; border-bottom: 1px solid var(--morfra-border-subtle); padding: 0 7px; color: var(--morfra-text-primary); font-size: 12px; }
+.morfra-kanban-column > header button { border: 0; background: transparent; color: var(--morfra-text-secondary); cursor: pointer; font: inherit; }
+.morfra-kanban-column > header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.morfra-kanban-column > header span { margin-left: auto; color: var(--morfra-text-tertiary); font-size: 11px; }
+.morfra-kanban-card-list { min-height: 0; flex: 1; overflow-y: auto; padding: 7px; }
+.morfra-kanban-card { position: absolute; top: 0; left: 7px; right: 7px; min-height: 106px; border: 1px solid var(--morfra-border-subtle); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); padding: 7px; }
+.morfra-kanban-card:active { opacity: .72; }
+.morfra-kanban-card-title { display: block; width: 100%; overflow: hidden; border: 0; background: transparent; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; padding: 0 0 6px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.morfra-kanban-card-field { display: flex; width: 100%; justify-content: space-between; gap: 8px; overflow: hidden; border: 0; background: transparent; color: var(--morfra-text-secondary); cursor: pointer; font: inherit; font-size: 10px; padding: 2px 0; text-align: left; }
+.morfra-kanban-card-field:disabled { cursor: default; }
+.morfra-kanban-card-field b { overflow: hidden; color: var(--morfra-text-primary); font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.morfra-kanban-card-actions { display: flex; gap: 5px; margin-top: 5px; }
+.morfra-kanban-card-actions button { border: 0; background: transparent; color: var(--morfra-text-tertiary); cursor: pointer; font: inherit; font-size: 10px; padding: 0; }
+.morfra-kanban-card-actions button:last-child { color: var(--morfra-status-danger); }
+.morfra-kanban-add { margin: 0 7px 7px; text-align: left; }
+
 @media (max-width: 1120px) {
   .morfra-view-secondary-tool, .morfra-view-row-height { display: none; }
   .morfra-view-more-trigger { display: inline-flex; }
@@ -86,15 +118,18 @@
 
 .morfra-storage-data-area {
   position: relative;
+  display: flex;
   min-width: 0;
   min-height: 0;
   flex: 1;
+  flex-direction: column;
   overflow: hidden;
   background: var(--morfra-surface-canvas);
   padding: 16px 18px;
 }
 
 .morfra-data-area-heading {
+  flex: none;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;

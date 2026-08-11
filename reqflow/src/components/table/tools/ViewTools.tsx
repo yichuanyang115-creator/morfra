@@ -17,12 +17,13 @@ interface ViewToolsProps {
   onRowHeightChange: (value: 32 | 40 | 56) => void;
   onChange: (config: ViewPipelineConfig) => void;
   onOpenFieldDisplay: () => void;
+  boardMode?: boolean;
 }
 
 type OpenTool = "filter" | "sort" | "group" | "color" | "more" | null;
 
 export function ViewTools(props: ViewToolsProps) {
-  const { fields, visibleFieldCount, config, search, rowHeight, onSearchChange, onRowHeightChange, onChange, onOpenFieldDisplay } = props;
+  const { fields, visibleFieldCount, config, search, rowHeight, onSearchChange, onRowHeightChange, onChange, onOpenFieldDisplay, boardMode = false } = props;
   const [open, setOpen] = useState<OpenTool>(null);
   const close = () => setOpen(null);
   const hiddenFieldCount = Math.max(0, fields.length - visibleFieldCount);
@@ -35,19 +36,17 @@ export function ViewTools(props: ViewToolsProps) {
     </label>
     <ToolButton label="筛选" active={config.filters.length > 0} count={config.filters.length} onClick={() => toggle("filter")} />
     <ToolButton label="排序" active={config.sorts.length > 0} count={config.sorts.length} onClick={() => toggle("sort")} />
-    <ToolButton label="分组" active={Boolean(config.group.fieldId)} onClick={() => toggle("group")} />
-    <ToolButton className="morfra-view-secondary-tool" label="条件填色" active={config.conditionalColors.some((rule) => rule.enabled)} count={config.conditionalColors.length} onClick={() => toggle("color")} />
-    <RowHeightSelect label="行高" value={rowHeight} onChange={onRowHeightChange} />
-    <ToolButton className="morfra-view-secondary-tool" label="字段显示" active={hiddenFieldCount > 0} count={hiddenFieldCount} onClick={onOpenFieldDisplay} />
+    {!boardMode && <ToolButton label="分组" active={Boolean(config.group.fieldId)} onClick={() => toggle("group")} />}
+    {!boardMode && <ToolButton className="morfra-view-secondary-tool" label="条件填色" active={config.conditionalColors.some((rule) => rule.enabled)} count={config.conditionalColors.length} onClick={() => toggle("color")} />}
+    {!boardMode && <RowHeightSelect label="行高" value={rowHeight} onChange={onRowHeightChange} />}
+    {!boardMode && <ToolButton className="morfra-view-secondary-tool" label="字段显示" active={hiddenFieldCount > 0} count={hiddenFieldCount} onClick={onOpenFieldDisplay} />}
     <button type="button" className="morfra-view-more-trigger" aria-label="更多视图工具" onClick={() => toggle("more")}>更多</button>
     {open === "filter" && <FilterPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
     {open === "sort" && <SortPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
-    {open === "group" && <GroupPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
-    {open === "color" && <ConditionalColorPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
+    {!boardMode && open === "group" && <GroupPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
+    {!boardMode && open === "color" && <ConditionalColorPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
     {open === "more" && <Panel title="更多视图工具" onClose={close}>
-      <button type="button" onClick={() => setOpen("color")}>条件填色{config.conditionalColors.length ? ` (${config.conditionalColors.length})` : ""}</button>
-      <RowHeightSelect label="更多菜单行高" value={rowHeight} onChange={onRowHeightChange} />
-      <button type="button" onClick={() => { onOpenFieldDisplay(); close(); }}>字段显示{hiddenFieldCount ? ` (${hiddenFieldCount})` : ""}</button>
+      {!boardMode && <><button type="button" onClick={() => setOpen("color")}>条件填色{config.conditionalColors.length ? ` (${config.conditionalColors.length})` : ""}</button><RowHeightSelect label="更多菜单行高" value={rowHeight} onChange={onRowHeightChange} /><button type="button" onClick={() => { onOpenFieldDisplay(); close(); }}>字段显示{hiddenFieldCount ? ` (${hiddenFieldCount})` : ""}</button></>}
     </Panel>}
   </div>;
 }

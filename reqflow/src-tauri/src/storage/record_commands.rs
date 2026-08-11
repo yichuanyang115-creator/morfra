@@ -95,7 +95,32 @@ pub fn storage_reorder_records(
 ) -> Result<TableDataSnapshot, StorageError> {
     let path = active_project_path(state.inner())?;
     let mut opened = connection::open_project(&path)?;
-    let backup = record_repository::reorder_records(&mut opened.connection, &table_id, &record_ids)?;
+    let backup =
+        record_repository::reorder_records(&mut opened.connection, &table_id, &record_ids)?;
     push_undo(state.inner(), UndoAction::RestoreBatch { backup })?;
+    field_repository::load_table_data(&opened.connection, &table_id)
+}
+
+#[tauri::command]
+pub fn storage_move_board_card(
+    view_id: String,
+    record_id: String,
+    field_id: String,
+    value: Value,
+    board_config: Value,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<TableDataSnapshot, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let mut opened = connection::open_project(&path)?;
+    let backup = record_repository::move_board_card(
+        &mut opened.connection,
+        &view_id,
+        &record_id,
+        &field_id,
+        value,
+        board_config,
+    )?;
+    let table_id = backup.record.record.table_id.clone();
+    push_undo(state.inner(), UndoAction::RestoreBoardMove { backup })?;
     field_repository::load_table_data(&opened.connection, &table_id)
 }

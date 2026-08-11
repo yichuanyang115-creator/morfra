@@ -182,6 +182,10 @@ export async function reorderStorageRecords(tableId: string, recordIds: string[]
   return invoke<TableDataSnapshot>("storage_reorder_records", { tableId, recordIds });
 }
 
+export async function moveStorageBoardCard(viewId: string, recordId: string, fieldId: string, value: JsonValue, boardConfig: JsonValue): Promise<TableDataSnapshot> {
+  return invoke<TableDataSnapshot>("storage_move_board_card", { viewId, recordId, fieldId, value, boardConfig });
+}
+
 export interface StorageCellUpdate { recordId: string; fieldId: string; value: JsonValue; }
 export interface StorageNewRecord { values: Record<string, JsonValue>; }
 
