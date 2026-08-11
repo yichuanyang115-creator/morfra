@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { MorfraShell } from "./MorfraShell";
 import { useLayoutStore } from "../../stores/layoutStore";
+import { useAIProviderStore } from "../../stores/aiProviderStore";
 import { useProjectStore } from "../../stores/projectStore";
 
 function setViewport(width: number, height: number): void {
@@ -95,5 +96,16 @@ describe("MorfraShell", () => {
     await waitFor(() => expect(document.documentElement.dataset.appearance).toBe("light"));
     fireEvent.click(screen.getByRole("button", { name: "切换外观，当前为浅色" }));
     await waitFor(() => expect(document.documentElement.dataset.appearance).toBe("dark"));
+  });
+
+  it("AI 面板的设置事件在 Morfra 宿主打开可关闭的服务设置", async () => {
+    useAIProviderStore.setState({ loaded: true, configs: [], secretStatus: {} });
+    render(<MorfraShell mainContent={<div>主表格</div>} />);
+
+    window.dispatchEvent(new CustomEvent("open-ai-service-settings"));
+
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "AI 服务设置" })).toBeInTheDocument());
+    fireEvent.click(screen.getAllByRole("button", { name: "关闭 AI 服务设置" })[1]);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "AI 服务设置" })).not.toBeInTheDocument());
   });
 });

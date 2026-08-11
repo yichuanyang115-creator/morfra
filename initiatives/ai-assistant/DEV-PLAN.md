@@ -306,6 +306,8 @@ Phase 2 与 Phase 4 在代码所有权隔离时可并行，但默认按序执行
 
 ## Phase 7：接入准备、质量评估与生产验证
 
+> 实际验收状态见 [`Phase-7-Validation-Status.md`](./Phase-7-Validation-Status.md)。该记录不授权主产品接入，也不替代本计划的生产验证门槛。
+
 **关联需求：** 全部 P0、完成定义、`INTEGRATION-CONTRACT.md`
 
 **目标：** 证明独立模块达到接入标准，但不在本 Phase 擅自改写主产品需求或启动合并。

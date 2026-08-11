@@ -9,6 +9,9 @@ import { RightPanelHost } from "./RightPanelHost";
 import { LayoutResizer } from "./LayoutResizer";
 import { ProjectSwitcher } from "../sidebar/ProjectSwitcher";
 import { TableList } from "../sidebar/TableList";
+import { StorageRecordDetailPanel } from "../storage/RecordDetailPanel";
+import { StorageAICascade, StorageAIHost, StorageAIPreferenceMigration } from "../storage/StorageAIHost";
+import { AIServiceSettings } from "../app-settings/AIServiceSettings";
 
 interface MorfraShellProps {
   mainContent: ReactNode;
@@ -34,14 +37,6 @@ function ProjectSidebar({ onProjectSelected }: { onProjectSelected?: () => void 
       {project ? <TableList tables={tables} activeTableId={activeTableId} canUndo={canUndo} onSelect={(id) => setActiveTable(project.id, id)} onCreate={createTable} onRename={renameTable} onDelete={deleteTable} onReorder={reorderTables} onUndo={undoStorageChange} /> : <div className="morfra-sidebar-empty">没有打开的项目</div>}
     </aside>
   );
-}
-
-function EmptyDetailPanel() {
-  return <div className="morfra-context-empty"><span className="morfra-empty-symbol">○</span><p>选择一条记录查看详情</p><span>记录字段和活动会显示在这里</span></div>;
-}
-
-function AiHostPanel() {
-  return <div className="morfra-context-empty morfra-ai-empty"><span className="morfra-empty-symbol">✦</span><p>AI 表格助手</p><span>AI 工作区宿主</span></div>;
 }
 
 function viewportSize(): { width: number; height: number } {
@@ -75,6 +70,7 @@ export function MorfraShell({ mainContent }: MorfraShellProps) {
   const setAppearanceMode = useLayoutStore((state) => state.setAppearanceMode);
   const [viewport, setViewport] = useState(viewportSize);
   const [narrowSidebarOpen, setNarrowSidebarOpen] = useState(false);
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
 
   useEffect(() => {
     hydrate();
@@ -86,6 +82,12 @@ export function MorfraShell({ mainContent }: MorfraShellProps) {
     }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const openSettings = () => setAiSettingsOpen(true);
+    window.addEventListener("open-ai-service-settings", openSettings);
+    return () => window.removeEventListener("open-ai-service-settings", openSettings);
   }, []);
 
   useEffect(() => {
@@ -119,14 +121,17 @@ export function MorfraShell({ mainContent }: MorfraShellProps) {
 
   return (
     <div className="morfra-shell" data-testid="morfra-shell" data-window-mode={layout.mode} data-sidebar-open={sidebarOpen} data-right-panel-mode={layout.rightPanelMode} style={{ "--morfra-sidebar-width": `${layout.sidebarWidth}px`, "--morfra-right-panel-width": `${layout.rightPanelWidth}px` } as CSSProperties}>
+      <StorageAICascade />
+      <StorageAIPreferenceMigration />
       <WindowTitlebar projectName={project?.name ?? null} sidebarOpen={layout.mode === "narrow" ? narrowSidebarOpen : sidebarOpen} aiOpen={aiOpen} appearanceMode={appearanceMode} onToggleSidebar={handleToggleSidebar} onToggleAi={handleToggleAi} onCycleAppearance={() => setAppearanceMode(cycleAppearance(appearanceMode))} />
       <div className="morfra-shell-body" style={{ gridTemplateColumns }}>
         <ProjectSidebar />
         {layout.mode === "regular" && sidebarOpen && <LayoutResizer className="morfra-sidebar-resizer" label="调整导航宽度" width={layout.sidebarWidth} direction="increase" onResize={setSidebarWidth} />}
         <main className="morfra-main" aria-label="主显示区">{mainContent}</main>
-        <RightPanelHost layout={layout} activePanel={activeRightPanel} detailOpen={detailOpen} aiOpen={aiOpen} detailContent={<EmptyDetailPanel />} aiContent={<AiHostPanel />} onCloseDetail={toggleDetail} onCloseAi={toggleAi} onSelectPanel={setActiveRightPanel} onResizeDetail={setDetailWidth} onResizeAi={setAiWidth} navigationOverlayOpen={narrowSidebarOpen} />
+        <RightPanelHost layout={layout} activePanel={activeRightPanel} detailOpen={detailOpen} aiOpen={aiOpen} detailContent={<StorageRecordDetailPanel />} aiContent={<StorageAIHost onClose={toggleAi} />} onCloseDetail={toggleDetail} onCloseAi={toggleAi} onSelectPanel={setActiveRightPanel} onResizeDetail={setDetailWidth} onResizeAi={setAiWidth} navigationOverlayOpen={narrowSidebarOpen} />
       </div>
       {layout.mode === "narrow" && narrowSidebarOpen && <div className="morfra-sidebar-overlay"><button type="button" className="morfra-sidebar-overlay-scrim" aria-label="关闭项目导航" onClick={() => setNarrowSidebarOpen(false)} /><div className="morfra-sidebar-overlay-panel"><ProjectSidebar onProjectSelected={() => setNarrowSidebarOpen(false)} /></div></div>}
+      {aiSettingsOpen && <div className="fixed inset-0 z-50 flex items-center justify-center p-6"><button type="button" aria-label="关闭 AI 服务设置" className="absolute inset-0 border-none bg-(--overlay-scrim)" onClick={() => setAiSettingsOpen(false)} /><section role="dialog" aria-modal="true" aria-label="AI 服务设置" className="relative flex max-h-[min(760px,calc(100vh-48px))] w-[min(860px,calc(100vw-48px))] flex-col overflow-hidden rounded-(--r-lg) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) shadow-(--shadow-panel)"><div className="flex flex-none items-center justify-between border-b border-(--module-scope-border-subtle) px-4 py-2.5"><strong className="text-[14px] font-[590]">AI 服务设置</strong><button type="button" aria-label="关闭 AI 服务设置" className="grid size-7 place-items-center rounded-(--r-sm) border-none bg-transparent text-[17px] text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft)" onClick={() => setAiSettingsOpen(false)}>×</button></div><AIServiceSettings /></section></div>}
     </div>
   );
 }

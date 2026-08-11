@@ -14,6 +14,8 @@ const EMPTY_CONVERSATIONS: never[] = [];
 
 export interface ChatPanelProps {
   width: number | null;
+  /** 由真实右侧宿主约束宽度时填满容器，避免窄屏抽屉溢出。 */
+  fillContainer?: boolean;
   tableContext?: ChatTableContext;
   hostActions?: AIHostActions;
   onClose?: () => void;
@@ -24,7 +26,7 @@ function dispatchSettingsRequest(): void {
   window.dispatchEvent(new CustomEvent("open-ai-service-settings"));
 }
 
-export function ChatPanel({ width, tableContext, hostActions, onClose = () => undefined, onOpenSettings = dispatchSettingsRequest }: ChatPanelProps) {
+export function ChatPanel({ width, fillContainer = false, tableContext, hostActions, onClose = () => undefined, onOpenSettings = dispatchSettingsRequest }: ChatPanelProps) {
   const tableId = tableContext?.table.tableId ?? null;
   const tableName = tableContext?.table.name;
   const adapter = tableContext?.adapter;
@@ -79,8 +81,23 @@ export function ChatPanel({ width, tableContext, hostActions, onClose = () => un
     setSnapshotError(null);
     if (!adapter || !tableId || providedSnapshot) return;
     let cancelled = false;
-    void adapter.getTableSnapshot(tableId).then((next) => { if (!cancelled) setSnapshot(next); }).catch(() => { if (!cancelled) setSnapshotError("当前表数据暂时不可用"); });
-    return () => { cancelled = true; };
+    const refreshSnapshot = () => {
+      void adapter.getTableSnapshot(tableId).then((next) => {
+        if (!cancelled) { setSnapshot(next); setSnapshotError(null); }
+      }).catch(() => { if (!cancelled) setSnapshotError("当前表数据暂时不可用"); });
+    };
+    refreshSnapshot();
+    const unsubscribe = adapter.subscribe((event) => {
+      if (event.type === "table-data-changed" && event.tableId === tableId) {
+        refreshSnapshot();
+        if (!providedSelection) setSelectionIds(adapter.getSelectedRecordIds(tableId));
+      }
+      if (event.type === "table-deleted" && event.tableId === tableId && !cancelled) {
+        setSnapshot(undefined);
+        setSnapshotError("当前表已删除，AI 会话已同步清理");
+      }
+    });
+    return () => { cancelled = true; unsubscribe(); };
   }, [adapter, providedSnapshot, tableId]);
 
   useEffect(() => {
@@ -173,7 +190,7 @@ export function ChatPanel({ width, tableContext, hostActions, onClose = () => un
   }
 
   if (width == null) return null;
-  return <div data-theme-module="chat" className="theme-module-chat flex h-full min-w-0 flex-none flex-col border-l border-(--module-scope-border-subtle) bg-(--module-scope-background-surface)" style={{ width: `${width}px` }}>
+  return <div data-theme-module="chat" className={`theme-module-chat flex h-full min-w-0 flex-col border-l border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) ${fillContainer ? "w-full flex-1" : "flex-none"}`} style={fillContainer ? undefined : { width: `${width}px` }}>
     <ChatHeader mode={mode} historyOpen={historyOpen} onModeChange={handleModeChange} onOpenHistory={() => setHistoryOpen((value) => !value)} onNewConversation={handleNewConversation} onClose={onClose} />
     <ChatContextBar mode={mode} tableName={tableName} recordCount={recordCount} contextRef={lastUserMessage?.contextRef} selectedCount={selectionIds.length} selectionReferenced={selectionReferenced} onToggleSelection={() => setSelectionReferenced((value) => !value)} />
     {historyOpen && tableId ? <ChatHistoryView conversations={conversations} currentConversationId={currentConversationId} onSelect={(conversationId) => { void selectConversation(tableId, conversationId); setHistoryOpen(false); }} onRename={(conversationId, title) => { void renameConversation(tableId, conversationId, title); }} onDelete={(conversationId) => { void deleteConversation(tableId, conversationId); }} onBack={() => setHistoryOpen(false)} /> : <>

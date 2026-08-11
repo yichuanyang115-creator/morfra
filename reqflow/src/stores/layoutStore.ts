@@ -32,6 +32,7 @@ interface LayoutState extends LayoutPreferences {
   setSidebarWidth: (width: number) => void;
   toggleDetail: () => void;
   setDetailWidth: (width: number) => void;
+  setAiOpen: (open: boolean) => void;
   toggleAi: () => void;
   setAiWidth: (width: number) => void;
   setActiveRightPanel: (panel: ActiveRightPanel) => void;
@@ -122,6 +123,7 @@ export const useLayoutStore = create<LayoutState>((set, get) => ({
   setSidebarWidth: (width) => updateAndPersist(set, get, { sidebarWidth: Math.min(Math.max(width, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH) }),
   toggleDetail: () => updateAndPersist(set, get, { detailOpen: !get().detailOpen }),
   setDetailWidth: (width) => updateAndPersist(set, get, { detailWidth: Math.min(Math.max(width, DETAIL_MIN_WIDTH), DETAIL_MAX_WIDTH) }),
+  setAiOpen: (open) => updateAndPersist(set, get, { aiOpen: open }),
   toggleAi: () => updateAndPersist(set, get, { aiOpen: !get().aiOpen }),
   setAiWidth: (width) => updateAndPersist(set, get, { aiWidth: Math.min(Math.max(width, AI_MIN_WIDTH), AI_MAX_WIDTH) }),
   setActiveRightPanel: (panel) => updateAndPersist(set, get, { activeRightPanel: panel }),

@@ -7,7 +7,7 @@ import { ensureDir, listDirNames, removeDir } from "../lib/fs";
 import { projectDir, projectsRootDir } from "../lib/paths";
 import { closeStorageProject, createStorageTable, createStorageView, deleteStorageTable, deleteStorageView, duplicateStorageView, isTauriRuntime, renameStorageProject, renameStorageTable, renameStorageView, reorderStorageTables, reorderStorageViews, undoStorageChange, } from "../lib/ipc/storageClient";
 import { loadRecentProjects, removeRecentProject as removeRecentRecord, touchRecentProject } from "../lib/recentProjects";
-import { emitTableDeleted } from "../lib/tableLifecycleEvents";
+import { deleteTableWithLifecycle } from "../lib/tableLifecycleEvents";
 import { createDefaultLegacyProject, createStorageProjectFromName, initLegacySchema, legacySchemaForTemplate, loadLegacyProject, loadStorageProjects, openStorageProjectAt, reorderRecentProjects, saveLegacyProject, updateProjectSnapshot } from "./projectStoreHelpers";
 
 export interface ProjectState {
@@ -170,9 +170,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   deleteTable: async (tableId) => {
     if (!isTauriRuntime()) return;
-    replaceCurrentSnapshot(set, get, await deleteStorageTable(tableId));
+    const snapshot = await deleteTableWithLifecycle(tableId, () => deleteStorageTable(tableId));
+    replaceCurrentSnapshot(set, get, snapshot);
     set({ canUndo: true });
-    emitTableDeleted(tableId);
   },
 
   reorderTables: async (tableIds) => {

@@ -60,8 +60,9 @@ export function TableList({ tables, activeTableId, canUndo, onSelect, onCreate, 
       setError(null);
       await onDelete(deleteTarget.id);
       setDeleteTarget(null);
-    } catch {
-      setError(tables.length <= 1 ? "至少保留一张表" : "删除表失败，数据未被修改");
+    } catch (error) {
+      if (tables.length <= 1) setError("至少保留一张表");
+      else setError(error instanceof Error && error.message ? error.message : "删除表失败，请重试");
     }
   }
 

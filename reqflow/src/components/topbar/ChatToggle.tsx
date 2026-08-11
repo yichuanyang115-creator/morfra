@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { findLegacyChatPreferenceMigration } from "../../adapters/ai/legacyChatPreferenceMigrationHost";
 import { useAIProviderStore } from "../../stores/aiProviderStore";
+import { useProjectStore } from "../../stores/projectStore";
 import { useUiStore } from "../../stores/uiStore";
 
 function ChatIcon() {
@@ -11,12 +13,24 @@ export function ChatToggle() {
   const loaded = useAIProviderStore((state) => state.loaded);
   const load = useAIProviderStore((state) => state.load);
   const setPanelOpen = useAIProviderStore((state) => state.setPanelOpen);
+  const setPanelWidth = useAIProviderStore((state) => state.setPanelWidth);
   const openAppSettings = useUiStore((state) => state.openAppSettings);
+  const currentProjectId = useProjectStore((state) => state.currentProjectId);
+  const migrationAttempted = useRef(false);
   const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
-    if (!loaded) void load();
-  }, [load, loaded]);
+    if (loaded || migrationAttempted.current) return;
+    migrationAttempted.current = true;
+    let cancelled = false;
+    void (async () => {
+      const candidate = currentProjectId ? await findLegacyChatPreferenceMigration(currentProjectId).catch(() => null) : null;
+      if (candidate?.open !== undefined) await setPanelOpen(candidate.open);
+      if (candidate?.width !== undefined) await setPanelWidth(candidate.width);
+      if (!cancelled) await load();
+    })();
+    return () => { cancelled = true; };
+  }, [currentProjectId, load, loaded, setPanelOpen, setPanelWidth]);
 
   useEffect(() => {
     const handleCompleted = () => setCompleted(true);
