@@ -28,7 +28,7 @@ function GridHarness() {
     element.getBoundingClientRect = () => RECT;
     setReady(true);
   }, []);
-  return <div ref={setScrollElement} data-testid="grid-scroll" style={{ height: 160, overflow: "auto", width: 360 }}>{ready && <GridBody parentRef={parentRef} layouts={layouts} records={records} rowHeight={40} onOpenDetail={vi.fn()} onRenderedRecordsChange={vi.fn()} />}</div>;
+  return <div ref={setScrollElement} data-testid="grid-scroll" style={{ height: 160, overflow: "auto", width: 360 }}>{ready && <GridBody gridId="test-grid" parentRef={parentRef} layouts={layouts} records={records} rowHeight={40} selection={null} editing={null} onOpenDetail={vi.fn()} onRenderedRecordsChange={vi.fn()} onSelectCell={vi.fn()} onExtendSelection={vi.fn()} onSelectRows={vi.fn()} onStartEditing={vi.fn()} onContextCell={vi.fn()} onToggleCheckbox={vi.fn()} />}</div>;
 }
 
 function renderedIndexes(container: HTMLElement, attribute: "data-row-index" | "data-column-index") { return Array.from(container.querySelectorAll(`[${attribute}]`)).map((node) => Number(node.getAttribute(attribute))); }

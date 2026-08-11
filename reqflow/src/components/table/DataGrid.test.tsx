@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FieldSummary } from "../../types/domain";
-import { normalizeGridFieldIds, orderGridFieldIdsByGroup, parseGridLayout } from "./DataGrid";
+import { nextGridScrollTop, normalizeGridFieldIds, orderGridFieldIdsByGroup, parseGridLayout } from "./DataGrid";
 
 const fields: FieldSummary[] = [
   { id: "title", tableId: "table-1", groupId: null, name: "名称", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] },
@@ -8,6 +8,12 @@ const fields: FieldSummary[] = [
 ];
 
 describe("parseGridLayout", () => {
+  it("纵向自动滚动为 64px 粘性表头保留可见空间", () => {
+    expect(nextGridScrollTop(264, 304, 0, 160)).toBe(144);
+    expect(nextGridScrollTop(104, 144, 200, 160)).toBe(40);
+    expect(nextGridScrollTop(144, 184, 80, 160)).toBe(80);
+  });
+
   it("为空视图配置补齐 v3 表格布局默认值", () => {
     expect(parseGridLayout({}, fields)).toEqual({ fieldIds: ["title", "status"], groupOrder: ["group-1"], columnWidths: {}, frozenFieldId: null, rowHeight: 40, collapsedGroupIds: [] });
   });

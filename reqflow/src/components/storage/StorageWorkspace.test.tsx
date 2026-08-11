@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FieldSummary } from "../../types/domain";
-import { createGridLayoutSaveCoordinator, gridLayoutSaveRollback, parseCachedGridLayout, shouldRollbackGridLayoutSave } from "./StorageWorkspace";
+import { createGridLayoutSaveCoordinator, gridLayoutSaveRollback, parseCachedGridLayout, parseLoadingGridLayout, shouldRollbackGridLayoutSave, shouldShowGridSkeleton } from "./StorageWorkspace";
 
 const fields: FieldSummary[] = [
   { id: "title", tableId: "table-1", groupId: null, name: "名称", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] },
@@ -8,6 +8,28 @@ const fields: FieldSummary[] = [
 ];
 
 describe("parseCachedGridLayout", () => {
+  it("数据首次加载时从当前视图缓存恢复骨架列数、隐藏列结果和列宽", () => {
+    expect(parseLoadingGridLayout('{"fieldIds":["title","owner"],"columnWidths":{"title":280,"owner":120},"rowHeight":56}', "title")).toEqual({
+      fieldIds: ["title", "owner"],
+      groupOrder: [],
+      columnWidths: { title: 280, owner: 120 },
+      frozenFieldId: null,
+      rowHeight: 56,
+      collapsedGroupIds: [],
+    });
+  });
+
+  it("同表切换视图等待新布局时继续显示目标视图骨架而非空白", () => {
+    expect(shouldShowGridSkeleton(true, false, false, false)).toBe(true);
+    expect(shouldShowGridSkeleton(true, false, true, false)).toBe(false);
+    expect(shouldShowGridSkeleton(false, true, false, false)).toBe(true);
+  });
+
+  it("首帧尚未写入 loading 时显示骨架，只有明确加载失败才显示恢复空态", () => {
+    expect(shouldShowGridSkeleton(false, false, false, false)).toBe(true);
+    expect(shouldShowGridSkeleton(false, false, false, true)).toBe(false);
+  });
+
   it("配置读取失败后从旧缓存恢复时，画布仍保留主标题", () => {
     expect(parseCachedGridLayout('["status"]', fields).fieldIds).toEqual(["title", "status"]);
   });

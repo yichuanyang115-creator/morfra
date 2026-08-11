@@ -24,7 +24,7 @@ describe("DataGrid 虚拟化与自动适配", () => {
 
   it("10,000×200 画布只挂载虚拟窗口单元格，并以当前可见后段记录自动适配", () => {
     const onConfigChange = vi.fn();
-    const { container } = render(<DataGrid data={data} config={config} onConfigChange={onConfigChange} onCreate={vi.fn()} onOpenDetail={vi.fn()} />);
+    const { container } = render(<DataGrid viewId="virtualization" data={data} config={config} onConfigChange={onConfigChange} onCreate={vi.fn()} onOpenDetail={vi.fn()} onUpdateCell={vi.fn()} />);
 
     expect(vi.mocked(useVirtualizer)).toHaveBeenCalledWith(expect.objectContaining({ count: 10_000, overscan: 4 }));
     expect(vi.mocked(useVirtualizer)).toHaveBeenCalledWith(expect.objectContaining({ count: 200, horizontal: true, overscan: 3 }));

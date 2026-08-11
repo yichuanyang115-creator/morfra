@@ -12,7 +12,7 @@ import { useTableDataStore } from "../../stores/tableDataStore";
 import { useStorageSelectionStore } from "../../stores/storageSelectionStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { getStorageViewConfig, updateStorageViewConfig } from "../../lib/ipc/storageClient";
-import { DataGrid, normalizeGridFieldIds, normalizeGridGroupOrder, orderGridFieldIdsByGroup, parseGridLayout, type GridLayoutConfig } from "../table/DataGrid";
+import { DataGrid, DataGridLoadingSkeleton, normalizeGridFieldIds, normalizeGridGroupOrder, orderGridFieldIdsByGroup, parseGridLayout, type GridLayoutConfig } from "../table/DataGrid";
 import type { FieldGroupSummary, FieldSummary, JsonValue } from "../../types/domain";
 
 interface StorageWorkspaceProps {
@@ -26,6 +26,28 @@ export function parseCachedGridLayout(raw: string | null, fields: FieldSummary[]
     return parseGridLayout(isJsonRecord(stored) ? stored : {}, fields, groups);
   } catch {
     return parseGridLayout({}, fields, groups);
+  }
+}
+
+export function parseLoadingGridLayout(raw: string | null, titleFieldId: string): GridLayoutConfig {
+  try {
+    const stored: unknown = raw ? JSON.parse(raw) : null;
+    const source = isJsonRecord(stored) ? stored : {};
+    const requestedIds = Array.isArray(source.fieldIds) ? source.fieldIds.filter((id): id is string => typeof id === "string") : [];
+    const fieldIds = [...new Set([titleFieldId, ...requestedIds.filter((id) => id !== titleFieldId)])];
+    const columnWidths = isJsonRecord(source.columnWidths)
+      ? Object.fromEntries(Object.entries(source.columnWidths).filter((entry): entry is [string, number] => typeof entry[1] === "number"))
+      : {};
+    return {
+      fieldIds,
+      groupOrder: [],
+      columnWidths,
+      frozenFieldId: typeof source.frozenFieldId === "string" ? source.frozenFieldId : null,
+      rowHeight: source.rowHeight === 32 || source.rowHeight === 56 ? source.rowHeight : 40,
+      collapsedGroupIds: [],
+    };
+  } catch {
+    return { fieldIds: [titleFieldId], groupOrder: [], columnWidths: {}, frozenFieldId: null, rowHeight: 40, collapsedGroupIds: [] };
   }
 }
 
@@ -51,6 +73,10 @@ export function createGridLayoutSaveCoordinator(): GridLayoutSaveCoordinator {
 
 export function shouldRollbackGridLayoutSave(currentVersion: number, saveVersion: number, currentViewId: string | null, saveViewId: string): boolean {
   return currentVersion === saveVersion && currentViewId === saveViewId;
+}
+
+export function shouldShowGridSkeleton(hasTableData: boolean, tableDataLoading: boolean, gridLayoutReady: boolean, hasLoadError: boolean): boolean {
+  return (!hasTableData && !hasLoadError) || (hasTableData && !gridLayoutReady) || (!hasTableData && tableDataLoading);
 }
 
 function isJsonRecord(value: unknown): value is Record<string, JsonValue> { return typeof value === "object" && value !== null && !Array.isArray(value); }
@@ -86,6 +112,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   const [detailFieldsOpen, setDetailFieldsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewConfigError, setViewConfigError] = useState<string | null>(null);
+  const [viewConfigRetry, setViewConfigRetry] = useState(0);
 
   const tables = project?.storageSnapshot?.tables ?? [];
   const activeTableId = project ? activeTableByProject[project.id] ?? tables[0]?.id ?? null : null;
@@ -94,8 +121,10 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   const activeView = activeTable?.views.find((view) => view.id === activeViewId) ?? activeTable?.views[0] ?? null;
   const tableData = useTableDataStore((state) => activeTable ? state.dataByTable[activeTable.id] : undefined);
   const tableDataLoading = useTableDataStore((state) => activeTable ? state.loadingByTable[activeTable.id] === true : false);
+  const tableDataError = useTableDataStore((state) => activeTable ? state.errorByTable[activeTable.id] : undefined);
   const loadTableData = useTableDataStore((state) => state.load);
   const createRecord = useTableDataStore((state) => state.createRecord);
+  const updateCell = useTableDataStore((state) => state.updateCell);
   const selectRecord = useStorageSelectionStore((state) => state.selectRecord);
   const detailOpen = useLayoutStore((state) => state.detailOpen);
   const toggleDetail = useLayoutStore((state) => state.toggleDetail);
@@ -104,6 +133,13 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   const detailLoadError = useStorageSelectionStore((state) => activeTable ? state.detailLoadErrorByTable[activeTable.id] : undefined);
   const loadDetailFields = useStorageSelectionStore((state) => state.loadDetailFields);
   const setDetailFields = useStorageSelectionStore((state) => state.setDetailFields);
+  const loadingGridLayout = useMemo(() => {
+    if (gridLayout && gridLayoutViewId === activeView?.id) return gridLayout;
+    if (!activeView || !activeTable) return null;
+    let raw: string | null = null;
+    try { raw = window.localStorage.getItem(`morfra.storage.view-fields.${activeView.id}`); } catch { /* 本地缓存不可读时使用标题列骨架 */ }
+    return parseLoadingGridLayout(raw, activeTable.titleFieldId);
+  }, [activeTable, activeView, gridLayout, gridLayoutViewId]);
 
   useLayoutEffect(() => { activeViewIdRef.current = activeView?.id ?? null; }, [activeView?.id]);
 
@@ -155,7 +191,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
     if (!cancelled && gridLayoutReadVersions.current.get(viewId) === readVersion) { if (!pendingLayout) gridLayoutSaveCoordinator.current.confirm(activeView.id, persistedLayout); setFieldDisplayIds(layout.fieldIds); setGridLayout(layout); setGridLayoutViewId(activeView.id); }
     });
     return () => { cancelled = true; };
-  }, [activeView, tableData?.fields]);
+  }, [activeView, tableData?.fields, viewConfigRetry]);
 
   useEffect(() => { if (activeTable && detailFields === undefined) loadDetailFields(activeTable.id); }, [activeTable, detailFields, loadDetailFields]);
 
@@ -214,6 +250,8 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   }
 
   const tableList = project && <TableList tables={tables} activeTableId={activeTable?.id ?? null} canUndo={canUndo} onSelect={(id) => project && setActiveTable(project.id, id)} onCreate={(name) => run(() => actions.createTable(name), "新建表失败，请重试")} onRename={(id, name) => run(() => actions.renameTable(id, name), "表重命名失败，请重试")} onDelete={(id) => run(() => actions.deleteTable(id), "删除表失败，数据未被修改")} onReorder={(ids) => run(() => actions.reorderTables(ids), "表顺序保存失败，请重试")} onUndo={() => run(undoStorageChange, "当前会话没有可撤销的存储操作")} />;
+  const gridLayoutReady = Boolean(tableData && gridLayout && gridLayoutViewId === activeView?.id);
+  const showGridSkeleton = shouldShowGridSkeleton(Boolean(tableData), tableDataLoading, gridLayoutReady, Boolean(tableDataError));
 
   const mainContent = <main className="morfra-storage-canvas" aria-label="Morfra 项目工作区">
     {project && activeTable && activeView ? <section className="morfra-storage-surface">
@@ -222,10 +260,11 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
       <ViewToolbar view={activeView} onOpenFieldDisplay={() => setFieldDisplayOpen(true)} />
       <div className="morfra-storage-data-area">
         <div className="morfra-data-area-heading"><div><p className="morfra-data-area-kicker">{activeView.viewType === "board" ? "看板" : "数据表"}</p><h2>{activeTable.name}</h2><p>当前视图：{activeView.name} · {tableData?.records.length ?? activeTable.recordCount} 条记录</p></div><span className="morfra-data-area-id">主标题固定首列</span></div>
-        {tableDataLoading && <div className="morfra-storage-empty"><span aria-hidden="true">…</span><p>正在读取字段和记录</p><small>数据区域保持稳定，完成后即可编辑。</small></div>}
-        {tableData && gridLayout && gridLayoutViewId === activeView.id && <DataGrid data={tableData} config={gridLayout} onConfigChange={setGridLayoutConfig} onCreate={() => void run(() => createRecord(activeTable.id, { [activeTable.titleFieldId]: "未命名记录" }).then(() => undefined), "新建记录失败，请重试")} onOpenDetail={(recordId) => { selectRecord(activeTable.id, recordId); setActiveRightPanel("detail"); if (!detailOpen) toggleDetail(); }} />}
-        {!tableDataLoading && !tableData && <div className="morfra-storage-empty"><span aria-hidden="true">○</span><p>字段和记录暂不可用</p><small>请重试或重新打开项目。</small></div>}
-        {viewConfigError && <p role="alert" className="morfra-storage-error">{viewConfigError}</p>}
+        {showGridSkeleton && loadingGridLayout && <DataGridLoadingSkeleton config={loadingGridLayout} />}
+        {tableDataLoading && gridLayoutReady && <div className="morfra-grid-refresh-indicator" role="status">正在刷新表格数据…</div>}
+        {tableData && gridLayout && gridLayoutViewId === activeView.id && <DataGrid viewId={activeView.id} data={tableData} config={gridLayout} onConfigChange={setGridLayoutConfig} onCreate={() => void run(() => createRecord(activeTable.id, { [activeTable.titleFieldId]: "未命名记录" }).then(() => undefined), "新建记录失败，请重试")} onUpdateCell={updateCell} onOpenDetail={(recordId) => { selectRecord(activeTable.id, recordId); setActiveRightPanel("detail"); if (!detailOpen) toggleDetail(); }} />}
+        {!tableDataLoading && !tableData && !showGridSkeleton && <div className="morfra-storage-empty"><span aria-hidden="true">○</span><p>字段和记录暂不可用</p><small>请重试或重新打开项目。</small></div>}
+        {viewConfigError && <p role="alert" className="morfra-storage-error">{viewConfigError}<button type="button" className="ml-2 underline" onClick={() => setViewConfigRetry((version) => version + 1)}>重试</button></p>}
         {detailLoadError && <p role="alert" className="morfra-storage-error">{detailLoadError}<button type="button" className="ml-2 underline" onClick={() => { if (activeTable) void loadDetailFields(activeTable.id); }}>重试</button></p>}
       </div>
     </section> : <div className="morfra-storage-empty morfra-storage-empty-project"><span aria-hidden="true">□</span><p>没有打开的项目</p><small>从文件菜单打开本地项目，或从项目切换器创建空白项目。</small></div>}
