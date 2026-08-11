@@ -59,8 +59,8 @@
   --module-scope-feedback-warning-soft: color-mix(in srgb, var(--module-scope-feedback-warning) 8%, var(--module-scope-background-surface));
   --module-scope-feedback-danger-soft: color-mix(in srgb, var(--module-scope-feedback-danger) 8%, var(--module-scope-background-surface));
 
-  --font-display: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-body: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   --r-sm: 6px;

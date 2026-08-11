@@ -1,8 +1,4 @@
-# 规划文档（Markdown 单一真相源，不随代码提交历史走）
-/Product-Spec.md
-/Product-Spec-CHANGELOG.md
-/Design-Brief.md
-/DEV-PLAN.md
+# 历史原型（不作为当前实现依据）
 /需求管理系统原型.html
 
 # 系统文件
@@ -12,6 +8,7 @@
 reqflow/node_modules/
 reqflow/dist/
 reqflow/src-tauri/target/
+.pnpm-store/
 
 # 环境变量
 .env
