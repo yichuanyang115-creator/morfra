@@ -1,0 +1,74 @@
+Window: "Morfra", App: Morfra.
+0 standard window Morfra, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: 需求管理系统, URL: tauri://localhost
+			3 container
+				4 button 展开导航
+				5 text morfra 默认项目
+				6 toggle button 关闭 AI 表格助手, Value: on
+			7 container 项目导航
+				8 pop up button 默认项目
+			9 container 主显示区
+				10 container Morfra 项目工作区
+					11 container
+						12 text 表
+						13 button 未命名表
+						14 text 2  条记录
+						15 button 备份
+						16 button 字段管理
+					17 container 当前表视图
+						18 button 表格
+						19 button (collapsed) 视图操作 表格, Secondary Actions: Expand
+						20 button 新建视图
+						21 button (collapsed) 所有视图, Secondary Actions: Expand
+					22 container 当前视图工具栏
+						23 text 表格视图
+						24 container
+							25 text 搜索当前视图
+							26 text field (settable, string) 搜索当前视图, Placeholder: 搜索
+						27 toggle button 筛选, Value: off
+						28 toggle button 排序, Value: off
+						29 toggle button 分组, Value: off
+						30 toggle button 条件填色, Value: off
+						31 container
+							32 text 行高
+							33 pop up button 行高, Value: 标准
+						34 toggle button 字段显示, Value: off
+					35 text 表
+					36 heading 未命名表, Value: 2
+						37 text 未命名表
+					38 container
+						39 text 当前视图： 表格  ·  2  条记录
+					40 text 主标题固定首列
+					41 container 表格画布，2 条记录
+						42 text 2  条记录 ·  1  个可见字段
+						43 button 新建记录
+						44 table (settable, string) 可编辑表格
+							45 row (selectable)
+								46 cell (selectable, settable, string) 打开第 1 条记录详情, Value: 1
+								47 cell (selected, settable, string) 第 1 行，标题，未命名记录Phase 44, Value: 未命名记录Phase 44
+							48 row (selectable)
+								49 cell (selectable, settable, string) 打开第 2 条记录详情, Value: 2
+								50 cell (selectable, settable, string) 第 2 行，标题，未命名记录, Value: 未命名记录
+			51 splitter 调整记录详情宽度, Value: 50
+			52 container 上下文面板
+				53 tab group (selectable) 上下文面板切换
+					54 tab (selected) 详情
+					55 tab (selectable) AI
+				56 container
+					57 text 记录详情
+					58 heading 未命名记录Phase 44, Value: 2
+						59 text 未命名记录Phase 44
+					60 button 显示字段
+					61 text # 1  ·  1786521971669
+	62 close button
+	63 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	64 minimize button
+	65 text Morfra
+66 menu bar
+	67 Morfra
+	68 文件
+	69 编辑
+	70 窗口
+
+The focused UI element is 47 cell (selected, settable, string) 第 1 行，标题，未命名记录Phase 44

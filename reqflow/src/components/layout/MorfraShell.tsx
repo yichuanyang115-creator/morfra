@@ -10,7 +10,7 @@ import { LayoutResizer } from "./LayoutResizer";
 import { ProjectSwitcher } from "../sidebar/ProjectSwitcher";
 import { TableList } from "../sidebar/TableList";
 import { StorageRecordDetailPanel } from "../storage/RecordDetailPanel";
-import { StorageAICascade, StorageAIHost, StorageAIPreferenceMigration } from "../storage/StorageAIHost";
+import { StorageAICascade, StorageAIHost } from "../storage/StorageAIHost";
 import { AppSettingsPage } from "../app-settings/AppSettingsPage";
 import { useAIProviderStore } from "../../stores/aiProviderStore";
 import { isTauriRuntime } from "../../lib/ipc/storageClient";
@@ -182,7 +182,6 @@ export function MorfraShell({ mainContent }: MorfraShellProps) {
   return (
     <div className="morfra-shell" data-testid="morfra-shell" data-window-mode={layout.mode} data-sidebar-open={sidebarOpen} data-right-panel-mode={layout.rightPanelMode} style={{ "--morfra-sidebar-width": `${layout.sidebarWidth}px`, "--morfra-right-panel-width": `${layout.rightPanelWidth}px` } as CSSProperties}>
       <StorageAICascade />
-      <StorageAIPreferenceMigration />
       <WindowTitlebar projectName={project?.name ?? null} sidebarOpen={layout.mode === "narrow" ? narrowSidebarOpen : sidebarOpen} aiOpen={aiOpen} aiCompleted={aiCompleted} onToggleSidebar={handleToggleSidebar} onToggleAi={handleToggleAi} />
       <div className="morfra-shell-body" style={{ gridTemplateColumns }}>
         <ProjectSidebar />

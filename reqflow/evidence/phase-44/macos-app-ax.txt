@@ -1,0 +1,209 @@
+Window: "Morfra", App: Morfra.
+0 standard window Morfra, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: 需求管理系统, URL: tauri://localhost
+			3 container
+				4 button 展开导航
+				5 text morfra 默认项目
+				6 toggle button 关闭 AI 表格助手, Value: on
+			7 container 项目导航
+				8 pop up button 默认项目
+			9 container 主显示区
+				10 container Morfra 项目工作区
+					11 container
+						12 text 表
+						13 button 未命名表
+						14 text 2  条记录
+						15 button 备份
+						16 button 字段管理
+					17 container 当前表视图
+						18 button 表格
+						19 button (collapsed) 视图操作 表格, Secondary Actions: Expand
+						20 button 新建视图
+						21 button (collapsed) 所有视图, Secondary Actions: Expand
+					22 container 当前视图工具栏
+						23 text 表格视图
+						24 container
+							25 text 搜索当前视图
+							26 text field (settable, string) 搜索当前视图, Placeholder: 搜索
+						27 toggle button 筛选, Value: off
+						28 toggle button 排序, Value: off
+						29 toggle button 分组, Value: off
+						30 toggle button 条件填色, Value: off
+						31 container
+							32 text 行高
+							33 pop up button 行高, Value: 标准
+						34 toggle button 字段显示, Value: off
+					35 text 表
+					36 heading 未命名表, Value: 2
+						37 text 未命名表
+					38 container
+						39 text 当前视图： 表格  ·  2  条记录
+					40 text 主标题固定首列
+					41 container 表格画布，2 条记录
+						42 text 2  条记录 ·  1  个可见字段
+						43 button 新建记录
+						44 table (settable, string) 可编辑表格
+							45 row (selectable)
+								46 cell (selectable, settable, string) 打开第 1 条记录详情, Value: 1
+								47 cell (selectable, settable, string) 第 1 行，标题，未命名记录Phase 44, Value: 未命名记录Phase 44
+							48 row (selectable)
+								49 cell (selectable, settable, string) 打开第 2 条记录详情, Value: 2
+								50 cell (selectable, settable, string) 第 2 行，标题，未命名记录, Value: 未命名记录
+			51 splitter 调整AI 面板宽度, Value: 50
+			52 container AI 表格助手
+				53 container
+					54 tab group (selectable) AI 对话模式
+						55 tab (selectable) 表格分析
+						56 tab (selected) 通用对话
+					57 button 新建对话
+					58 button 查看历史
+				59 text 未命名表 等待提问
+				60 container AI 对话消息
+				61 container AI 输入
+					62 text 按问题判断表格上下文
+					63 container
+						64 text 选择模型
+						65 pop up button 选择模型, Value: 1 · deepseek-v4-pro
+					66 text entry area (settable, string) 输入问题, Placeholder: 输入问题，Enter 发送，Shift+Enter 换行
+						67 text 输入问题，Enter 发送，Shift+Enter 换行
+					68 button (disabled) 发送
+			69 button 关闭应用设置
+			70 container 应用设置
+				71 text 应用设置
+				72 button 关闭应用设置
+				73 container 应用设置导航
+					74 text 应用设置
+					75 button 外观
+					76 button AI 服务
+					77 button 版本
+				78 container
+					79 heading 外观, Value: 1
+						80 text 外观
+					81 text 选择系统外观模式，并可继续调整语义色。
+					82 container 外观模式
+						83 text 外观模式
+						84 (settable, unknown) 外观模式
+							85 radio button 跟随系统, Value: 1
+							86 radio button 浅色, Value: 0
+							87 radio button 深色, Value: 0
+					88 heading 背景与边框, Value: 2
+						89 text 背景与边框
+					90 text 应用底色 backgroundCanvas
+					91 text field (settable, string) 应用底色 backgroundCanvas, Value: canvas, Placeholder: 如 blue500
+					92 text 内容表面 backgroundSurface
+					93 text field (settable, string) 内容表面 backgroundSurface, Value: surface, Placeholder: 如 blue500
+					94 text 浮层表面 backgroundElevated
+					95 text field (settable, string) 浮层表面 backgroundElevated, Value: neutral50, Placeholder: 如 blue500
+					96 text 普通边框 borderSubtle
+					97 text field (settable, string) 普通边框 borderSubtle, Value: neutral100, Placeholder: 如 blue500
+					98 text 强调边框 borderStrong
+					99 text field (settable, string) 强调边框 borderStrong, Value: neutral300, Placeholder: 如 blue500
+					100 heading 文字, Value: 2
+						101 text 文字
+					102 text 主要文字 textPrimary
+					103 text field (settable, string) 主要文字 textPrimary, Value: ink, Placeholder: 如 blue500
+					104 text 次要文字 textSecondary
+					105 text field (settable, string) 次要文字 textSecondary, Value: neutral700, Placeholder: 如 blue500
+					106 text 弱化文字 textTertiary
+					107 text field (settable, string) 弱化文字 textTertiary, Value: neutral500, Placeholder: 如 blue500
+					108 text 禁用文字 textDisabled
+					109 text field (settable, string) 禁用文字 textDisabled, Value: neutral500, Placeholder: 如 blue500
+					110 heading 操作与结构, Value: 2
+						111 text 操作与结构
+					112 text 主要操作 actionStrong
+					113 text field (settable, string) 主要操作 actionStrong, Value: blue700, Placeholder: 如 blue500
+					114 text 交互焦点 actionBase
+					115 text field (settable, string) 交互焦点 actionBase, Value: blue500, Placeholder: 如 blue500
+					116 text 操作弱背景 actionSoft
+					117 text field (settable, string) 操作弱背景 actionSoft, Value: blue50, Placeholder: 如 blue500
+					118 text 结构强调 contextStrong
+					119 text field (settable, string) 结构强调 contextStrong, Value: blue700, Placeholder: 如 blue500
+					120 text 结构弱背景 contextSoft
+					121 text field (settable, string) 结构弱背景 contextSoft, Value: blue50, Placeholder: 如 blue500
+					122 heading 反馈, Value: 2
+						123 text 反馈
+					124 text 成功反馈 feedbackSuccess
+					125 text field (settable, string) 成功反馈 feedbackSuccess, Value: success, Placeholder: 如 blue500
+					126 text 警告反馈 feedbackWarning
+					127 text field (settable, string) 警告反馈 feedbackWarning, Value: warning, Placeholder: 如 blue500
+					128 text 危险反馈 feedbackDanger
+					129 text field (settable, string) 危险反馈 feedbackDanger, Value: danger, Placeholder: 如 blue500
+					130 heading 模块覆盖, Value: 2
+						131 text 模块覆盖
+					132 text 默认跟随主题；仅开启自定义的模块会写入配置。
+					133 heading 顶栏与导航, Value: 3
+						134 text 顶栏与导航
+					135 text 跟随主题
+					136 checkbox 顶栏与导航：自定义此模块, Value: 0
+					137 text 自定义此模块
+					138 heading 看板, Value: 3
+						139 text 看板
+					140 text 跟随主题
+					141 checkbox 看板：自定义此模块, Value: 0
+					142 text 自定义此模块
+					143 heading 详情, Value: 3
+						144 text 详情
+					145 text 跟随主题
+					146 checkbox 详情：自定义此模块, Value: 0
+					147 text 自定义此模块
+					148 heading 设置页, Value: 3
+						149 text 设置页
+					150 text 跟随主题
+					151 checkbox 设置页：自定义此模块, Value: 0
+					152 text 自定义此模块
+					153 heading 业务状态, Value: 3
+						154 text 业务状态
+					155 text 跟随主题
+					156 checkbox 业务状态：自定义此模块, Value: 0
+					157 text 自定义此模块
+					158 heading 系统反馈, Value: 3
+						159 text 系统反馈
+					160 text 跟随主题
+					161 checkbox 系统反馈：自定义此模块, Value: 0
+					162 text 自定义此模块
+					163 heading 对话区, Value: 3
+						164 text 对话区
+					165 text 跟随主题
+					166 checkbox 对话区：自定义此模块, Value: 0
+					167 text 自定义此模块
+				168 heading 综合预览, Value: 2
+					169 text 综合预览
+				170 text 草稿只影响此区域，应用后才改变全局界面。
+				171 text Morfra / 示例项目
+				172 button 默认 / 悬停
+				173 text 已打开 进行中 3 条记录
+				174 text 建立主题草稿
+				175 text 看板、详情和设置页使用同一套语义映射。
+				176 text 空状态：暂无其他记录
+				177 toggle button 按下, Value: on
+				178 text 详情
+				179 tab group (selectable)
+					180 tab (selected) 正文
+					181 tab (selectable) 任务
+				182 text 优先级 P1 错误状态：对比度不足 状态 ✓ 已通过 详情
+				183 text 语义色编辑器
+				184 button 应用
+				185 text 系统反馈
+				186 text 对比度通过
+				187 text 错误示例
+				188 text 加载态
+				189 text 焦点态
+				190 button 键盘焦点
+				191 button (disabled) 禁用控件 · 语义弱化
+				192 text 禁用态使用当前语义中性色阶，并保持可读性。
+				193 container
+					194 button 恢复默认
+					195 button 取消
+					196 button 应用
+	197 close button
+	198 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	199 minimize button
+	200 text Morfra
+201 menu bar
+	202 Morfra
+	203 文件
+	204 编辑
+	205 窗口
+
+The focused UI element is 2 HTML content Description: 需求管理系统, URL: tauri://localhost

@@ -85,4 +85,15 @@ describe("view pipeline", () => {
     expect(result.records).toHaveLength(9_899);
     expect(performance.now() - startedAt).toBeLessThan(300);
   });
+
+  it("reuses a snapshot-scoped search index after warmup without changing all-field search semantics", () => {
+    const largeData = { ...data, records: Array.from({ length: 10_000 }, (_, index) => ({ ...record(`record-${index}`, index, "todo", [], index), values: { title: `标题 ${index}`, note: index === 9_999 ? "唯一可搜索内容" : "常规内容" } })) };
+    const fieldsWithNote = [...fields, { id: "note", tableId: "table", groupId: null, name: "备注", fieldType: "text" as const, isTitle: false, position: 4, config: {}, options: [] }];
+    const indexedData = { ...largeData, fields: fieldsWithNote };
+    expect(runViewPipeline(indexedData, EMPTY_VIEW_PIPELINE, "唯一可搜索内容").records.map((item) => item.id)).toEqual(["record-9999"]);
+    const startedAt = performance.now();
+    const result = runViewPipeline(indexedData, EMPTY_VIEW_PIPELINE, "唯一可搜索内容");
+    expect(result.records).toHaveLength(1);
+    expect(performance.now() - startedAt).toBeLessThan(300);
+  });
 });

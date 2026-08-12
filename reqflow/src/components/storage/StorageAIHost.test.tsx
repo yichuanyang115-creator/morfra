@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { StorageAIHost, StorageAIPreferenceMigration } from "./StorageAIHost";
+import { StorageAIHost } from "./StorageAIHost";
 import { useAIConversationStore } from "../../stores/aiConversationStore";
 import { useAIProviderStore } from "../../stores/aiProviderStore";
 import { useLayoutStore } from "../../stores/layoutStore";
@@ -45,20 +45,4 @@ describe("StorageAIHost 生产宿主", () => {
     expect(screen.queryByText("AI 工作区宿主")).not.toBeInTheDocument();
   });
 
-  it("首次接入在 Morfra 生产宿主迁移旧 open/width，不导入旧假消息", async () => {
-    files.set("/app-local-data/projects/project-a/_chat.md", "---\nopen: true\nwidth: 388\nmessages: [{ content: 假消息 }]\n---\n");
-    useLayoutStore.setState({ aiOpen: false, aiWidth: 336, activeRightPanel: "detail" });
-    useAIProviderStore.setState({ loaded: false, panelOpen: false, panelWidth: 336 });
-
-    render(<StorageAIPreferenceMigration />);
-
-    await waitFor(() => expect(useLayoutStore.getState().aiOpen).toBe(true));
-    expect(useLayoutStore.getState().aiWidth).toBe(388);
-    expect(useLayoutStore.getState().activeRightPanel).toBe("ai");
-    expect(useAIProviderStore.getState().panelOpen).toBe(true);
-    expect(useAIProviderStore.getState().panelWidth).toBe(388);
-    const preference = files.get("/app-local-data/ai/preferences.json") ?? "";
-    expect(preference).not.toContain("假消息");
-    expect(files.get("/app-local-data/projects/project-a/_chat.md")).toContain("假消息");
-  });
 });

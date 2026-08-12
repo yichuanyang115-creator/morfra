@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { createCurrentStorageHostActions, createCurrentStorageTableAdapter, type CurrentStorageHostActions, type CurrentStorageTableAdapter } from "../../adapters/ai/currentStorageTableAdapter";
-import { findLegacyChatPreferenceMigration } from "../../adapters/ai/legacyChatPreferenceMigrationHost";
 import { ChatPanel } from "../chat/ChatPanel";
 import { prepareTableAIDataDeletion } from "../../lib/ai/integrationChecks";
 import { onBeforeTableDeleted } from "../../lib/tableLifecycleEvents";
-import { useAIProviderStore } from "../../stores/aiProviderStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { currentProject, useProjectStore } from "../../stores/projectStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
@@ -41,33 +39,5 @@ export function StorageAICascade() {
   useEffect(() => onBeforeTableDeleted(async (tableId) => {
     return prepareTableAIDataDeletion(tableId);
   }), []);
-  return null;
-}
-
-/** 将旧 Markdown 工作区的 open/width 一次性映射到生产 Morfra 的 AI 偏好与右栏布局。 */
-export function StorageAIPreferenceMigration() {
-  const projectId = useProjectStore((state) => state.currentProjectId);
-  const attemptedProjectIds = useRef(new Set<string>());
-
-  useEffect(() => {
-    if (!projectId || attemptedProjectIds.current.has(projectId)) return;
-    attemptedProjectIds.current.add(projectId);
-    let cancelled = false;
-    void (async () => {
-      const candidate = await findLegacyChatPreferenceMigration(projectId).catch(() => null);
-      if (!candidate || cancelled) return;
-      const provider = useAIProviderStore.getState();
-      if (!provider.loaded) await provider.load();
-      if (candidate.open !== undefined) await useAIProviderStore.getState().setPanelOpen(candidate.open);
-      if (candidate.width !== undefined) await useAIProviderStore.getState().setPanelWidth(candidate.width);
-      if (cancelled) return;
-      const layout = useLayoutStore.getState();
-      if (candidate.open !== undefined) layout.setAiOpen(candidate.open);
-      if (candidate.width !== undefined) layout.setAiWidth(candidate.width);
-      if (candidate.open) layout.setActiveRightPanel("ai");
-    })();
-    return () => { cancelled = true; };
-  }, [projectId]);
-
   return null;
 }

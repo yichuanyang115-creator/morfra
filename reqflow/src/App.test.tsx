@@ -70,7 +70,7 @@ describe("App 主题启动门", () => {
     expect(acknowledgeRecovery).toHaveBeenCalledOnce();
   });
 
-  it("Tauri 运行时展示 SQLite 项目包工作区而不是旧 Markdown 看板", () => {
+  it("无论宿主运行时均只展示 SQLite 项目包工作区而不是旧 Markdown 看板", () => {
     Object.defineProperty(window, "__TAURI_INTERNALS__", { value: {}, configurable: true });
     useThemeStore.setState({ loaded: true, recoveryNotice: null, load: loadTheme, acknowledgeRecovery });
     useProjectStore.setState({

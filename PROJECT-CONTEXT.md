@@ -10,10 +10,10 @@
 
 ## 1.1 当前产品环节
 
-- **v3.0 产品需求、设计方向与根 DEV-PLAN 已完成重基线；Phase 32～35 已完成并通过统一验收，当前等待用户批准 Phase 36。**
+- **v3.0 产品需求、设计方向与根 DEV-PLAN 已完成重基线；Phase 32～44 已完成并通过统一验收。**
 - `Product-Spec.md` 只保留 v3 当前产品事实；冻结 v2 已独立归档，不与当前需求共处一个活跃文件。
 - `Design-Brief.md` 只保留 v3 当前视觉事实；冻结 v2 已独立归档，不得指导新实现。
-- `DEV-PLAN.md` 的 Phase 32～44 已覆盖全部 v3 需求并通过来源、依赖和粒度审计；Phase 32～35 已完成，当前等待用户批准 Phase 36。
+- `DEV-PLAN.md` 的 Phase 32～44 已覆盖全部 v3 需求并通过来源、依赖和粒度审计；全部 Phase 均已完成。
 - AI 表格助手由独立工作流并行开发；其实现状态与主产品接入状态分开判断。AI 计划头部状态落后于 Git 和当前工作区事实，根计划只记录差异，不代替该进程改写其文件；主产品在接入阶段前不得覆盖其未提交改动。
 
 ## 2. 当前事实来源
@@ -101,9 +101,9 @@
 1. 读取 `AGENTS.md` 和本文件。
 2. 检查 Git 当前分支、最近提交和工作区状态；不覆盖未提交或未追踪文件。
 3. 读取 `Product-Spec.md`、`Design-Brief.md` 和 `DEV-PLAN.md` 当前状态；不得读取 `docs/archive/` 或 `docs/future/` 猜测当前需求。
-4. 根据当前状态路由：当前无待确认产品需求，根计划已定稿；Phase 32～35 已完成，等待用户批准 Phase 36。
+4. 根据当前状态路由：当前无待确认产品需求，根计划已定稿；Phase 32～44 已完成，可进入发布或维护。
 5. 只加载本次主题涉及的 Spec 条目、设计章节、代码和直接测试。
 
 建议用户在新 Session 只需发送：
 
-> 使用 dev-builder 继续 Morfra v3 开发。请按 AGENTS.md 和 PROJECT-CONTEXT.md 初始化，检查 Git 状态并读取 Product-Spec.md、Design-Brief.md 和 DEV-PLAN.md；Phase 35 已完成，等待我批准 Phase 36。不得读取归档或未来提案猜测当前需求，不得覆盖 AI 独立进程及共享入口中的未提交改动，不要提交或推送。
+> 使用 release-builder 发布 Morfra v3。请按 AGENTS.md 和 PROJECT-CONTEXT.md 初始化，检查 Git 状态并读取 Product-Spec.md、Design-Brief.md 和 DEV-PLAN.md；Phase 32～44 已完成。不得读取归档或未来提案猜测当前需求，不得覆盖 AI 独立进程及共享入口中的未提交改动，不要提交或推送。

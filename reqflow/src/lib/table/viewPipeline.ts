@@ -13,6 +13,8 @@ export interface ViewPipelineResult { records: RecordData[]; recordGroups: Recor
 
 export const EMPTY_VIEW_PIPELINE: ViewPipelineConfig = { filters: [], filterMode: "all", sorts: [], group: { fieldId: null, direction: "asc", collapsedKeys: [] }, conditionalColors: [] };
 
+const SEARCH_INDEX = new WeakMap<TableDataSnapshot, Map<RecordData, string>>();
+
 export function parseViewPipelineConfig(value: JsonValue): ViewPipelineConfig {
   const source = isObject(value) ? value : {};
   const filters = Array.isArray(source.filters) ? source.filters.flatMap(parseFilter) : [];
@@ -30,7 +32,8 @@ export function parseViewPipelineConfig(value: JsonValue): ViewPipelineConfig {
 
 export function runViewPipeline(data: TableDataSnapshot, config: ViewPipelineConfig, search: string): ViewPipelineResult {
   const searchedTerms = search.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  const filtered = data.records.filter((record) => matchesFilters(record, data.fields, config.filters, config.filterMode) && searchedTerms.every((term) => searchableText(record, data.fields).includes(term)));
+  const searchIndex = searchedTerms.length ? searchableTextIndex(data) : null;
+  const filtered = data.records.filter((record) => matchesFilters(record, data.fields, config.filters, config.filterMode) && (!searchIndex || searchedTerms.every((term) => searchIndex.get(record)?.includes(term))));
   const groupField = data.fields.find((field) => field.id === config.group.fieldId);
   if (!groupField) return { records: stableSort(filtered, data.fields, config.sorts), recordGroups: [], groups: [], total: data.records.length, matched: filtered.length };
   const groups = buildGroupProjection(filtered, groupField, config.group.direction);
@@ -43,6 +46,14 @@ export function runViewPipeline(data: TableDataSnapshot, config: ViewPipelineCon
     groupRecords.forEach((record, index) => { records.push(record); recordGroups.push({ key: group.key, label: group.label, count: group.count, first: index === 0, last: index === groupRecords.length - 1 }); });
   }
   return { records, recordGroups, groups, total: data.records.length, matched: filtered.length };
+}
+
+function searchableTextIndex(data: TableDataSnapshot): Map<RecordData, string> {
+  const cached = SEARCH_INDEX.get(data);
+  if (cached?.size === data.records.length) return cached;
+  const index = new Map(data.records.map((record) => [record, searchableText(record, data.fields)]));
+  SEARCH_INDEX.set(data, index);
+  return index;
 }
 
 export function matchesFilters(record: RecordData, fields: FieldSummary[], filters: ViewFilter[], mode: "all" | "any"): boolean {

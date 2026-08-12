@@ -33,7 +33,7 @@ export function ThemePreview({ theme, hasValidationErrors = false }: ThemePrevie
         <div className="theme-module-board rounded-(--r-md) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) p-2.5">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[11px] font-[590] text-(--module-scope-context-strong)">进行中</span>
-            <span className="font-(family-name:--font-mono) text-[10px] text-(--module-scope-text-tertiary)">3 条需求</span>
+            <span className="font-(family-name:--font-mono) text-[10px] text-(--module-scope-text-tertiary)">3 条记录</span>
           </div>
           <div className="rounded-(--r-sm) border-l-2 border-(--module-scope-context-strong) bg-(--module-scope-context-soft) p-2">
             <p className="m-0 text-[12px] font-[550] text-(--module-scope-text-primary)">建立主题草稿</p>
@@ -44,7 +44,7 @@ export function ThemePreview({ theme, hasValidationErrors = false }: ThemePrevie
           </div>
           <div className="mt-2 flex items-center gap-1.5 text-[10px] text-(--module-scope-text-secondary)">
             <span className="size-1.5 rounded-full bg-(--module-scope-context-strong)" aria-hidden="true" />
-            <span>空状态：暂无其他实体</span>
+            <span>空状态：暂无其他记录</span>
             <button type="button" aria-pressed="true" className="ml-auto rounded-(--r-sm) border-none bg-(--module-scope-action-strong) px-1.5 py-0.5 text-(--module-scope-background-surface) active:bg-(--module-scope-action-base) active:text-(--module-scope-background-surface)">
               按下
             </button>
