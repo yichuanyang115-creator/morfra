@@ -2,16 +2,52 @@ pub fn load_table_data(
     connection: &Connection,
     table_id: &str,
 ) -> Result<TableDataSnapshot, StorageError> {
-    ensure_table(connection, table_id)?;
-    let groups = load_groups(connection, table_id)?;
-    let fields = load_fields(connection, table_id)?;
-    let records = record_repository::load_records(connection, table_id, &fields)?;
-    Ok(TableDataSnapshot {
+    let transaction = connection.unchecked_transaction()?;
+    ensure_table(&transaction, table_id)?;
+    let table_metadata = transaction
+        .query_row(
+            "SELECT t.name, (SELECT f.id FROM fields f WHERE f.table_id = t.id AND f.is_title = 1) FROM data_tables t WHERE t.id = ?1",
+            [table_id],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?)),
+        )
+        .optional()?
+        .ok_or_else(|| StorageError::validation("目标表不存在"))?;
+    let title_field_id = table_metadata
+        .1
+        .ok_or_else(|| StorageError::validation("当前表缺少主标题字段"))?;
+    let groups = load_groups(&transaction, table_id)?;
+    let fields = load_fields(&transaction, table_id)?;
+    let records = record_repository::load_records(&transaction, table_id, &fields)?;
+    let attachments = load_attachment_metadata(&transaction, table_id)?;
+    let snapshot = TableDataSnapshot {
         table_id: table_id.to_string(),
+        table_name: table_metadata.0,
+        title_field_id,
         groups,
         fields,
         records,
-    })
+        attachments,
+    };
+    transaction.commit()?;
+    Ok(snapshot)
+}
+
+fn load_attachment_metadata(
+    connection: &Connection,
+    table_id: &str,
+) -> Result<Vec<super::domain::TableAttachmentMetadata>, StorageError> {
+    let mut statement = connection.prepare("SELECT a.id, a.record_id, a.field_id, a.original_name, a.media_type FROM attachments a JOIN records r ON r.id = a.record_id WHERE r.table_id = ?1 ORDER BY a.created_at, a.id")?;
+    let rows = statement.query_map([table_id], |row| {
+        Ok(super::domain::TableAttachmentMetadata {
+            id: row.get(0)?,
+            record_id: row.get(1)?,
+            field_id: row.get(2)?,
+            original_name: row.get(3)?,
+            media_type: row.get(4)?,
+        })
+    })?;
+    rows.collect::<Result<Vec<_>, _>>()
+        .map_err(StorageError::from)
 }
 
 pub fn load_groups(
@@ -298,4 +334,3 @@ pub fn move_field(
     transaction.commit()?;
     Ok(backup)
 }
-

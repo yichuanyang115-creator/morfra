@@ -7,7 +7,8 @@ use rusqlite::{backup::Backup, Connection};
 use serde::{Deserialize, Serialize};
 
 use super::connection::{
-    read_manifest, timestamp, ProjectManifest, ProjectPaths, ATTACHMENTS_DIRECTORY, DATABASE_FILE, PROJECT_MANIFEST_FILE,
+    read_manifest, timestamp, ProjectManifest, ProjectPaths, ATTACHMENTS_DIRECTORY, DATABASE_FILE,
+    PROJECT_MANIFEST_FILE,
 };
 use super::error::{StorageError, StorageErrorCode};
 use super::{migrations, repository};
@@ -71,7 +72,13 @@ pub fn restore_project(paths: &ProjectPaths, backup_id: &str) -> Result<(), Stor
     let backup_manifest = read_manifest(&backup_manifest_path)?;
     super::connection::validate_manifest(&backup_manifest)?;
     verify_backup(&backup_database_path, &backup_manifest)?;
-    if !backup_attachments_path.is_dir() { return Err(StorageError::new(StorageErrorCode::InvalidProjectManifest, "备份附件目录不完整，已取消恢复", false)); }
+    if !backup_attachments_path.is_dir() {
+        return Err(StorageError::new(
+            StorageErrorCode::InvalidProjectManifest,
+            "备份附件目录不完整，已取消恢复",
+            false,
+        ));
+    }
 
     let current_manifest = read_manifest(&paths.manifest)?;
     let current_connection = Connection::open(&paths.database)?;
@@ -126,9 +133,24 @@ pub fn restore_project(paths: &ProjectPaths, backup_id: &str) -> Result<(), Stor
             let _ = fs::remove_file(&paths.database);
             let _ = fs::remove_file(&paths.manifest);
             let _ = fs::remove_dir_all(&paths.attachments);
-            if previous_database.exists() { fs::rename(&previous_database, &paths.database)?; } else { fs::rename(rollback_database, &paths.database)?; }
-            if previous_manifest.exists() { fs::rename(&previous_manifest, &paths.manifest)?; } else { fs::rename(rollback_manifest, &paths.manifest)?; }
-            if previous_attachments.exists() { fs::rename(&previous_attachments, &paths.attachments)?; } else { copy_directory(&pre_restore_path.join(ATTACHMENTS_DIRECTORY), &paths.attachments)?; }
+            if previous_database.exists() {
+                fs::rename(&previous_database, &paths.database)?;
+            } else {
+                fs::rename(rollback_database, &paths.database)?;
+            }
+            if previous_manifest.exists() {
+                fs::rename(&previous_manifest, &paths.manifest)?;
+            } else {
+                fs::rename(rollback_manifest, &paths.manifest)?;
+            }
+            if previous_attachments.exists() {
+                fs::rename(&previous_attachments, &paths.attachments)?;
+            } else {
+                copy_directory(
+                    &pre_restore_path.join(ATTACHMENTS_DIRECTORY),
+                    &paths.attachments,
+                )?;
+            }
             Ok::<(), StorageError>(())
         })();
         let _ = fs::remove_file(&temporary_database);
@@ -216,17 +238,22 @@ pub(crate) fn retain_latest(paths: &ProjectPaths) -> Result<(), StorageError> {
         .filter_map(Result::ok)
         .map(|entry| {
             let path = entry.path();
-            let modified = entry.metadata().ok().and_then(|metadata| metadata.modified().ok()).unwrap_or(SystemTime::UNIX_EPOCH);
+            let modified = entry
+                .metadata()
+                .ok()
+                .and_then(|metadata| metadata.modified().ok())
+                .unwrap_or(SystemTime::UNIX_EPOCH);
             (path, modified)
         })
         .filter(|path| {
             path.0.is_dir()
-                && path.0
+                && path
+                    .0
                     .file_name()
                     .is_some_and(|name| name.to_string_lossy().starts_with("backup-"))
         })
         .collect::<Vec<_>>();
-    directories.sort_by(|left, right| right.1.cmp(&left.1));
+    directories.sort_by_key(|entry| std::cmp::Reverse(entry.1));
     let remove_count = directories.len().saturating_sub(MAX_BACKUPS);
     for (directory, _) in directories.into_iter().skip(MAX_BACKUPS).take(remove_count) {
         fs::remove_dir_all(directory)?;
@@ -263,7 +290,11 @@ fn copy_directory(source: &Path, destination: &Path) -> Result<(), StorageError>
     for entry in fs::read_dir(source)? {
         let entry = entry?;
         let target = destination.join(entry.file_name());
-        if entry.file_type()?.is_dir() { copy_directory(&entry.path(), &target)?; } else if entry.file_type()?.is_file() { fs::copy(entry.path(), target)?; }
+        if entry.file_type()?.is_dir() {
+            copy_directory(&entry.path(), &target)?;
+        } else if entry.file_type()?.is_file() {
+            fs::copy(entry.path(), target)?;
+        }
     }
     Ok(())
 }
@@ -304,11 +335,22 @@ mod tests {
 
     #[test]
     fn only_creates_one_daily_backup_per_open_day() {
-        let root = project_root("daily"); let _ = fs::remove_dir_all(&root); create_project(&root, "备份测试").expect("create");
-        let opened = open_project(&root).expect("open"); let paths = ProjectPaths::existing(&root).expect("paths");
+        let root = project_root("daily");
+        let _ = fs::remove_dir_all(&root);
+        create_project(&root, "备份测试").expect("create");
+        let opened = open_project(&root).expect("open");
+        let paths = ProjectPaths::existing(&root).expect("paths");
         ensure_daily_backup(&paths, &opened.manifest, &opened.connection).expect("daily backup");
-        ensure_daily_backup(&paths, &opened.manifest, &opened.connection).expect("same day no duplicate");
-        assert_eq!(list_backups(&paths).expect("list").iter().filter(|backup| backup.id.starts_with("backup-daily-")).count(), 1);
+        ensure_daily_backup(&paths, &opened.manifest, &opened.connection)
+            .expect("same day no duplicate");
+        assert_eq!(
+            list_backups(&paths)
+                .expect("list")
+                .iter()
+                .filter(|backup| backup.id.starts_with("backup-daily-"))
+                .count(),
+            1
+        );
         fs::remove_dir_all(root).expect("cleanup");
     }
 
@@ -335,11 +377,18 @@ mod tests {
 
     #[test]
     fn corrupt_backup_never_replaces_the_current_project() {
-        let root = project_root("corrupt"); let _ = fs::remove_dir_all(&root);
+        let root = project_root("corrupt");
+        let _ = fs::remove_dir_all(&root);
         create_project(&root, "恢复测试").expect("create");
-        let opened = open_project(&root).expect("open"); let paths = ProjectPaths::existing(&root).expect("paths");
-        let stable = create_manual_backup(&paths, &opened.manifest, &opened.connection).expect("backup");
-        fs::write(paths.backups.join(&stable.id).join(DATABASE_FILE), "not sqlite").expect("corrupt");
+        let opened = open_project(&root).expect("open");
+        let paths = ProjectPaths::existing(&root).expect("paths");
+        let stable =
+            create_manual_backup(&paths, &opened.manifest, &opened.connection).expect("backup");
+        fs::write(
+            paths.backups.join(&stable.id).join(DATABASE_FILE),
+            "not sqlite",
+        )
+        .expect("corrupt");
         assert!(restore_project(&paths, &stable.id).is_err());
         assert!(open_project(&root).is_ok());
         fs::remove_dir_all(root).expect("cleanup");

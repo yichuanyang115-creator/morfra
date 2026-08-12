@@ -30,6 +30,7 @@ interface GridInteractionState {
   notice: string | null;
   initialize: (viewId: string) => void;
   setSelection: (selection: GridSelection) => void;
+  clearSelection: () => void;
   startEditing: (editing: EditingCell) => void;
   setDraft: (draft: JsonValue) => void;
   stopEditing: () => void;
@@ -57,6 +58,7 @@ export const useGridInteractionStore = create<GridInteractionState>((set, get) =
       : { viewId, selection: null, editing: null, pendingCommit: null, saving: false, error: null, notice: null });
   },
   setSelection: (selection) => set({ selection, notice: null }),
+  clearSelection: () => set({ selection: null, notice: null }),
   startEditing: (editing) => set({ editing, selection: get().selection ?? singleCell(editing.point), error: null, notice: null }),
   setDraft: (draft) => set((state) => state.editing ? { editing: { ...state.editing, draft } } : state),
   stopEditing: () => set({ editing: null, pendingCommit: null, saving: false, error: null, notice: null }),

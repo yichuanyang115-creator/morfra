@@ -4,8 +4,8 @@ use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use super::connection::timestamp;
 use super::activity_repository;
+use super::connection::timestamp;
 use super::domain::{FieldSummary, RecordData};
 use super::error::StorageError;
 use super::field_models::{CellValueRow, FieldRow, MultiSelectValueRow};
@@ -22,13 +22,36 @@ pub struct RecordBackup {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct ActivityEventRow { id: String, record_id: String, field_id: Option<String>, field_name_snapshot: String, from_value_snapshot: Option<String>, to_value_snapshot: Option<String>, occurred_at: String, note: Option<String>, comments: Vec<ActivityCommentRow> }
+struct ActivityEventRow {
+    id: String,
+    record_id: String,
+    field_id: Option<String>,
+    field_name_snapshot: String,
+    from_value_snapshot: Option<String>,
+    to_value_snapshot: Option<String>,
+    occurred_at: String,
+    note: Option<String>,
+    comments: Vec<ActivityCommentRow>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct ActivityCommentRow { id: String, event_id: String, content: String, created_at: String, updated_at: String }
+struct ActivityCommentRow {
+    id: String,
+    event_id: String,
+    content: String,
+    created_at: String,
+    updated_at: String,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct RecordDetailContentRow { body: String, deliverables_json: String, tasks_json: String, acceptance_json: String, created_at: String, updated_at: String }
+struct RecordDetailContentRow {
+    body: String,
+    deliverables_json: String,
+    tasks_json: String,
+    acceptance_json: String,
+    created_at: String,
+    updated_at: String,
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]

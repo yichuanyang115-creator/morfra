@@ -11,6 +11,33 @@ use super::table_backup;
 use super::undo::UndoAction;
 use super::StorageState;
 
+fn delete_table_atomically(
+    connection: &mut rusqlite::Connection,
+    manifest: &ProjectManifest,
+    table_id: &str,
+) -> Result<(ProjectSnapshot, table_backup::DeletedTable), StorageError> {
+    let previous_updated_at: String = connection.query_row(
+        "SELECT updated_at FROM project_meta WHERE id = 'project'",
+        [],
+        |row| row.get(0),
+    )?;
+    let deleted = table_backup::delete_table(connection, table_id)?;
+    match repository::load_snapshot(connection, manifest) {
+        Ok(snapshot) => Ok((snapshot, deleted)),
+        Err(error) => {
+            // The delete transaction has already committed. Restore the exact
+            // captured table before returning an error so the JS lifecycle can
+            // safely roll back its staged AI directory without orphaning it.
+            table_backup::restore_table(connection, &deleted)?;
+            connection.execute(
+                "UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'",
+                [&previous_updated_at],
+            )?;
+            Err(error)
+        }
+    }
+}
+
 #[tauri::command]
 pub fn storage_rename_project(
     name: String,
@@ -52,22 +79,111 @@ pub fn storage_delete_table(
     table_id: String,
     state: State<'_, Mutex<StorageState>>,
 ) -> Result<ProjectSnapshot, StorageError> {
-    let path = active_project_path(state.inner())?;
+    // Acquire the session guard before the irreversible database operation. If
+    // the mutex is poisoned, the command must fail while both the table and its
+    // staged AI data are still intact.
+    let mut session = state.lock().map_err(|_| {
+        super::error::StorageError::new(
+            super::error::StorageErrorCode::DatabaseError,
+            "项目会话状态不可用",
+            true,
+        )
+    })?;
+    let path = session.active_project.clone().ok_or_else(|| {
+        super::error::StorageError::new(
+            super::error::StorageErrorCode::ProjectNotFound,
+            "当前没有打开的项目",
+            false,
+        )
+    })?;
     let mut opened = connection::open_project(&path)?;
-    let deleted = table_backup::delete_table(&mut opened.connection, &table_id)?;
-    let result = repository::load_snapshot(&opened.connection, &opened.manifest)?;
-    state
-        .lock()
-        .map_err(|_| {
-            super::error::StorageError::new(
-                super::error::StorageErrorCode::DatabaseError,
-                "项目会话状态不可用",
-                true,
-            )
-        })?
+    let (result, deleted) =
+        delete_table_atomically(&mut opened.connection, &opened.manifest, &table_id)?;
+    session
         .undo
         .push(UndoAction::RestoreTable { table: deleted });
     Ok(result)
+}
+
+#[tauri::command]
+pub fn storage_restore_deleted_table(
+    table_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<ProjectSnapshot, StorageError> {
+    let mut session = state.lock().map_err(|_| {
+        super::error::StorageError::new(
+            super::error::StorageErrorCode::DatabaseError,
+            "项目会话状态不可用",
+            true,
+        )
+    })?;
+    let path = session.active_project.clone().ok_or_else(|| {
+        super::error::StorageError::new(
+            super::error::StorageErrorCode::ProjectNotFound,
+            "当前没有打开的项目",
+            false,
+        )
+    })?;
+    let mut opened = connection::open_project(&path)?;
+    session
+        .undo
+        .restore_deleted_table(&mut opened.connection, &table_id)?;
+    repository::load_snapshot(&opened.connection, &opened.manifest)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::delete_table_atomically;
+    use crate::storage::connection::ProjectManifest;
+    use crate::storage::migrations::{apply_pending_migrations, configure_connection};
+    use crate::storage::repository::{create_table, initialize_blank_project, load_snapshot};
+
+    fn database() -> (rusqlite::Connection, ProjectManifest) {
+        let mut connection = rusqlite::Connection::open_in_memory().expect("database");
+        configure_connection(&connection).expect("configure");
+        apply_pending_migrations(&mut connection, None).expect("migrate");
+        let manifest = ProjectManifest {
+            id: "project".into(),
+            name: "测试项目".into(),
+            format_version: 1,
+            created_at: "1".into(),
+            updated_at: "1".into(),
+        };
+        initialize_blank_project(&mut connection, &manifest).expect("blank project");
+        (connection, manifest)
+    }
+
+    #[test]
+    fn failed_post_delete_snapshot_restores_table_before_returning_error() {
+        let (mut connection, manifest) = database();
+        let created = create_table(&mut connection, "待删除表").expect("table");
+        let invalid_manifest = ProjectManifest {
+            id: "missing-project".into(),
+            ..manifest.clone()
+        };
+        let before = load_snapshot(&connection, &manifest).expect("before");
+        let before_updated_at: String = connection
+            .query_row(
+                "SELECT updated_at FROM project_meta WHERE id = 'project'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("updated_at");
+
+        let result = delete_table_atomically(&mut connection, &invalid_manifest, &created.id);
+
+        assert!(result.is_err());
+        let snapshot = load_snapshot(&connection, &manifest).expect("restored snapshot");
+        assert_eq!(snapshot.tables, before.tables);
+        let restored_updated_at: String = connection
+            .query_row(
+                "SELECT updated_at FROM project_meta WHERE id = 'project'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("restored updated_at");
+        assert_eq!(restored_updated_at, before_updated_at);
+    }
 }
 
 #[tauri::command]

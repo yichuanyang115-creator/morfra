@@ -4,7 +4,7 @@
 >
 > 状态：契约基线，主产品接入前必须复核
 >
-> 更新日期：2026-08-08
+> 更新日期：2026-08-12
 
 ## 1. 目的
 
@@ -122,8 +122,22 @@ export type TableEvent =
 ## 5. AI 模块提供给主产品的端口
 
 ```ts
+export type AIHostActionErrorCode =
+  | "table-not-found"
+  | "record-not-found"
+  | "host-unavailable";
+
+export interface AIHostActionError {
+  ok: false;
+  code: AIHostActionErrorCode;
+  message: string;
+  retryable: boolean;
+}
+
+export type AIHostActionResult = { ok: true } | AIHostActionError;
+
 export interface AIHostActions {
-  openRecord(input: { tableId: string; recordId: string }): void;
+  openRecord(input: { tableId: string; recordId: string }): Promise<AIHostActionResult>;
   notifyGenerationCompleted(input: {
     tableId: string;
     conversationId: string;
@@ -145,7 +159,8 @@ export interface AIPanelHostState {
 ### 5.1 导航规则
 
 - 点击记录引用只调用 `openRecord`；AI 不判断详情页路由、Tab 或面板模式。
-- `openRecord` 失败时主产品返回可呈现错误，AI 会话不得丢失或被卸载。
+- `openRecord` 返回 `AIHostActionResult`；主产品必须区分表不存在、记录不存在和宿主暂不可用。
+- 失败结果必须带用户可呈现的中文 `message` 与 `retryable`；AI 面板保留会话、消息和滚动上下文，并在引用附近提供局部重试。
 - AI 完成提示是非打断式状态；不得自动打开面板、切表或切记录。
 
 ### 5.2 删除规则
@@ -232,20 +247,29 @@ macOS Keychain: reqflow.ai.provider / <providerConfigId>
 - 会话必须保存：`tableId`、模式、标题、服务配置引用、模型 ID、消息、上下文引用和消息状态。
 - 面板显隐与宽度是应用级偏好；切表不改变。
 
-## 9. 当前代码的临时映射
+## 9. v3 表模型交接映射
 
-主产品当前没有独立 `Table` 实体；在正式表格模型接入前，可使用以下临时适配验证，但不得进入 AI 核心：
+AI Core 只依赖第 4 节的 `TableDataAdapter`，不依赖主产品 Store、项目路径或详情组件。当前主产品的 v3 存储模型通过宿主适配器提供以下语义；这些映射是接入基线，不是把项目当作表：
 
-| 契约概念 | 当前代码映射 | 限制 |
+| v3 主产品事实 | AI 契约字段 | 规则 |
 | --- | --- | --- |
-| `tableId` | `Project.id` | 未来表模型出现后替换适配器 |
-| 表名 | `Project.name` | 仅展示，不作为 ID |
-| 字段 | `Schema.attributes` + 主标题 Name + Stage | 需统一 Stage 和主标题的字段表示 |
-| 记录 | `Requirement` | 只映射表格字段值，不传详情 Tab 正文 |
-| 当前选择 | `uiStore.selectedRequirementId` | 当前只支持单条；多选由主产品未来能力提供 |
-| 打开详情 | `uiStore.selectRequirement(recordId)` | 由宿主适配器调用 |
+| `TableSummary.id` | `tableId` | 稳定 UUID；不得使用项目 ID、名称、位置或视图 ID |
+| `TableSummary.name` | `name` | 仅展示，不作持久化主键 |
+| `TableSummary.titleFieldId` | `primaryTitleFieldId` | 必须指向同一捕获时点存在的字段 |
+| `FieldSummary.id/name/fieldType/options` | `TableField` | 字段顺序和选项 ID 保持稳定；不暴露详情 Tab 配置 |
+| `text` | `text` | 字符串或 `null` |
+| `number` | `number` | 有限数值或 `null` |
+| `progress` | `percent` | 0–100 的有限数值或 `null` |
+| `select` | `singleSelect` | 选项 ID；选项必须来自同一快照 |
+| `multi_select` | `multiSelect` | 去重的选项 ID 数组；选项必须来自同一快照 |
+| `date/created_time/updated_time` | `date` | 规范化为可解析日期字符串 |
+| `checkbox` | `checkbox` | 布尔值或 `null` |
+| `image/file` | `attachment` | 仅 `{id,name,mimeType?}` 元数据数组；不得读取路径、正文或文件字节 |
+| `auto_number` | `computed` | 只读派生值；AI 不得写回或将其视为可编辑字段 |
+| `RecordData.id/values` | `recordId/values` | 稳定记录 ID；不使用数组下标、标题或页面位置 |
+| `storageSelectionStore` 当前表选择 | `getSelectedRecordIds(tableId)` | 只返回仍存在于该表最新数据中的有效 ID；发送前再次与快照校验 |
 
-临时适配的目的只是验证契约可行，不得据此把“项目等于表”写入 AI Product Spec。
+快照必须从同一捕获时点的 `TableSummary` 与 `TableDataSnapshot` 生成；当前搜索、筛选、排序、分组以及表格/看板视图状态不得改变快照内容。
 
 ## 10. 旧假对话迁移
 
@@ -262,10 +286,10 @@ macOS Keychain: reqflow.ai.provider / <providerConfigId>
 1. 主产品先批准根 Spec 与根 DEV-PLAN 变更。
 2. 主产品实现或确认稳定表端口与删除事件。
 3. AI 模块在假适配器上通过完整评估。
-4. 新增当前主产品临时适配器，不修改 AI Core。
-5. 用功能开关替换假回复，保留回退到旧面板的能力。
+4. 新增当前主产品 v3 宿主适配器，不修改 AI Core。
+5. 由 `StorageAIHost` 接入真实只读快照与 `HostActions`；旧 Markdown 工作区只迁移 open/width 偏好，不导入假消息。
 6. 完成切表、详情、布局、主题、设置、存储、Keychain 和生产构建回归。
-7. 验证通过后再移除假回复代码；旧数据文件仍按批准的迁移策略处理。
+7. 验证通过后保留独立 AI 会话目录；旧数据文件仍按批准的迁移策略处理。
 
 ## 12. 合并阻断条件
 

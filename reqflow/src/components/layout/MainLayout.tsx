@@ -177,8 +177,8 @@ export function MainLayout({ detailMode, boardContent, detailContent }: MainLayo
         <div />
       )}
 
-      <ChatPanel width={clampedChatWidth > 0 ? clampedChatWidth : null} onClose={() => { void useAIProviderStore.getState().setPanelOpen(false); }} />
-      {isNarrow && chatOpen && <div className="absolute inset-0 z-20 flex justify-end" data-testid="ai-drawer"><button type="button" aria-label="关闭 AI 面板" onClick={() => { void useAIProviderStore.getState().setPanelOpen(false); }} className="absolute inset-0 border-none bg-(--overlay-scrim)" /><div className="relative z-10 h-full max-w-[calc(100%-52px)] shadow-(--shadow-panel)"><ChatPanel width={Math.min(chatStoredWidth, Math.max(260, viewportWidth - 52))} onClose={() => { void useAIProviderStore.getState().setPanelOpen(false); }} /></div></div>}
+      <ChatPanel width={clampedChatWidth > 0 ? clampedChatWidth : null} />
+      {isNarrow && chatOpen && <div className="absolute inset-0 z-20 flex justify-end" data-testid="ai-drawer"><button type="button" aria-label="关闭 AI 面板" onClick={() => { void useAIProviderStore.getState().setPanelOpen(false); }} className="absolute inset-0 border-none bg-(--overlay-scrim)" /><div className="relative z-10 h-full max-w-[calc(100%-52px)] shadow-(--shadow-panel)"><ChatPanel width={Math.min(chatStoredWidth, Math.max(260, viewportWidth - 52))} /></div></div>}
     </div>
   );
 }

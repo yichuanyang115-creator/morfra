@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import { currentProject, useProjectStore } from "../../stores/projectStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { calculateWindowLayout, PANEL_RESIZER_WIDTH, type WindowLayout } from "../../lib/layout/windowLayout";
-import { useLayoutStore, type AppearanceMode } from "../../stores/layoutStore";
+import { useLayoutStore } from "../../stores/layoutStore";
 import { applyAccessibilityPreferences, applyAppearanceMode, subscribeToAccessibilityPreferences, subscribeToSystemAppearance } from "../../lib/layout/appearance";
 import { WindowTitlebar } from "./WindowTitlebar";
 import { RightPanelHost } from "./RightPanelHost";
@@ -11,7 +11,10 @@ import { ProjectSwitcher } from "../sidebar/ProjectSwitcher";
 import { TableList } from "../sidebar/TableList";
 import { StorageRecordDetailPanel } from "../storage/RecordDetailPanel";
 import { StorageAICascade, StorageAIHost, StorageAIPreferenceMigration } from "../storage/StorageAIHost";
-import { AIServiceSettings } from "../app-settings/AIServiceSettings";
+import { AppSettingsPage } from "../app-settings/AppSettingsPage";
+import { useAIProviderStore } from "../../stores/aiProviderStore";
+import { isTauriRuntime } from "../../lib/ipc/storageClient";
+import { open as openDirectoryDialog } from "@tauri-apps/plugin-dialog";
 
 interface MorfraShellProps {
   mainContent: ReactNode;
@@ -44,10 +47,6 @@ function viewportSize(): { width: number; height: number } {
   return { width: window.innerWidth, height: window.innerHeight };
 }
 
-function cycleAppearance(mode: AppearanceMode): AppearanceMode {
-  return mode === "system" ? "light" : mode === "light" ? "dark" : "system";
-}
-
 export function MorfraShell({ mainContent }: MorfraShellProps) {
   const project = useProjectStore(currentProject);
   const hydrated = useLayoutStore((state) => state.hydrated);
@@ -62,15 +61,18 @@ export function MorfraShell({ mainContent }: MorfraShellProps) {
   const appearanceMode = useLayoutStore((state) => state.appearanceMode);
   const toggleSidebar = useLayoutStore((state) => state.toggleSidebar);
   const toggleDetail = useLayoutStore((state) => state.toggleDetail);
-  const toggleAi = useLayoutStore((state) => state.toggleAi);
+  const setAiOpen = useLayoutStore((state) => state.setAiOpen);
+  const setProviderPanelOpen = useAIProviderStore((state) => state.setPanelOpen);
   const setSidebarWidth = useLayoutStore((state) => state.setSidebarWidth);
   const setDetailWidth = useLayoutStore((state) => state.setDetailWidth);
   const setAiWidth = useLayoutStore((state) => state.setAiWidth);
   const setActiveRightPanel = useLayoutStore((state) => state.setActiveRightPanel);
-  const setAppearanceMode = useLayoutStore((state) => state.setAppearanceMode);
+  const createProject = useProjectStore((state) => state.createProject);
+  const openProject = useProjectStore((state) => state.openProject);
   const [viewport, setViewport] = useState(viewportSize);
   const [narrowSidebarOpen, setNarrowSidebarOpen] = useState(false);
-  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [appSettingsSection, setAppSettingsSection] = useState<"appearance" | "ai-service" | "version" | null>(null);
+  const [aiCompleted, setAiCompleted] = useState(false);
 
   useEffect(() => {
     hydrate();
@@ -85,9 +87,60 @@ export function MorfraShell({ mainContent }: MorfraShellProps) {
   }, []);
 
   useEffect(() => {
-    const openSettings = () => setAiSettingsOpen(true);
+    if (!isTauriRuntime()) return;
+    let disposed = false;
+    const stops: Array<() => void> = [];
+    void import("@tauri-apps/api/event").then(async ({ listen }) => {
+      const stopNew = await listen("morfra-new-project", () => {
+        if (disposed) return;
+        const name = window.prompt("新建项目名称", "未命名项目")?.trim();
+        if (name) void createProject(name);
+      });
+      const stopOpen = await listen("morfra-open-project", () => {
+        if (disposed) return;
+        void openDirectoryDialog({ directory: true, multiple: false, title: "打开 Morfra 项目" }).then((selected) => {
+          if (typeof selected === "string") return openProject(selected);
+        });
+      });
+      if (disposed) {
+        stopNew();
+        stopOpen();
+      } else {
+        stops.push(stopNew, stopOpen);
+      }
+    }).catch(() => undefined);
+    return () => {
+      disposed = true;
+      stops.forEach((stop) => stop());
+    };
+  }, [createProject, openProject]);
+
+  useEffect(() => {
+    const handleCompleted = () => { if (!useLayoutStore.getState().aiOpen) setAiCompleted(true); };
+    window.addEventListener("ai-generation-completed", handleCompleted);
+    return () => window.removeEventListener("ai-generation-completed", handleCompleted);
+  }, []);
+
+  useEffect(() => {
+    const openSettings = () => setAppSettingsSection("ai-service");
     window.addEventListener("open-ai-service-settings", openSettings);
     return () => window.removeEventListener("open-ai-service-settings", openSettings);
+  }, []);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void import("@tauri-apps/api/event").then(({ listen }) => listen<"appearance" | "ai-service" | "version">("morfra-open-settings", (event) => {
+      if (!disposed) setAppSettingsSection(event.payload ?? "appearance");
+    })).then((stop) => {
+      if (disposed) stop();
+      else unlisten = stop;
+    }).catch(() => undefined);
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -116,22 +169,29 @@ export function MorfraShell({ mainContent }: MorfraShellProps) {
   const handleToggleAi = () => {
     if (layout.mode === "narrow") setNarrowSidebarOpen(false);
     setActiveRightPanel("ai");
-    toggleAi();
+    const nextOpen = !aiOpen;
+    if (nextOpen) setAiCompleted(false);
+    setAiOpen(nextOpen);
+    void setProviderPanelOpen(nextOpen);
+  };
+  const handleCloseAi = () => {
+    setAiOpen(false);
+    void setProviderPanelOpen(false);
   };
 
   return (
     <div className="morfra-shell" data-testid="morfra-shell" data-window-mode={layout.mode} data-sidebar-open={sidebarOpen} data-right-panel-mode={layout.rightPanelMode} style={{ "--morfra-sidebar-width": `${layout.sidebarWidth}px`, "--morfra-right-panel-width": `${layout.rightPanelWidth}px` } as CSSProperties}>
       <StorageAICascade />
       <StorageAIPreferenceMigration />
-      <WindowTitlebar projectName={project?.name ?? null} sidebarOpen={layout.mode === "narrow" ? narrowSidebarOpen : sidebarOpen} aiOpen={aiOpen} appearanceMode={appearanceMode} onToggleSidebar={handleToggleSidebar} onToggleAi={handleToggleAi} onCycleAppearance={() => setAppearanceMode(cycleAppearance(appearanceMode))} />
+      <WindowTitlebar projectName={project?.name ?? null} sidebarOpen={layout.mode === "narrow" ? narrowSidebarOpen : sidebarOpen} aiOpen={aiOpen} aiCompleted={aiCompleted} onToggleSidebar={handleToggleSidebar} onToggleAi={handleToggleAi} />
       <div className="morfra-shell-body" style={{ gridTemplateColumns }}>
         <ProjectSidebar />
         {layout.mode === "regular" && sidebarOpen && <LayoutResizer className="morfra-sidebar-resizer" label="调整导航宽度" width={layout.sidebarWidth} direction="increase" onResize={setSidebarWidth} />}
         <main className="morfra-main" aria-label="主显示区">{mainContent}</main>
-        <RightPanelHost layout={layout} activePanel={activeRightPanel} detailOpen={detailOpen} aiOpen={aiOpen} detailContent={<StorageRecordDetailPanel />} aiContent={<StorageAIHost onClose={toggleAi} />} onCloseDetail={toggleDetail} onCloseAi={toggleAi} onSelectPanel={setActiveRightPanel} onResizeDetail={setDetailWidth} onResizeAi={setAiWidth} navigationOverlayOpen={narrowSidebarOpen} />
+        <RightPanelHost layout={layout} activePanel={activeRightPanel} detailOpen={detailOpen} aiOpen={aiOpen} detailContent={<StorageRecordDetailPanel />} aiContent={<StorageAIHost />} onCloseDetail={toggleDetail} onCloseAi={handleCloseAi} onSelectPanel={setActiveRightPanel} onResizeDetail={setDetailWidth} onResizeAi={setAiWidth} navigationOverlayOpen={narrowSidebarOpen} />
       </div>
       {layout.mode === "narrow" && narrowSidebarOpen && <div className="morfra-sidebar-overlay"><button type="button" className="morfra-sidebar-overlay-scrim" aria-label="关闭项目导航" onClick={() => setNarrowSidebarOpen(false)} /><div className="morfra-sidebar-overlay-panel"><ProjectSidebar onProjectSelected={() => setNarrowSidebarOpen(false)} /></div></div>}
-      {aiSettingsOpen && <div className="fixed inset-0 z-50 flex items-center justify-center p-6"><button type="button" aria-label="关闭 AI 服务设置" className="absolute inset-0 border-none bg-(--overlay-scrim)" onClick={() => setAiSettingsOpen(false)} /><section role="dialog" aria-modal="true" aria-label="AI 服务设置" className="relative flex max-h-[min(760px,calc(100vh-48px))] w-[min(860px,calc(100vw-48px))] flex-col overflow-hidden rounded-(--r-lg) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) shadow-(--shadow-panel)"><div className="flex flex-none items-center justify-between border-b border-(--module-scope-border-subtle) px-4 py-2.5"><strong className="text-[14px] font-[590]">AI 服务设置</strong><button type="button" aria-label="关闭 AI 服务设置" className="grid size-7 place-items-center rounded-(--r-sm) border-none bg-transparent text-[17px] text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft)" onClick={() => setAiSettingsOpen(false)}>×</button></div><AIServiceSettings /></section></div>}
+      {appSettingsSection && <div className="fixed inset-0 z-50 flex items-center justify-center p-6"><button type="button" aria-label="关闭应用设置" className="absolute inset-0 border-none bg-(--overlay-scrim)" onClick={() => setAppSettingsSection(null)} /><section role="dialog" aria-modal="true" aria-label="应用设置" className="relative flex h-[min(720px,calc(100vh-48px))] w-[min(960px,calc(100vw-48px))] overflow-hidden rounded-(--r-lg) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) shadow-(--shadow-panel)"><AppSettingsPage section={appSettingsSection} onSelectSection={setAppSettingsSection} onClose={() => setAppSettingsSection(null)} /></section></div>}
     </div>
   );
 }

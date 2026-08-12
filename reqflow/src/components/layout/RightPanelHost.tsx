@@ -58,8 +58,15 @@ export function RightPanelHost({ layout, navigationOverlayOpen = false, ...props
   if (mode === "dual") {
     return <><LayoutResizer className="morfra-panel-resizer" label="调整记录详情宽度" width={layout.detailWidth} direction="decrease" onResize={props.onResizeDetail} /><Panel className="morfra-detail-panel" label="记录详情" onClose={props.onCloseDetail}>{props.detailContent}</Panel><LayoutResizer className="morfra-panel-resizer" label="调整 AI 面板宽度" width={layout.aiWidth} direction="decrease" onResize={props.onResizeAi} /><Panel className="morfra-ai-panel" label="AI 表格助手" onClose={props.onCloseAi} showHeader={false}>{props.aiContent}</Panel></>;
   }
-  if (mode === "merged" || mode === "single") {
+  if (mode === "single") {
+    const showAi = props.aiOpen && !props.detailOpen;
+    return <><LayoutResizer className="morfra-panel-resizer" label={`调整${showAi ? "AI 面板" : "记录详情"}宽度`} width={layout.rightPanelWidth} direction="decrease" onResize={(width) => showAi ? props.onResizeAi(width) : props.onResizeDetail(width)} />{showAi ? <Panel className="morfra-ai-panel" label="AI 表格助手" onClose={props.onCloseAi} showHeader={false}>{props.aiContent}</Panel> : <Panel className="morfra-detail-panel" label="记录详情" onClose={props.onCloseDetail}>{props.detailContent}</Panel>}</>;
+  }
+  if (mode === "merged") {
     return <><LayoutResizer className="morfra-panel-resizer" label={`调整${props.activePanel === "ai" ? "AI 面板" : "记录详情"}宽度`} width={layout.rightPanelWidth} direction="decrease" onResize={(width) => props.activePanel === "ai" ? props.onResizeAi(width) : props.onResizeDetail(width)} /><MergedPanel {...props} /></>;
   }
-  return <div className="morfra-drawer-layer"><button type="button" className="morfra-drawer-scrim" aria-label="关闭上下文面板" onClick={props.activePanel === "ai" ? props.onCloseAi : props.onCloseDetail} /><div className="morfra-drawer-panel"><MergedPanel {...props} /></div></div>;
+  const showOnlyAi = props.aiOpen && !props.detailOpen;
+  const showOnlyDetail = props.detailOpen && !props.aiOpen;
+  const closeDrawer = showOnlyAi ? props.onCloseAi : showOnlyDetail ? props.onCloseDetail : props.activePanel === "ai" ? props.onCloseAi : props.onCloseDetail;
+  return <div className="morfra-drawer-layer"><button type="button" className="morfra-drawer-scrim" aria-label="关闭上下文面板" onClick={closeDrawer} /><div className="morfra-drawer-panel">{showOnlyAi ? <Panel className="morfra-ai-panel" label="AI 表格助手" onClose={props.onCloseAi} showHeader={false}>{props.aiContent}</Panel> : showOnlyDetail ? <Panel className="morfra-detail-panel" label="记录详情" onClose={props.onCloseDetail}>{props.detailContent}</Panel> : <MergedPanel {...props} />}</div></div>;
 }

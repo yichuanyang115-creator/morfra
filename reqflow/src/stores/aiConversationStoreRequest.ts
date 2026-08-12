@@ -99,7 +99,7 @@ export async function runConversationRequest(
       deps.putConversation(next);
       await deps.queueSave(next);
     }
-    if (input.firstQuestion) {
+    if (input.firstQuestion && (result.status === "complete" || result.status === "clarification")) {
       const title = await generateConversationTitle(input.question, input.runtime.generateTitle);
       const titled = deps.findConversation(input.conversation.tableId, input.conversation.id);
       if (titled && titled.title === AI_CONVERSATION_DEFAULT_TITLES[titled.mode]) {

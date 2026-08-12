@@ -140,11 +140,11 @@ describe("currentProjectTableAdapter 临时宿主映射", () => {
     adapter.dispose();
   });
 
-  it("HostActions.openRecord 只调用 uiStore.selectRequirement", () => {
+  it("HostActions.openRecord 只调用 uiStore.selectRequirement", async () => {
     const deps = dependencies();
-    const actions = createCurrentProjectHostActions(deps.uiStore);
+    const actions = createCurrentProjectHostActions(deps);
 
-    actions.openRecord({ tableId: "project-a", recordId: "requirement-a" });
+    await actions.openRecord({ tableId: "project-a", recordId: "requirement-a" });
 
     expect(deps.selectRequirement).toHaveBeenCalledOnce();
     expect(deps.selectRequirement).toHaveBeenCalledWith("requirement-a");

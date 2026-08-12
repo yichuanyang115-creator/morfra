@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createCurrentStorageHostActions,
   createCurrentStorageTableAdapter,
+  type CurrentStorageTableAdapterDependencies,
   type StorageStore,
 } from "./currentStorageTableAdapter";
 import type { Project } from "../../types/models";
@@ -33,16 +34,27 @@ const tableData: TableDataSnapshot = {
     { id: "files", tableId: "table-delivery", groupId: null, name: "附件", fieldType: "file", isTitle: false, position: 2, config: {}, options: [] },
     { id: "tags", tableId: "table-delivery", groupId: null, name: "标签", fieldType: "multi_select", isTitle: false, position: 3, config: {}, options: [{ id: "tag-a", fieldId: "tags", name: "A", color: "blue", position: 0 }] },
     { id: "created", tableId: "table-delivery", groupId: null, name: "创建时间", fieldType: "created_time", isTitle: false, position: 4, config: {}, options: [] },
+    { id: "empty-select", tableId: "table-delivery", groupId: null, name: "空单选", fieldType: "select", isTitle: false, position: 5, config: {}, options: [] },
+    { id: "empty-multi", tableId: "table-delivery", groupId: null, name: "空多选", fieldType: "multi_select", isTitle: false, position: 6, config: {}, options: [] },
   ],
   records: [{ id: "record-a", tableId: "table-delivery", position: 0, autoNumber: 1, createdAt: "2026-08-10T00:00:00.000Z", updatedAt: "2026-08-10T00:00:00.000Z", values: { name: "验收接入", stage: "done", files: "/private/secret.pdf" }, multiSelectValues: { tags: ["tag-a"] } }],
 };
 
-function dependencies() {
+const recordB = { ...tableData.records[0], id: "record-b", position: 1, autoNumber: 2, values: { ...tableData.records[0].values, name: "第二条" } };
+
+type TestDependencies = CurrentStorageTableAdapterDependencies & {
+  projectStore: StorageStore<CurrentStorageTableAdapterDependencies["projectStore"] extends StorageStore<infer State> ? State : never> & { set: (state: CurrentStorageTableAdapterDependencies["projectStore"] extends StorageStore<infer State> ? State : never) => void };
+  workspaceStore: StorageStore<CurrentStorageTableAdapterDependencies["workspaceStore"] extends StorageStore<infer State> ? State : never> & { set: (state: CurrentStorageTableAdapterDependencies["workspaceStore"] extends StorageStore<infer State> ? State : never) => void };
+  tableDataStore: StorageStore<CurrentStorageTableAdapterDependencies["tableDataStore"] extends StorageStore<infer State> ? State : never> & { set: (state: CurrentStorageTableAdapterDependencies["tableDataStore"] extends StorageStore<infer State> ? State : never) => void };
+  selectionStore: StorageStore<CurrentStorageTableAdapterDependencies["selectionStore"] extends StorageStore<infer State> ? State : never> & { set: (state: CurrentStorageTableAdapterDependencies["selectionStore"] extends StorageStore<infer State> ? State : never) => void };
+};
+
+function dependencies(): TestDependencies {
   const projectStore = createStore({ projects: [project], currentProjectId: project.id });
   const workspaceStore = createStore({ activeTableByProject: { [project.id]: tableData.tableId }, setActiveTable: vi.fn() });
   const tableDataStore = createStore({ dataByTable: { [tableData.tableId]: tableData }, load: vi.fn(async () => tableData) });
-  const selectionStore = createStore({ selectedRecordByTable: { [tableData.tableId]: "record-a" }, selectRecord: vi.fn() });
-  return { projectStore, workspaceStore, tableDataStore, selectionStore };
+  const selectionStore = createStore({ selectedRecordByTable: { [tableData.tableId]: "record-a" }, selectedRecordIdsByTable: { [tableData.tableId]: ["record-a"] }, selectRecord: vi.fn() });
+  return { projectStore, workspaceStore, tableDataStore, selectionStore } as unknown as TestDependencies;
 }
 
 describe("currentStorageTableAdapter 真实 Tauri 宿主映射", () => {
@@ -52,7 +64,7 @@ describe("currentStorageTableAdapter 真实 Tauri 宿主映射", () => {
 
     const report = await runIntegrationChecks(adapter, {
       tableId: "table-delivery",
-      eventProbe: () => deps.selectionStore.set({ ...deps.selectionStore.getState(), selectedRecordByTable: {} }),
+      eventProbe: () => deps.selectionStore.set({ ...deps.selectionStore.getState(), selectedRecordIdsByTable: {} }),
       afterUnsubscribeProbe: () => deps.tableDataStore.set({ ...deps.tableDataStore.getState(), dataByTable: {} }),
     });
 
@@ -68,10 +80,33 @@ describe("currentStorageTableAdapter 真实 Tauri 宿主映射", () => {
 
     expect(adapter.getActiveTable()).toEqual({ tableId: "table-delivery", name: "交付表" });
     expect(snapshot.primaryTitleFieldId).toBe("name");
-    expect(snapshot.fields.map((field) => field.type)).toEqual(["text", "singleSelect", "attachment", "multiSelect", "date"]);
-    expect(snapshot.records[0]).toEqual({ id: "record-a", values: { name: "验收接入", stage: "done", files: [], tags: ["tag-a"], created: "2026-08-10" } });
+    expect(snapshot.fields.map((field) => field.type)).toEqual(["text", "singleSelect", "attachment", "multiSelect", "date", "singleSelect", "multiSelect"]);
+    expect(snapshot.records[0]).toEqual({ id: "record-a", values: { name: "验收接入", stage: "done", files: [], tags: ["tag-a"], created: "2026-08-10", "empty-select": null, "empty-multi": [] } });
     expect(JSON.stringify(snapshot)).not.toContain("/private/secret.pdf");
     expect(adapter.getSelectedRecordIds("table-delivery")).toEqual(["record-a"]);
+    adapter.dispose();
+  });
+
+  it("把真实表格多行选区按稳定 recordId 交给 AI，并过滤失效记录", () => {
+    const deps = dependencies();
+    deps.tableDataStore.set({ ...deps.tableDataStore.getState(), dataByTable: { [tableData.tableId]: { ...tableData, records: [tableData.records[0], recordB] } } });
+    deps.selectionStore.set({ ...deps.selectionStore.getState(), selectedRecordIdsByTable: { [tableData.tableId]: ["record-a", "record-b", "missing-record"] } });
+    const adapter = createCurrentStorageTableAdapter(deps);
+
+    expect(adapter.getSelectedRecordIds("table-delivery")).toEqual(["record-a", "record-b"]);
+    adapter.dispose();
+  });
+
+  it("附件只映射元数据，绝不把相对路径或正文带入 AI 快照", async () => {
+    const deps = dependencies();
+    const current = deps.tableDataStore.getState().dataByTable[tableData.tableId]!;
+    deps.tableDataStore.set({ ...deps.tableDataStore.getState(), dataByTable: { [tableData.tableId]: { ...current, attachments: [{ id: "attachment-a", recordId: "record-a", fieldId: "files", originalName: "合同.pdf", mediaType: "application/pdf" }] } } });
+    const adapter = createCurrentStorageTableAdapter(deps);
+    const snapshot = await adapter.getTableSnapshot("table-delivery");
+
+    expect(snapshot.records[0]?.values.files).toEqual([{ id: "attachment-a", name: "合同.pdf", mimeType: "application/pdf" }]);
+    expect(JSON.stringify(snapshot)).not.toContain("relative_path");
+    expect(JSON.stringify(snapshot)).not.toContain("attachment-body");
     adapter.dispose();
   });
 
@@ -82,7 +117,7 @@ describe("currentStorageTableAdapter 真实 Tauri 宿主映射", () => {
     const listener = vi.fn();
     adapter.subscribe(listener);
     deps.tableDataStore.set({ ...deps.tableDataStore.getState(), dataByTable: { [tableData.tableId]: { ...tableData, records: [] } } });
-    deps.selectionStore.set({ ...deps.selectionStore.getState(), selectedRecordByTable: {} });
+    deps.selectionStore.set({ ...deps.selectionStore.getState(), selectedRecordIdsByTable: {} });
     deletionListener?.("table-delivery");
     expect(listener.mock.calls.map(([event]) => event.type)).toEqual(["table-data-changed", "selection-changed", "table-deleted"]);
     adapter.dispose();
@@ -102,18 +137,30 @@ describe("currentStorageTableAdapter 真实 Tauri 宿主映射", () => {
     adapter.dispose();
   });
 
-  it("引用跳转只切换真实表并选择真实记录", () => {
+  it("引用跳转只切换真实表并选择真实记录", async () => {
     const deps = dependencies();
     const opened = vi.fn();
     const actions = createCurrentStorageHostActions(deps, opened);
 
-    actions.openRecord({ tableId: "table-delivery", recordId: "record-a" });
-    actions.openRecord({ tableId: "unknown", recordId: "record-x" });
+    await actions.openRecord({ tableId: "table-delivery", recordId: "record-a" });
+    const missing = await actions.openRecord({ tableId: "unknown", recordId: "record-x" });
 
     expect(deps.workspaceStore.getState().setActiveTable).toHaveBeenCalledOnce();
     expect(deps.workspaceStore.getState().setActiveTable).toHaveBeenCalledWith("project-storage", "table-delivery");
     expect(deps.selectionStore.getState().selectRecord).toHaveBeenCalledOnce();
     expect(deps.selectionStore.getState().selectRecord).toHaveBeenCalledWith("table-delivery", "record-a");
     expect(opened).toHaveBeenCalledOnce();
+    expect(missing).toEqual({ ok: false, code: "table-not-found", message: "目标表不存在，无法打开引用。", retryable: false });
+  });
+
+  it("失效记录引用返回可重试错误，不改变当前选择", async () => {
+    const deps = dependencies();
+    const actions = createCurrentStorageHostActions(deps);
+
+    const result = await actions.openRecord({ tableId: "table-delivery", recordId: "missing-record" });
+
+    expect(result).toEqual({ ok: false, code: "record-not-found", message: "这条记录已不存在，请刷新后重试。", retryable: true });
+    expect(deps.workspaceStore.getState().setActiveTable).not.toHaveBeenCalled();
+    expect(deps.selectionStore.getState().selectRecord).not.toHaveBeenCalled();
   });
 });

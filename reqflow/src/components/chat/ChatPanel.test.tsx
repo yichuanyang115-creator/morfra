@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { AIConversation, AIMessage } from "../../types/ai";
 import type { TableSnapshot } from "../../lib/ai/tableDataAdapter";
+import type { AIHostActionResult } from "../../lib/ai/tableDataAdapter";
 import { useAIConversationStore } from "../../stores/aiConversationStore";
 import { useAIProviderStore } from "../../stores/aiProviderStore";
 import { ChatPanel } from "./ChatPanel";
@@ -13,7 +14,7 @@ vi.mock("@tauri-apps/api/path", () => ({ appLocalDataDir: vi.fn(async () => "/ap
 const snapshot: TableSnapshot = { tableId: "table-1", name: "需求表", schemaVersion: "1", primaryTitleFieldId: "title", fields: [{ id: "title", name: "标题", type: "text" }, { id: "stage", name: "阶段", type: "singleSelect", options: [{ id: "todo", label: "待办" }] }], records: [{ id: "record-1", values: { title: "接入 AI", stage: "todo" } }], capturedAt: "2026-08-10T00:00:00.000Z" };
 const provider = { id: "provider-1", name: "本地兼容服务", baseUrl: "https://example.test/v1", defaultModelId: "model-a", cachedModelIds: ["model-a"], capabilityStatus: "available" as const, createdAt: "2026-08-10", updatedAt: "2026-08-10" };
 const adapter = { getActiveTable: () => ({ tableId: "table-1", name: "需求表" }), getTableSnapshot: vi.fn(async () => snapshot), getSelectedRecordIds: () => ["record-1"], subscribe: vi.fn(() => () => undefined) };
-const hostActions = { openRecord: vi.fn() };
+const hostActions = { openRecord: vi.fn(async (): Promise<AIHostActionResult> => ({ ok: true })) };
 
 function message(role: "user" | "assistant", content: string, status: AIMessage["status"] = "complete", conversationId = "conversation-1"): AIMessage {
   return { id: `${role}-${content}`, conversationId, role, contentBlocks: [{ type: "markdown", markdown: content }], contextRef: { type: "fullTable" }, providerConfigId: provider.id, modelId: provider.defaultModelId, status, createdAt: "2026-08-10" };
@@ -25,6 +26,7 @@ function resetStores(): void {
   useAIProviderStore.setState({ configs: [provider], secretStatus: { [provider.id]: true }, defaultProviderConfigId: provider.id, lastProviderConfigId: provider.id, lastModelId: provider.defaultModelId, modelIds: { [provider.id]: [provider.defaultModelId] }, dataExfiltrationConfirmed: true, loaded: true, panelOpen: true, panelWidth: 360 });
   useAIConversationStore.setState({ activeTableId: null, conversationsByTable: {}, currentConversationIdByTable: {}, loadedTables: {}, loadingTables: {}, activeRequests: {}, persistenceError: null });
   hostActions.openRecord.mockReset();
+  hostActions.openRecord.mockResolvedValue({ ok: true as const });
   adapter.getTableSnapshot.mockClear();
 }
 
@@ -92,6 +94,21 @@ describe("ChatPanel Phase 6 右侧 AI 面板", () => {
     useAIConversationStore.setState({ sendMessage: originalSend });
   });
 
+  it("通用对话可显式引用已选，未引用时不误标为整表", async () => {
+    const generalConversation = { ...conversation, mode: "general" as const };
+    const sendMessage = vi.fn(async () => ({ ok: true, requestId: "request-general-selected" }));
+    useAIConversationStore.setState({ sendMessage, conversationsByTable: { "table-1": [generalConversation] }, currentConversationIdByTable: { "table-1": generalConversation.id }, loadedTables: { "table-1": true } });
+    renderPanel();
+
+    expect(await screen.findByText("按问题判断表格上下文")).toBeInTheDocument();
+    expect(screen.queryByText("整张表")).not.toBeInTheDocument();
+    await userClick(screen.getByRole("button", { name: "引用已选 1 条" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "输入问题" }), { target: { value: "只看所选" } });
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "输入问题" }), { key: "Enter" });
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({ question: "只看所选", selectionReferenced: true, selectedRecordIds: ["record-1"] })));
+  });
+
   it("回答结构化引用只通过 HostActions 打开记录，点击不卸载面板", async () => {
     const answer: AIMessage = { ...message("assistant", "安全说明"), id: "assistant-1", contentBlocks: [{ type: "markdown", markdown: "## 结论\n\n|字段|值|\n|---|---|\n|阶段|待办|\n\n<script>alert(1)</script>" }, { type: "metrics", items: [{ label: "记录数", value: 1 }] }, { type: "recordRefs", records: [{ recordId: "record-1", title: "接入 AI" }] }] };
     useAIConversationStore.setState({ conversationsByTable: { "table-1": [{ ...conversation, messages: [answer] }] }, currentConversationIdByTable: { "table-1": conversation.id }, loadedTables: { "table-1": true } });
@@ -107,6 +124,38 @@ describe("ChatPanel Phase 6 右侧 AI 面板", () => {
     await userClick(screen.getByRole("button", { name: "复制" }));
     expect(screen.getByRole("button", { name: "已复制" })).toBeInTheDocument();
     expect(screen.queryByText(/Token|耗时|费用|Base URL|API Key/u)).not.toBeInTheDocument();
+  });
+
+  it("引用跳转失败时只显示局部可重试错误，不丢失面板上下文", async () => {
+    const answer: AIMessage = { ...message("assistant", "带引用的回答"), id: "assistant-retry", contentBlocks: [{ type: "recordRefs", records: [{ recordId: "record-1", title: "接入 AI" }] }] };
+    useAIConversationStore.setState({ conversationsByTable: { "table-1": [{ ...conversation, messages: [answer] }] }, currentConversationIdByTable: { "table-1": conversation.id }, loadedTables: { "table-1": true } });
+    hostActions.openRecord.mockReset();
+    hostActions.openRecord
+      .mockResolvedValueOnce({ ok: false as const, code: "host-unavailable" as const, message: "记录详情暂时不可用，请重试。", retryable: true })
+      .mockResolvedValueOnce({ ok: true as const });
+    renderPanel();
+    await waitFor(() => expect(screen.getByRole("button", { name: "接入 AI" })).toBeInTheDocument());
+    await userClick(screen.getByRole("button", { name: "接入 AI" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("记录详情暂时不可用"));
+    expect(screen.getByRole("log", { name: "AI 对话消息" })).toBeInTheDocument();
+    await userClick(screen.getByRole("button", { name: "重试" }));
+    await waitFor(() => expect(hostActions.openRecord).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("宿主重挂载同一会话时恢复原滚动位置，不强制跳到底部", async () => {
+    const messages = Array.from({ length: 20 }, (_, index) => message(index % 2 === 0 ? "user" : "assistant", `消息-${index}`));
+    useAIConversationStore.setState({ conversationsByTable: { "table-1": [{ ...conversation, messages }] }, currentConversationIdByTable: { "table-1": conversation.id }, loadedTables: { "table-1": true } });
+    const first = renderPanel();
+    await waitFor(() => expect(screen.getByText("消息-19")).toBeInTheDocument());
+    const firstLog = screen.getByRole("log", { name: "AI 对话消息" });
+    Object.defineProperty(firstLog, "scrollHeight", { configurable: true, value: 1200 });
+    fireEvent.scroll(firstLog, { target: { scrollTop: 240 } });
+    first.unmount();
+
+    renderPanel();
+    const restoredLog = await screen.findByRole("log", { name: "AI 对话消息" });
+    expect(restoredLog.scrollTop).toBe(240);
   });
 
   it("生成中显示停止入口并把停止动作交给会话编排", async () => {

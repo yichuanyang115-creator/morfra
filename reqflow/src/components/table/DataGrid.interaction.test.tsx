@@ -19,6 +19,7 @@ const data: TableDataSnapshot = {
   ],
   records: [{ id: "record-1", tableId: "table-1", position: 0, autoNumber: 1, createdAt: "", updatedAt: "", values: { title: "旧标题", progress: 20, done: false, created: "2026-08-10" }, multiSelectValues: { tags: [] } }],
 };
+const twoRowData: TableDataSnapshot = { ...data, records: [data.records[0], { ...data.records[0], id: "record-2", position: 1, autoNumber: 2, values: { ...data.records[0].values, title: "第二条" } }] };
 const config: GridLayoutConfig = { fieldIds: data.fields.map((field) => field.id), groupOrder: [], columnWidths: {}, frozenFieldId: null, rowHeight: 40, collapsedGroupIds: [] };
 
 describe("DataGrid Phase 37 交互", () => {
@@ -189,6 +190,54 @@ describe("DataGrid Phase 37 交互", () => {
     expect(useGridInteractionStore.getState().selection?.rows).toEqual([0]);
   });
 
+  it("只把行号勾选上报给 AI，普通单元格焦点不冒充已选记录", async () => {
+    vi.mocked(useVirtualizer).mockImplementation(((options: { count: number; horizontal?: boolean }) => ({ getTotalSize: () => 80, getVirtualItems: () => options.horizontal ? [{ index: 0, start: 0 }, { index: 1, start: 240 }, { index: 2, start: 360 }, { index: 3, start: 480 }, { index: 4, start: 600 }] : Array.from({ length: options.count }, (_, index) => ({ index, start: index * 40 })) })) as never);
+    const onSelectionChange = vi.fn();
+    const { rerender } = render(<DataGrid viewId="ai-row-selection" data={twoRowData} config={config} onConfigChange={vi.fn()} onCreate={vi.fn()} onOpenDetail={vi.fn()} onUpdateCell={vi.fn()} onSelectionChange={onSelectionChange} />);
+
+    fireEvent.pointerDown(screen.getByRole("gridcell", { name: /第 1 行，名称，旧标题/ }));
+    await waitFor(() => expect(onSelectionChange).toHaveBeenLastCalledWith([]));
+
+    const rowHeaders = screen.getAllByRole("rowheader");
+    fireEvent.pointerDown(rowHeaders[0]);
+    await waitFor(() => expect(onSelectionChange).toHaveBeenLastCalledWith(["record-1"]));
+    expect(rowHeaders[0]).toHaveClass("is-selected");
+    expect(rowHeaders[1]).not.toHaveClass("is-selected");
+
+    const reorderedData = { ...twoRowData, records: [...twoRowData.records].reverse() };
+    rerender(<DataGrid viewId="ai-row-selection" data={reorderedData} config={config} onConfigChange={vi.fn()} onCreate={vi.fn()} onOpenDetail={vi.fn()} onUpdateCell={vi.fn()} onSelectionChange={onSelectionChange} />);
+    await waitFor(() => expect(onSelectionChange).toHaveBeenLastCalledWith(["record-1"]));
+    await waitFor(() => {
+      const reorderedHeaders = screen.getAllByRole("rowheader");
+      expect(reorderedHeaders[0]).not.toHaveClass("is-selected");
+      expect(reorderedHeaders[1]).toHaveClass("is-selected");
+    });
+
+    rerender(<DataGrid viewId="ai-row-selection" data={{ ...reorderedData, records: [reorderedData.records[0]] }} config={config} onConfigChange={vi.fn()} onCreate={vi.fn()} onOpenDetail={vi.fn()} onUpdateCell={vi.fn()} onSelectionChange={onSelectionChange} />);
+    await waitFor(() => expect(onSelectionChange).toHaveBeenLastCalledWith([]));
+    expect(screen.getByRole("rowheader")).not.toHaveClass("is-selected");
+
+    fireEvent.pointerDown(screen.getByRole("gridcell", { name: /第 1 行，名称，第二条/ }));
+    await waitFor(() => expect(onSelectionChange).toHaveBeenLastCalledWith([]));
+  });
+
+  it("父级重渲染更换内联回调时保留稳定行选择", async () => {
+    const firstCallback = vi.fn();
+    const props = { viewId: "inline-callback", data, config, onConfigChange: vi.fn(), onCreate: vi.fn(), onOpenDetail: vi.fn(), onUpdateCell: vi.fn() };
+    const { rerender } = render(<DataGrid {...props} onSelectionChange={firstCallback} />);
+    fireEvent.pointerDown(screen.getByRole("rowheader"));
+    await waitFor(() => expect(firstCallback).toHaveBeenLastCalledWith(["record-1"]));
+
+    const replacementCallback = vi.fn();
+    rerender(<DataGrid {...props} onSelectionChange={replacementCallback} />);
+
+    expect(replacementCallback).not.toHaveBeenCalledWith([]);
+    expect(screen.getByRole("rowheader")).toHaveClass("is-selected");
+
+    rerender(<DataGrid {...props} data={{ ...data, records: [...data.records] }} onSelectionChange={replacementCallback} />);
+    await waitFor(() => expect(replacementCallback).toHaveBeenLastCalledWith(["record-1"]));
+  });
+
   it("右键已有矩形选区内的单元格不会先坍缩选区", () => {
     render(<DataGrid viewId="context-range" data={data} config={config} onConfigChange={vi.fn()} onCreate={vi.fn()} onOpenDetail={vi.fn()} onUpdateCell={vi.fn()} />);
     const title = screen.getByRole("gridcell", { name: /名称，旧标题/ });
@@ -198,6 +247,16 @@ describe("DataGrid Phase 37 交互", () => {
     fireEvent.pointerDown(title, { button: 2 });
 
     expect(useGridInteractionStore.getState().selection?.range).toEqual({ anchor: { row: 0, column: 0 }, focus: { row: 0, column: 1 } });
+  });
+
+  it("右键未选中行时视觉选择与 AI 稳定记录选择同步", async () => {
+    const onSelectionChange = vi.fn();
+    render(<DataGrid viewId="context-row-ai" data={data} config={config} onConfigChange={vi.fn()} onCreate={vi.fn()} onOpenDetail={vi.fn()} onUpdateCell={vi.fn()} onSelectionChange={onSelectionChange} />);
+
+    fireEvent.contextMenu(screen.getByRole("rowheader"));
+
+    await waitFor(() => expect(onSelectionChange).toHaveBeenLastCalledWith(["record-1"]));
+    expect(screen.getByRole("rowheader")).toHaveClass("is-selected");
   });
 
   it("在网格内使用 ⌘Z 撤销存储操作并给出反馈", async () => {

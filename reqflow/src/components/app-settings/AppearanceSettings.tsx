@@ -4,6 +4,7 @@ import type { SemanticToken } from "../../types/theme";
 import { ThemeColorField } from "./ThemeColorField";
 import { ThemePreview } from "./ThemePreview";
 import { ModuleColorSection } from "./ModuleColorSection";
+import { useLayoutStore, type AppearanceMode } from "../../stores/layoutStore";
 
 const SEMANTIC_LABELS: Record<SemanticToken, string> = {
   backgroundCanvas: "应用底色",
@@ -40,6 +41,8 @@ export function AppearanceSettings({ onClose }: { onClose: () => void }) {
   const resetDraft = useThemeStore((state) => state.resetDraft);
   const cancelDraft = useThemeStore((state) => state.cancelDraft);
   const applyDraft = useThemeStore((state) => state.applyDraft);
+  const appearanceMode = useLayoutStore((state) => state.appearanceMode);
+  const setAppearanceMode = useLayoutStore((state) => state.setAppearanceMode);
   const [appliedNotice, setAppliedNotice] = useState(false);
   const startedDraft = useRef(false);
 
@@ -83,8 +86,16 @@ export function AppearanceSettings({ onClose }: { onClose: () => void }) {
         <div className="mx-auto max-w-2xl">
           <div className="mb-5">
             <h1 className="m-0 text-[16px] font-[590] text-(--module-scope-text-primary)">外观</h1>
-            <p className="m-0 mt-1 text-[12.5px] text-(--module-scope-text-secondary)">调整语义色。中性色可用于结构层级，应用前会执行可读性门禁。</p>
+            <p className="m-0 mt-1 text-[12.5px] text-(--module-scope-text-secondary)">选择系统外观模式，并可继续调整语义色。</p>
           </div>
+          <fieldset className="mb-5 rounded-(--r-md) border border-(--module-scope-border-subtle) p-3">
+            <legend className="px-1 text-[12.5px] font-[590] text-(--module-scope-context-strong)">外观模式</legend>
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="外观模式">
+              {([["system", "跟随系统"], ["light", "浅色"], ["dark", "深色"]] as Array<[AppearanceMode, string]>).map(([mode, label]) => (
+                <button key={mode} type="button" role="radio" aria-checked={appearanceMode === mode} onClick={() => setAppearanceMode(mode)} className={`rounded-(--r-sm) border px-3 py-2 text-[12.5px] ${appearanceMode === mode ? "border-(--module-scope-action-base) bg-(--module-scope-action-soft) text-(--module-scope-action-strong)" : "border-(--module-scope-border-subtle) bg-transparent text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft)"}`}>{label}</button>
+              ))}
+            </div>
+          </fieldset>
           {draftIssues.length > 0 && (
             <div role="alert" className="mb-4 rounded-(--r-md) border border-(--module-scope-feedback-danger) bg-(--module-scope-feedback-danger-soft) p-3">
               <p className="m-0 text-[12.5px] font-[550] text-(--module-scope-feedback-danger)">当前草稿不能应用</p>

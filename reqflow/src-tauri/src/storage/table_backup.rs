@@ -6,6 +6,8 @@ use super::error::{StorageError, StorageErrorCode};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeletedTable {
     table: TableRow,
+    project_updated_at: String,
+    delete_updated_at: String,
     table_config_json: String,
     table_config_updated_at: String,
     groups: Vec<FieldGroupRow>,
@@ -17,6 +19,20 @@ pub struct DeletedTable {
     values: Vec<CellValueRow>,
     multi_values: Vec<MultiSelectValueRow>,
     attachments: Vec<AttachmentRow>,
+}
+
+impl DeletedTable {
+    pub fn table_id(&self) -> &str {
+        &self.table.id
+    }
+
+    pub fn project_updated_at(&self) -> &str {
+        &self.project_updated_at
+    }
+
+    pub fn delete_updated_at(&self) -> &str {
+        &self.delete_updated_at
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -102,7 +118,16 @@ struct CellValueRow {
     updated_at: String,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct AttachmentRow { id: String, record_id: String, field_id: String, relative_path: String, original_name: String, media_type: Option<String>, byte_size: i64, created_at: String }
+struct AttachmentRow {
+    id: String,
+    record_id: String,
+    field_id: String,
+    relative_path: String,
+    original_name: String,
+    media_type: Option<String>,
+    byte_size: i64,
+    created_at: String,
+}
 
 include!("table_backup_mutations.rs");
 include!("table_backup_capture.rs");

@@ -1,4 +1,4 @@
-import { loadAIConversations, deleteTableAIData } from "./persistence";
+import { loadAIConversations, deleteTableAIData, stageTableAIDataDeletion } from "./persistence";
 import { getRecordTitle, normalizeTableSnapshot } from "./tableSnapshot";
 import type { TableDataAdapter, TableEvent, TableSnapshot } from "./tableDataAdapter";
 
@@ -129,4 +129,8 @@ export async function deleteTableAIDataAndVerify(tableId: string): Promise<void>
   if (remaining.value.length > 0 || remaining.issues.length > 0) {
     throw new Error(`表 ${tableId} 删除后仍有 AI 会话或存储问题`);
   }
+}
+
+export async function prepareTableAIDataDeletion(tableId: string) {
+  return stageTableAIDataDeletion(tableId);
 }

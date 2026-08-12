@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use reqwest::{header::CONTENT_TYPE, Client, Response, Url};
+use reqwest::{header::CONTENT_TYPE, redirect::Policy, Client, Response, Url};
 use serde_json::json;
 
 use super::errors::{AIError, AIErrorCode};
@@ -47,9 +47,10 @@ impl ProviderClient {
             client_builder = client_builder.no_proxy();
         }
         let client = client_builder
+            .redirect(Policy::none())
             .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(120))
-            .user_agent("ReqFlow AI Assistant")
+            .user_agent("Morfra AI Assistant")
             .build()
             .map_err(|_| {
                 AIError::new(

@@ -1,6 +1,6 @@
-pub mod backup;
-pub mod attachments;
 pub mod activity_repository;
+pub mod attachments;
+pub mod backup;
 pub mod benchmark;
 pub mod commands;
 pub mod connection;

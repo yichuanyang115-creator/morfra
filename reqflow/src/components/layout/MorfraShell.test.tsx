@@ -74,7 +74,8 @@ describe("MorfraShell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "打开 AI 表格助手" }));
 
-    await waitFor(() => expect(screen.getByRole("tab", { name: "AI" })).toHaveAttribute("aria-selected", "true"));
+    await waitFor(() => expect(screen.getByLabelText("AI 表格助手")).toBeInTheDocument());
+    expect(screen.queryByRole("tab", { name: "详情" })).not.toBeInTheDocument();
   });
 
   it("窄窗口导航入口打开临时浮层，选择项目后关闭", async () => {
@@ -89,13 +90,34 @@ describe("MorfraShell", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: "关闭项目导航" })).not.toBeInTheDocument());
   });
 
-  it("外观入口按跟随系统、浅色、深色循环并写入根节点", async () => {
+  it("窄窗口折叠轨道隐藏项目包长文案，导航浮层重新显示", () => {
+    setViewport(960, 800);
+    useProjectStore.setState({
+      projects: [{
+        id: "project-1",
+        name: "测试项目",
+        sources: [],
+        storageSnapshot: {
+          manifest: { id: "project-1", name: "测试项目", formatVersion: 3, createdAt: "2026-08-12T00:00:00.000Z", updatedAt: "2026-08-12T00:00:00.000Z" },
+          tables: [],
+        },
+      }],
+    });
+    const { container } = render(<MorfraShell mainContent={<div>主表格</div>} />);
+
+    const scope = screen.getByText("Morfra 本地项目包");
+    expect(scope).toHaveClass("morfra-sidebar-scope");
+    expect(container.querySelector(".morfra-sidebar-overlay-panel")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "展开导航" }));
+    expect(container.querySelector(".morfra-sidebar-overlay-panel .morfra-sidebar-scope")).toHaveTextContent("Morfra 本地项目包");
+  });
+
+  it("标题栏不重复承载文件或外观全局操作", () => {
     render(<MorfraShell mainContent={<div>主表格</div>} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "切换外观，当前为跟随系统" }));
-    await waitFor(() => expect(document.documentElement.dataset.appearance).toBe("light"));
-    fireEvent.click(screen.getByRole("button", { name: "切换外观，当前为浅色" }));
-    await waitFor(() => expect(document.documentElement.dataset.appearance).toBe("dark"));
+    expect(screen.queryByRole("button", { name: "文件" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /切换外观/ })).not.toBeInTheDocument();
   });
 
   it("AI 面板的设置事件在 Morfra 宿主打开可关闭的服务设置", async () => {
@@ -104,8 +126,27 @@ describe("MorfraShell", () => {
 
     window.dispatchEvent(new CustomEvent("open-ai-service-settings"));
 
-    await waitFor(() => expect(screen.getByRole("dialog", { name: "AI 服务设置" })).toBeInTheDocument());
-    fireEvent.click(screen.getAllByRole("button", { name: "关闭 AI 服务设置" })[1]);
-    await waitFor(() => expect(screen.queryByRole("dialog", { name: "AI 服务设置" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("dialog", { name: "应用设置" })).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "AI 服务" })).toHaveAttribute("aria-current", "page");
+    fireEvent.click(screen.getAllByRole("button", { name: "关闭应用设置" })[1]);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "应用设置" })).not.toBeInTheDocument());
+  });
+
+  it("AI 收起后完成生成在标题栏显示提示，重新打开后清除", async () => {
+    render(<MorfraShell mainContent={<div>主表格</div>} />);
+
+    window.dispatchEvent(new CustomEvent("ai-generation-completed"));
+    await waitFor(() => expect(screen.getByRole("status", { name: "AI 已完成" })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "打开 AI 表格助手" }));
+
+    await waitFor(() => expect(screen.queryByRole("status", { name: "AI 已完成" })).not.toBeInTheDocument());
+  });
+
+  it("AI 面板内部不渲染第二个关闭按钮", () => {
+    useLayoutStore.setState({ hydrated: true, aiOpen: true, activeRightPanel: "ai" });
+    render(<MorfraShell mainContent={<div>主表格</div>} />);
+
+    expect(screen.queryByRole("button", { name: "收起 AI 面板" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "关闭 AI 表格助手" })).toBeInTheDocument();
   });
 });

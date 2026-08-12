@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use serde_json::{json, Value};
 
-use super::connection::timestamp;
 use super::activity_repository;
+use super::connection::timestamp;
 use super::domain::{
     FieldGroupSummary, FieldOptionSummary, FieldSummary, OptionUsage, TableDataSnapshot,
 };

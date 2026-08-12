@@ -115,6 +115,10 @@
   padding: 14px 10px 10px;
 }
 
+.morfra-sidebar-overlay-panel .morfra-sidebar-scope {
+  display: block;
+}
+
 .morfra-sidebar-overlay-panel .morfra-sidebar-heading > span:first-child,
 .morfra-sidebar-overlay-panel .morfra-sidebar-count,
 .morfra-sidebar-overlay-panel .morfra-project-name {
@@ -157,6 +161,7 @@
   .morfra-sidebar-heading > span:first-child,
   .morfra-sidebar-count,
   .morfra-project-name,
+  .morfra-sidebar-scope,
   .morfra-sidebar-section,
   .morfra-sidebar-create,
   .morfra-sidebar-error {
@@ -177,6 +182,7 @@
 .morfra-shell[data-sidebar-open="false"] .morfra-sidebar-heading > span:first-child,
 .morfra-shell[data-sidebar-open="false"] .morfra-sidebar-count,
 .morfra-shell[data-sidebar-open="false"] .morfra-project-name,
+.morfra-shell[data-sidebar-open="false"] .morfra-sidebar-scope,
 .morfra-shell[data-sidebar-open="false"] .morfra-sidebar-section,
 .morfra-shell[data-sidebar-open="false"] .morfra-sidebar-create,
 .morfra-shell[data-sidebar-open="false"] .morfra-sidebar-error {

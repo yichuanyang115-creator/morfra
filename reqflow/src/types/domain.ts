@@ -58,9 +58,21 @@ export interface RecordData {
 
 export interface TableDataSnapshot {
   tableId: string;
+  /** 与字段、记录、附件在同一 SQLite 读事务内捕获；旧测试夹具可省略。 */
+  tableName?: string;
+  titleFieldId?: string;
   groups: FieldGroupSummary[];
   fields: FieldSummary[];
   records: RecordData[];
+  attachments?: TableAttachmentMetadata[];
+}
+
+export interface TableAttachmentMetadata {
+  id: string;
+  recordId: string;
+  fieldId: string;
+  originalName: string;
+  mediaType: string | null;
 }
 
 export interface OptionUsage {

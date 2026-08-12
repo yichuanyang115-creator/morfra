@@ -1,7 +1,7 @@
-import type { ActiveTableDescriptor, TableDataAdapter, TableSnapshot } from "../../lib/ai/tableDataAdapter";
+import type { ActiveTableDescriptor, AIHostActionResult, TableDataAdapter, TableSnapshot } from "../../lib/ai/tableDataAdapter";
 
 export interface AIHostActions {
-  openRecord: (input: { tableId: string; recordId: string }) => void;
+  openRecord: (input: { tableId: string; recordId: string }) => Promise<AIHostActionResult>;
   notifyGenerationCompleted?: (input: { tableId: string; conversationId: string }) => void;
 }
 

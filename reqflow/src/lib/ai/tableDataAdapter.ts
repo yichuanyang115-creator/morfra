@@ -16,6 +16,15 @@ export type {
   TableAttachment,
 } from "./tableSnapshot";
 
+export type AIHostActionErrorCode = "table-not-found" | "record-not-found" | "host-unavailable";
+export interface AIHostActionError {
+  ok: false;
+  code: AIHostActionErrorCode;
+  message: string;
+  retryable: boolean;
+}
+export type AIHostActionResult = { ok: true } | AIHostActionError;
+
 /** 主产品提供给 AI Core 的唯一只读表数据端口。 */
 export interface TableDataAdapter {
   getActiveTable(): ActiveTableDescriptor | null;

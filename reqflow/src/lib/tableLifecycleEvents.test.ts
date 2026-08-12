@@ -40,6 +40,28 @@ describe("tableLifecycleEvents", () => {
     expect(deleted).not.toHaveBeenCalled();
   });
 
+  it("物理表删除失败时回滚已暂存的 AI 数据", async () => {
+    const rollback = vi.fn(async () => undefined);
+    const commit = vi.fn(async () => undefined);
+    cleanups.push(onBeforeTableDeleted(async () => ({ rollback, commit })));
+
+    await expect(deleteTableWithLifecycle("table-a", async () => { throw new Error("物理删除失败"); })).rejects.toThrow("物理删除失败");
+
+    expect(rollback).toHaveBeenCalledOnce();
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it("AI 最终清理失败时恢复物理表并回滚 AI 数据", async () => {
+    const rollback = vi.fn(async () => undefined);
+    const restorePhysical = vi.fn(async () => undefined);
+    cleanups.push(onBeforeTableDeleted(async () => ({ rollback, commit: async () => { throw new Error("AI 最终清理失败"); } })));
+
+    await expect(deleteTableWithLifecycle("table-a", async () => "deleted", restorePhysical)).rejects.toThrow("AI 最终清理失败");
+
+    expect(restorePhysical).toHaveBeenCalledOnce();
+    expect(rollback).toHaveBeenCalledOnce();
+  });
+
   it("成功路径先完成 AI 清理，再删物理表，最后通知 UI", async () => {
     const calls: string[] = [];
     cleanups.push(onBeforeTableDeleted(async () => { calls.push("ai-cleanup"); }));

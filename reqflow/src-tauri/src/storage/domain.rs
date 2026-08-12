@@ -73,9 +73,22 @@ pub struct RecordData {
 #[serde(rename_all = "camelCase")]
 pub struct TableDataSnapshot {
     pub table_id: String,
+    pub table_name: String,
+    pub title_field_id: String,
     pub groups: Vec<FieldGroupSummary>,
     pub fields: Vec<FieldSummary>,
     pub records: Vec<RecordData>,
+    pub attachments: Vec<TableAttachmentMetadata>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct TableAttachmentMetadata {
+    pub id: String,
+    pub record_id: String,
+    pub field_id: String,
+    pub original_name: String,
+    pub media_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

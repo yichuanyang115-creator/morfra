@@ -3,9 +3,11 @@ import { getStorageDetailFields, updateStorageDetailFields } from "../lib/ipc/st
 
 interface StorageSelectionState {
   selectedRecordByTable: Record<string, string | undefined>;
+  selectedRecordIdsByTable: Record<string, string[] | undefined>;
   detailFieldsByTable: Record<string, string[] | undefined>;
   detailLoadErrorByTable: Record<string, string | undefined>;
   selectRecord: (tableId: string, recordId: string | null) => void;
+  setSelectedRecords: (tableId: string, recordIds: string[]) => void;
   loadDetailFields: (tableId: string) => Promise<void>;
   setDetailFields: (tableId: string, fieldIds: string[]) => Promise<void>;
 }
@@ -14,9 +16,16 @@ function storageKey(tableId: string): string { return `morfra.storage.detail-fie
 
 export const useStorageSelectionStore = create<StorageSelectionState>((set) => ({
   selectedRecordByTable: {},
+  selectedRecordIdsByTable: {},
   detailFieldsByTable: {},
   detailLoadErrorByTable: {},
-  selectRecord: (tableId, recordId) => set((state) => ({ selectedRecordByTable: { ...state.selectedRecordByTable, [tableId]: recordId ?? undefined } })),
+  selectRecord: (tableId, recordId) => set((state) => ({
+    selectedRecordByTable: { ...state.selectedRecordByTable, [tableId]: recordId ?? undefined },
+    selectedRecordIdsByTable: { ...state.selectedRecordIdsByTable, [tableId]: recordId ? [recordId] : [] },
+  })),
+  setSelectedRecords: (tableId, recordIds) => set((state) => ({
+    selectedRecordIdsByTable: { ...state.selectedRecordIdsByTable, [tableId]: [...new Set(recordIds)] },
+  })),
   loadDetailFields: async (tableId) => {
     try {
       const ids = await getStorageDetailFields(tableId);

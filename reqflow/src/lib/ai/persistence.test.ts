@@ -41,9 +41,18 @@ vi.mock("@tauri-apps/plugin-fs", () => ({
       throw new Error("rename failed");
     }
     const content = fsMock.files.get(from);
-    if (content === undefined) throw new Error("missing source");
-    fsMock.files.set(to, content);
-    fsMock.files.delete(from);
+    if (content !== undefined) {
+      fsMock.files.set(to, content);
+      fsMock.files.delete(from);
+      return;
+    }
+    const prefix = `${from}/`;
+    const matchingFiles = [...fsMock.files.entries()].filter(([path]) => path.startsWith(prefix));
+    if (matchingFiles.length === 0) throw new Error("missing source");
+    for (const [path, value] of matchingFiles) {
+      fsMock.files.set(`${to}/${path.slice(prefix.length)}`, value);
+      fsMock.files.delete(path);
+    }
   }),
   remove: vi.fn(async (path: string, options?: { recursive?: boolean }) => {
     if (options?.recursive) {
@@ -70,6 +79,7 @@ const {
   saveAIConversation,
   saveAIPanelPreference,
   saveAIProviderConfigs,
+  stageTableAIDataDeletion,
 } = await import("./persistence");
 const PREFERENCE: AIPanelPreference = {
   open: true,
@@ -228,6 +238,18 @@ describe("AI 本地持久化", () => {
 
     expect((await loadAIConversations("table-a")).value).toEqual([]);
     expect((await loadAIConversations("table-b")).value.map((item) => item.id)).toEqual(["conversation-b"]);
+  });
+
+  it("分阶段删表可在物理删除失败时恢复 AI 会话，成功后才最终清理", async () => {
+    await saveAIConversation(conversation("table-a", "conversation-a"));
+    const staged = await stageTableAIDataDeletion("table-a");
+    expect((await loadAIConversations("table-a")).value).toEqual([]);
+    await staged.rollback();
+    expect((await loadAIConversations("table-a")).value.map((item) => item.id)).toEqual(["conversation-a"]);
+
+    const committed = await stageTableAIDataDeletion("table-a");
+    await committed.commit();
+    expect((await loadAIConversations("table-a")).value).toEqual([]);
   });
 
   it("删表会等待已经开始的保存，返回后目标表数据不会复活", async () => {

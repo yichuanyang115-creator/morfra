@@ -22,7 +22,7 @@ export function ThemePreview({ theme, hasValidationErrors = false }: ThemePrevie
       </div>
       <div data-testid="theme-preview-surface" ref={previewRef} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-(--r-md) border border-(--module-scope-border-subtle) bg-(--module-scope-background-canvas) p-2.5">
         <div className="theme-module-topbar flex h-8 items-center justify-between rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-canvas) px-2.5">
-          <span className="text-[11px] font-[590] text-(--module-scope-text-primary)">reqflow / 示例项目</span>
+          <span className="text-[11px] font-[590] text-(--module-scope-text-primary)">Morfra / 示例项目</span>
           <div className="flex items-center gap-1">
             <button type="button" className="rounded-(--r-sm) border-none bg-transparent px-1.5 py-0.5 text-[10px] text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-action-strong)">
               默认 / 悬停
@@ -101,10 +101,10 @@ export function ThemePreview({ theme, hasValidationErrors = false }: ThemePrevie
           </div>
         </div>
         <button type="button" disabled className="rounded-(--r-sm) border border-(--module-scope-border-strong) bg-(--module-scope-background-surface) px-2 py-1.5 text-left text-[10px] text-(--module-scope-text-tertiary) disabled:cursor-not-allowed">
-          禁用控件 · 保留色相
+          禁用控件 · 语义弱化
         </button>
         <div className="rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-elevated) p-2 text-[11px] text-(--module-scope-text-tertiary)">
-          禁用态保留色相，不使用中性灰。
+          禁用态使用当前语义中性色阶，并保持可读性。
         </div>
       </div>
     </aside>

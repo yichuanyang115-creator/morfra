@@ -1,4 +1,9 @@
 fn capture(transaction: &Transaction<'_>, table_id: &str) -> Result<DeletedTable, StorageError> {
+    let project_updated_at = transaction.query_row(
+        "SELECT updated_at FROM project_meta WHERE id = 'project'",
+        [],
+        |row| row.get(0),
+    )?;
     let table = transaction.query_row(
         "SELECT id, project_id, name, position, created_at, updated_at FROM data_tables WHERE id = ?1",
         [table_id],
@@ -130,6 +135,8 @@ fn capture(transaction: &Transaction<'_>, table_id: &str) -> Result<DeletedTable
     for row in statement.query_map([table_id], |row| Ok(AttachmentRow { id: row.get(0)?, record_id: row.get(1)?, field_id: row.get(2)?, relative_path: row.get(3)?, original_name: row.get(4)?, media_type: row.get(5)?, byte_size: row.get(6)?, created_at: row.get(7)? }))? { attachments.push(row?); }
     Ok(DeletedTable {
         table,
+        project_updated_at,
+        delete_updated_at: String::new(),
         table_config_json: table_config.0,
         table_config_updated_at: table_config.1,
         groups,

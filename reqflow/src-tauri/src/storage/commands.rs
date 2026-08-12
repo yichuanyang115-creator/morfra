@@ -3,8 +3,8 @@ use std::sync::Mutex;
 
 use tauri::State;
 
-use super::backup::{self, BackupInfo};
 use super::attachments::{self, Attachment};
+use super::backup::{self, BackupInfo};
 use super::benchmark::{self, BenchmarkReport};
 use super::connection;
 use super::error::{StorageError, StorageErrorCode};
@@ -155,22 +155,40 @@ pub fn storage_restore_project(
 }
 
 #[tauri::command]
-pub fn storage_add_attachment(record_id: String, field_id: String, source_path: String, state: State<'_, Mutex<StorageState>>) -> Result<Attachment, StorageError> {
+pub fn storage_add_attachment(
+    record_id: String,
+    field_id: String,
+    source_path: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<Attachment, StorageError> {
     let path = active_project_path(state.inner())?;
     let paths = connection::ProjectPaths::existing(&path)?;
     let mut opened = connection::open_project(&path)?;
-    attachments::add_file(&paths, &mut opened.connection, &record_id, &field_id, &PathBuf::from(source_path))
+    attachments::add_file(
+        &paths,
+        &mut opened.connection,
+        &record_id,
+        &field_id,
+        &PathBuf::from(source_path),
+    )
 }
 
 #[tauri::command]
-pub fn storage_list_attachments(record_id: String, field_id: String, state: State<'_, Mutex<StorageState>>) -> Result<Vec<Attachment>, StorageError> {
+pub fn storage_list_attachments(
+    record_id: String,
+    field_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<Vec<Attachment>, StorageError> {
     let path = active_project_path(state.inner())?;
     let opened = connection::open_project(&path)?;
     attachments::list_for_cell(&opened.connection, &record_id, &field_id)
 }
 
 #[tauri::command]
-pub fn storage_remove_attachment(attachment_id: String, state: State<'_, Mutex<StorageState>>) -> Result<(), StorageError> {
+pub fn storage_remove_attachment(
+    attachment_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<(), StorageError> {
     let path = active_project_path(state.inner())?;
     let paths = connection::ProjectPaths::existing(&path)?;
     let mut opened = connection::open_project(&path)?;
@@ -178,12 +196,30 @@ pub fn storage_remove_attachment(attachment_id: String, state: State<'_, Mutex<S
 }
 
 #[tauri::command]
-pub fn storage_replace_attachment(attachment_id: String, source_path: String, state: State<'_, Mutex<StorageState>>) -> Result<Attachment, StorageError> { let path = active_project_path(state.inner())?; let paths = connection::ProjectPaths::existing(&path)?; let mut opened = connection::open_project(&path)?; attachments::replace_file(&paths, &mut opened.connection, &attachment_id, &PathBuf::from(source_path)) }
+pub fn storage_replace_attachment(
+    attachment_id: String,
+    source_path: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<Attachment, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let paths = connection::ProjectPaths::existing(&path)?;
+    let mut opened = connection::open_project(&path)?;
+    attachments::replace_file(
+        &paths,
+        &mut opened.connection,
+        &attachment_id,
+        &PathBuf::from(source_path),
+    )
+}
 
 #[tauri::command]
-pub fn storage_attachment_path(attachment_id: String, state: State<'_, Mutex<StorageState>>) -> Result<String, StorageError> {
+pub fn storage_attachment_path(
+    attachment_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<String, StorageError> {
     let path = active_project_path(state.inner())?;
     let paths = connection::ProjectPaths::existing(&path)?;
     let opened = connection::open_project(&path)?;
-    attachments::resolve_path(&paths, &attachment_id, &opened.connection).map(|path| path.to_string_lossy().into_owned())
+    attachments::resolve_path(&paths, &attachment_id, &opened.connection)
+        .map(|path| path.to_string_lossy().into_owned())
 }

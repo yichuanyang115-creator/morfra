@@ -8,6 +8,11 @@ const persistenceMocks = vi.hoisted(() => ({
   saveAIProviderConfigs: vi.fn(),
   loadAIPanelPreference: vi.fn(),
   saveAIPanelPreference: vi.fn(),
+  clearAllAIConversationData: vi.fn(),
+  loadAIConversationIndex: vi.fn(),
+  loadAIConversations: vi.fn(),
+  saveAIConversation: vi.fn(),
+  deleteAIConversation: vi.fn(),
 }));
 const keychainMocks = vi.hoisted(() => ({
   setAIProviderSecret: vi.fn(),
@@ -46,6 +51,7 @@ describe("AIServiceSettings", () => {
     vi.clearAllMocks();
     persistenceMocks.saveAIProviderConfigs.mockResolvedValue(undefined);
     persistenceMocks.saveAIPanelPreference.mockResolvedValue(undefined);
+    persistenceMocks.clearAllAIConversationData.mockResolvedValue(undefined);
     keychainMocks.setAIProviderSecret.mockResolvedValue(undefined);
     keychainMocks.deleteAIProviderSecret.mockResolvedValue(undefined);
     providerMocks.listAIModels.mockResolvedValue({ modelIds: ["model-a", "model-b"], source: "remote" });
@@ -196,5 +202,29 @@ describe("AIServiceSettings", () => {
     await user.click(dialogDelete!);
     expect(useAIProviderStore.getState().configs).toEqual([]);
     expect(keychainMocks.deleteAIProviderSecret).toHaveBeenCalledWith("provider-a");
+  });
+
+  it("清空全部 AI 对话历史需要二次确认并给出成功反馈", async () => {
+    const user = userEvent.setup();
+    render(<AIServiceSettings />);
+
+    await user.click(screen.getByRole("button", { name: "清空全部 AI 对话历史" }));
+    expect(screen.getByText(/所有表的 AI 会话和消息都会被删除/)).toBeInTheDocument();
+    expect(persistenceMocks.clearAllAIConversationData).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "确认清空" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("已清空全部 AI 对话历史");
+    expect(persistenceMocks.clearAllAIConversationData).toHaveBeenCalledOnce();
+  });
+
+  it("清空历史失败会明确告警并允许重试", async () => {
+    const user = userEvent.setup();
+    persistenceMocks.clearAllAIConversationData.mockRejectedValueOnce(new Error("disk busy"));
+    render(<AIServiceSettings />);
+
+    await user.click(screen.getByRole("button", { name: "清空全部 AI 对话历史" }));
+    await user.click(screen.getByRole("button", { name: "确认清空" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("清空失败");
+    expect(screen.getByRole("button", { name: "清空全部 AI 对话历史" })).toBeInTheDocument();
   });
 });

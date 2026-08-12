@@ -14,13 +14,13 @@ export function AppSettingsNav({ section, onSelect }: AppSettingsNavProps) {
   return (
     <nav aria-label="应用设置导航" className="flex w-48 flex-none flex-col gap-0.5 border-r border-(--module-scope-border-subtle) p-3">
       <span className="px-2.5 py-1 font-(family-name:--font-mono) text-[11px] tracking-[0.04em] text-(--module-scope-text-tertiary)">应用设置</span>
-      <button type="button" className={navItemClass(section === "appearance")} onClick={() => onSelect("appearance")}>
+      <button type="button" aria-current={section === "appearance" ? "page" : undefined} className={navItemClass(section === "appearance")} onClick={() => onSelect("appearance")}>
         外观
       </button>
-      <button type="button" className={navItemClass(section === "ai-service")} onClick={() => onSelect("ai-service")}>
+      <button type="button" aria-current={section === "ai-service" ? "page" : undefined} className={navItemClass(section === "ai-service")} onClick={() => onSelect("ai-service")}>
         AI 服务
       </button>
-      <button type="button" className={navItemClass(section === "version")} onClick={() => onSelect("version")}>
+      <button type="button" aria-current={section === "version" ? "page" : undefined} className={navItemClass(section === "version")} onClick={() => onSelect("version")}>
         版本
       </button>
     </nav>

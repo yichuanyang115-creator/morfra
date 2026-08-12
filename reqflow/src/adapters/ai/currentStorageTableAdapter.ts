@@ -5,6 +5,7 @@ import { currentProject, type ProjectState, useProjectStore } from "../../stores
 import { useStorageSelectionStore } from "../../stores/storageSelectionStore";
 import { useTableDataStore } from "../../stores/tableDataStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
+import type { AIHostActionResult, TableAttachment } from "../../lib/ai/tableDataAdapter";
 import type { FieldSummary, RecordData, TableDataSnapshot, TableSummary } from "../../types/domain";
 
 export interface StorageStore<State> {
@@ -26,6 +27,7 @@ export interface CurrentStorageTableDataState {
 
 export interface CurrentStorageSelectionState {
   selectedRecordByTable: Record<string, string | undefined>;
+  selectedRecordIdsByTable: Record<string, string[] | undefined>;
   selectRecord: (tableId: string, recordId: string | null) => void;
 }
 
@@ -42,7 +44,8 @@ export interface CurrentStorageTableAdapter extends TableDataAdapter {
 }
 
 export interface CurrentStorageHostActions {
-  openRecord: (input: { tableId: string; recordId: string }) => void;
+  openRecord: (input: { tableId: string; recordId: string }) => Promise<AIHostActionResult>;
+  notifyGenerationCompleted: (input: { tableId: string; conversationId: string }) => void;
 }
 
 const defaultDependencies: CurrentStorageTableAdapterDependencies = {
@@ -76,8 +79,8 @@ function mapFieldType(field: FieldSummary): TableFieldType {
   switch (field.fieldType) {
     case "number": return "number";
     case "progress": return "percent";
-    case "select": return field.options.length > 0 ? "singleSelect" : "text";
-    case "multi_select": return field.options.length > 0 ? "multiSelect" : "text";
+    case "select": return "singleSelect";
+    case "multi_select": return "multiSelect";
     case "date":
     case "created_time":
     case "updated_time": return "date";
@@ -106,11 +109,13 @@ function scalarText(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
-function valueFor(record: RecordData, source: FieldSummary, field: TableField): unknown {
+function valueFor(attachments: TableDataSnapshot["attachments"], record: RecordData, source: FieldSummary, field: TableField): unknown {
   if (source.fieldType === "auto_number") return record.autoNumber;
   if (source.fieldType === "created_time") return record.createdAt;
   if (source.fieldType === "updated_time") return record.updatedAt;
-  if (source.fieldType === "image" || source.fieldType === "file") return [];
+  if (source.fieldType === "image" || source.fieldType === "file") {
+    return (attachments ?? []).filter((attachment) => attachment.recordId === record.id && attachment.fieldId === source.id).map((attachment): TableAttachment => ({ id: attachment.id, name: attachment.originalName, ...(attachment.mediaType ? { mimeType: attachment.mediaType } : {}) }));
+  }
   const value = source.fieldType === "multi_select" ? record.multiSelectValues[source.id] : record.values[source.id];
 
   if (field.type === "text") {
@@ -119,7 +124,7 @@ function valueFor(record: RecordData, source: FieldSummary, field: TableField): 
   }
   if (field.type === "number" || field.type === "percent") return typeof value === "number" && Number.isFinite(value) ? value : null;
   if (field.type === "singleSelect") return typeof value === "string" && field.options?.some((option) => option.id === value) ? value : null;
-  if (field.type === "multiSelect") return Array.isArray(value) && value.every((id): id is string => typeof id === "string") && value.every((id) => field.options?.some((option) => option.id === id)) ? value : null;
+  if (field.type === "multiSelect") return Array.isArray(value) && value.every((id): id is string => typeof id === "string") && value.every((id) => field.options?.some((option) => option.id === id)) ? value : source.fieldType === "multi_select" ? [] : null;
   if (field.type === "date") return typeof value === "string" ? value : null;
   if (field.type === "checkbox") return typeof value === "boolean" ? value : null;
   if (field.type === "attachment") return [];
@@ -133,13 +138,13 @@ function snapshotFor(dependencies: CurrentStorageTableAdapterDependencies, table
   const fields = sources.map(fieldFor);
   return normalizeTableSnapshot({
     tableId,
-    name: table.name,
+    name: data.tableName ?? table.name,
     schemaVersion: `storage-${project?.storageSnapshot?.manifest.formatVersion ?? 1}`,
-    primaryTitleFieldId: table.titleFieldId,
+    primaryTitleFieldId: data.titleFieldId ?? table.titleFieldId,
     fields,
     records: [...data.records].sort((left, right) => left.position - right.position).map((record) => ({
       id: record.id,
-      values: Object.fromEntries(sources.map((source, index) => [source.id, valueFor(record, source, fields[index])])),
+      values: Object.fromEntries(sources.map((source, index) => [source.id, valueFor(data.attachments, record, source, fields[index])] as const)),
     })),
     capturedAt: new Date().toISOString(),
   });
@@ -170,11 +175,11 @@ export function createCurrentStorageTableAdapter(
     }
   });
   const selectionUnsubscribe = dependencies.selectionStore.subscribe((state, previous) => {
-    if (state.selectedRecordByTable === previous.selectedRecordByTable) return;
+    if (state.selectedRecordIdsByTable === previous.selectedRecordIdsByTable) return;
     const active = activeTableFor(dependencies);
     if (!active) return;
-    const selected = state.selectedRecordByTable[active.id];
-    emit({ type: "selection-changed", tableId: active.id, recordIds: selected ? [selected] : [] });
+    const selected = state.selectedRecordIdsByTable[active.id] ?? [];
+    emit({ type: "selection-changed", tableId: active.id, recordIds: selected });
   });
   const deletionUnsubscribe = dependencies.onTableDeleted?.((tableId) => emit({ type: "table-deleted", tableId }));
 
@@ -187,12 +192,14 @@ export function createCurrentStorageTableAdapter(
       tableFor(dependencies, tableId);
       const cached = dependencies.tableDataStore.getState().dataByTable[tableId];
       const data = cached ?? await dependencies.tableDataStore.getState().load(tableId);
+      if (data.tableId !== tableId) throw new Error(`表快照身份不匹配：期望 ${tableId}，实际 ${data.tableId}`);
       return snapshotFor(dependencies, tableId, data);
     },
     getSelectedRecordIds(tableId) {
-      const selected = dependencies.selectionStore.getState().selectedRecordByTable[tableId];
+      const selected = dependencies.selectionStore.getState().selectedRecordIdsByTable[tableId] ?? [];
       const records = dependencies.tableDataStore.getState().dataByTable[tableId]?.records;
-      return selected && records?.some((record) => record.id === selected) ? [selected] : [];
+      const existing = new Set(records?.map((record) => record.id) ?? []);
+      return selected.filter((recordId) => existing.has(recordId));
     },
     subscribe(listener) {
       listeners.add(listener);
@@ -210,16 +217,24 @@ export function createCurrentStorageTableAdapter(
 }
 
 export function createCurrentStorageHostActions(
-  dependencies: Pick<CurrentStorageTableAdapterDependencies, "projectStore" | "workspaceStore" | "selectionStore"> = defaultDependencies,
+  dependencies: Pick<CurrentStorageTableAdapterDependencies, "projectStore" | "workspaceStore" | "selectionStore" | "tableDataStore"> = defaultDependencies,
   onRecordOpened: () => void = () => undefined,
 ): CurrentStorageHostActions {
   return {
-    openRecord: ({ tableId, recordId }) => {
+    openRecord: async ({ tableId, recordId }) => {
       const project = currentStorageProject(dependencies as CurrentStorageTableAdapterDependencies);
-      if (!project?.storageSnapshot?.tables.some((table) => table.id === tableId)) return;
+      if (!project?.storageSnapshot?.tables.some((table) => table.id === tableId)) return { ok: false, code: "table-not-found", message: "目标表不存在，无法打开引用。", retryable: false };
+      let data = dependencies.tableDataStore.getState().dataByTable[tableId];
+      try { if (!data) data = await dependencies.tableDataStore.getState().load(tableId); } catch { return { ok: false, code: "host-unavailable", message: "表数据暂时不可用，请重试。", retryable: true }; }
+      if (data.tableId !== tableId) return { ok: false, code: "host-unavailable", message: "表数据暂时不可用，请重试。", retryable: true };
+      if (!data.records.some((record) => record.id === recordId)) return { ok: false, code: "record-not-found", message: "这条记录已不存在，请刷新后重试。", retryable: true };
       dependencies.workspaceStore.getState().setActiveTable(project.id, tableId);
       dependencies.selectionStore.getState().selectRecord(tableId, recordId);
       onRecordOpened();
+      return { ok: true };
+    },
+    notifyGenerationCompleted: () => {
+      window.dispatchEvent(new CustomEvent("ai-generation-completed"));
     },
   };
 }

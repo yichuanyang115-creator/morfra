@@ -1,6 +1,13 @@
 mod ai;
 mod storage;
 
+#[cfg(desktop)]
+const MENU_SETTINGS: &str = "morfra-settings";
+#[cfg(desktop)]
+const MENU_NEW_PROJECT: &str = "morfra-new-project";
+#[cfg(desktop)]
+const MENU_OPEN_PROJECT: &str = "morfra-open-project";
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -11,6 +18,22 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_upload::init())
+        .on_menu_event(|app, event| {
+            #[cfg(desktop)]
+            {
+                use tauri::{Emitter, Manager};
+                if let Some(window) = app.get_webview_window("main") {
+                    let emitted = match event.id().as_ref() {
+                        MENU_SETTINGS => window.emit("morfra-open-settings", "appearance"),
+                        MENU_NEW_PROJECT => window.emit("morfra-new-project", ()),
+                        MENU_OPEN_PROJECT => window.emit("morfra-open-project", ()),
+                        _ => return,
+                    };
+                    let _ = emitted;
+                    let _ = window.set_focus();
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             ai::commands::set_ai_provider_secret,
             ai::commands::ai_provider_secret_status,
@@ -36,6 +59,7 @@ pub fn run() {
             storage::lifecycle_commands::storage_rename_project,
             storage::lifecycle_commands::storage_rename_table,
             storage::lifecycle_commands::storage_delete_table,
+            storage::lifecycle_commands::storage_restore_deleted_table,
             storage::lifecycle_commands::storage_reorder_tables,
             storage::lifecycle_commands::storage_create_view,
             storage::lifecycle_commands::storage_rename_view,
@@ -78,6 +102,51 @@ pub fn run() {
             storage::record_commands::storage_save_record_detail_content,
         ])
         .setup(|app| {
+            #[cfg(desktop)]
+            {
+                use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+
+                let settings = MenuItemBuilder::with_id(MENU_SETTINGS, "设置…")
+                    .accelerator("CmdOrCtrl+Comma")
+                    .build(app)?;
+                let app_menu = SubmenuBuilder::new(app, "Morfra")
+                    .about(None)
+                    .separator()
+                    .item(&settings)
+                    .separator()
+                    .services()
+                    .separator()
+                    .hide()
+                    .hide_others()
+                    .show_all()
+                    .separator()
+                    .quit()
+                    .build()?;
+                let file_menu = SubmenuBuilder::new(app, "文件")
+                    .text(MENU_NEW_PROJECT, "新建项目…")
+                    .text(MENU_OPEN_PROJECT, "打开项目…")
+                    .build()?;
+                let edit_menu = SubmenuBuilder::new(app, "编辑")
+                    .undo()
+                    .redo()
+                    .separator()
+                    .cut()
+                    .copy()
+                    .paste()
+                    .select_all()
+                    .build()?;
+                let window_menu = SubmenuBuilder::new(app, "窗口")
+                    .minimize()
+                    .fullscreen()
+                    .separator()
+                    .bring_all_to_front()
+                    .build()?;
+                let menu = MenuBuilder::new(app)
+                    .items(&[&app_menu, &file_menu, &edit_menu, &window_menu])
+                    .build()?;
+                app.set_menu(menu)?;
+            }
+
             // 调试模式自动弹出 WebView devtools 面板，本机右键菜单没有触发出
             // "Inspect Element"，用 API 直接打开更可靠，不依赖右键。仅 debug
             // build 生效，release 打包不受影响。

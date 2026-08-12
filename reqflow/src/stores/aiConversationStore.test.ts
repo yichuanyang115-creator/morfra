@@ -121,6 +121,44 @@ describe("Phase 5 aiConversationStore", () => {
     expect(store.getState().getCurrentConversation("table-delivery")?.messages.some((message) => messageText(message) === "仍然完成")).toBe(true);
   });
 
+  it("停止后不再启动自动标题请求", async () => {
+    const { persistence } = memoryPersistence();
+    const store = createAIConversationStore({ persistence, createId: (() => { let id = 0; return () => `id-${id++}`; })() });
+    const controls = createEvaluationTableAdapter();
+    await store.getState().loadTable("table-delivery");
+    const conversation = await store.getState().createConversation({ tableId: "table-delivery", mode: "general", providerConfigId: "provider-old", modelId: "model-old" });
+    const generateTitle = vi.fn(async () => "不应生成");
+    const transport = {
+      start: vi.fn(async (request: AIChatRequest): Promise<AIChatHandle> => ({
+        requestId: request.requestId ?? "stopped",
+        completion: Promise.resolve({ requestId: request.requestId ?? "stopped", content: "", streamed: true, status: "stopped" as const }),
+        cancel: async () => undefined,
+      })),
+    };
+
+    const result = await store.getState().sendMessage({ tableId: "table-delivery", conversationId: conversation.id, question: "你好", runtime: { ...runtime(controls.adapter, transport), generateTitle } });
+
+    expect(result.ok).toBe(false);
+    expect(generateTitle).not.toHaveBeenCalled();
+    expect(store.getState().getCurrentConversation()?.title).toBe("通用对话");
+  });
+
+  it("Provider 失败后不再启动自动标题请求", async () => {
+    const { persistence } = memoryPersistence();
+    const store = createAIConversationStore({ persistence, createId: (() => { let id = 0; return () => `id-${id++}`; })() });
+    const controls = createEvaluationTableAdapter();
+    await store.getState().loadTable("table-delivery");
+    const conversation = await store.getState().createConversation({ tableId: "table-delivery", mode: "general", providerConfigId: "provider-old", modelId: "model-old" });
+    const generateTitle = vi.fn(async () => "不应生成");
+    const failed = readyTransport([new Error("provider failed")]);
+
+    const result = await store.getState().sendMessage({ tableId: "table-delivery", conversationId: conversation.id, question: "你好", runtime: { ...runtime(controls.adapter, failed.transport), generateTitle } });
+
+    expect(result.ok).toBe(false);
+    expect(generateTitle).not.toHaveBeenCalled();
+    expect(store.getState().getCurrentConversation()?.title).toBe("通用对话");
+  });
+
   it("重命名、最近使用排序和删除只影响目标会话，历史保留旧 provider 引用", async () => {
     const { persistence } = memoryPersistence();
     const store = createAIConversationStore({ persistence, now: () => `2026-08-09T00:00:${String(clock++).padStart(2, "0")}.000Z`, createId: () => `id-${clock++}` });
@@ -203,7 +241,7 @@ describe("Phase 5 aiConversationStore", () => {
     await store.getState().loadTable("table-delivery");
     const conversation = await store.getState().createConversation({ tableId: "table-delivery", mode: "table-analysis", providerConfigId: "provider-old", modelId: "model-old" });
     let resolveAnswer: ((value: { requestId: string; content: string; streamed: boolean; status: "stopped" }) => void) | undefined;
-    const transport = {
+    const transport: AIChatTransport = {
       start: vi.fn(async (request: AIChatRequest): Promise<AIChatHandle> => {
         if (request.requestId?.includes("-plan-")) {
           return {
@@ -240,6 +278,81 @@ describe("Phase 5 aiConversationStore", () => {
     const answer = messages[messages.length - 1];
     expect(answer?.status).toBe("stopped");
     expect(answer?.contentBlocks).toEqual([{ type: "markdown", markdown: "分析说明已整理；精确数值、范围和记录仅由本地校验结果呈现。" }]);
+  });
+
+  it("清空全部历史会等待进行中请求，迟到片段和完成包不会复活文件或内存会话", async () => {
+    const { persistence, conversations } = memoryPersistence();
+    const store = createAIConversationStore({ persistence, createId: (() => { let id = 0; return () => `id-${id++}`; })() });
+    const controls = createEvaluationTableAdapter();
+    await store.getState().loadTable("table-delivery");
+    const conversation = await store.getState().createConversation({ tableId: "table-delivery", mode: "general", providerConfigId: "provider-old", modelId: "model-old" });
+    let onDelta: ((content: string) => void) | undefined;
+    let resolveCompletion: ((value: { requestId: string; content: string; streamed: boolean; status: "complete" }) => void) | undefined;
+    const transport = {
+      start: vi.fn(async (request: AIChatRequest, callback?: (content: string) => void): Promise<AIChatHandle> => {
+        onDelta = callback;
+        const completion = new Promise<{ requestId: string; content: string; streamed: boolean; status: "complete" }>((resolve) => { resolveCompletion = resolve; });
+        return { requestId: request.requestId ?? "clear-request", completion, cancel: async () => undefined };
+      }),
+    };
+    const pending = store.getState().sendMessage({ tableId: "table-delivery", conversationId: conversation.id, question: "请讲一个笑话", runtime: runtime(controls.adapter, transport) });
+    await vi.waitFor(() => expect(onDelta).toBeDefined());
+    const clearing = store.getState().clearAllHistory();
+    onDelta?.("迟到片段");
+    resolveCompletion?.({ requestId: "clear-request", content: "迟到完成", streamed: true, status: "complete" });
+    await pending;
+    await clearing;
+    expect(store.getState().conversationsByTable).toEqual({});
+    expect(store.getState().activeRequests).toEqual({});
+    expect(conversations.size).toBe(0);
+  });
+
+  it("清空全部历史会等待已开始但仍在加载的普通会话变更，完成后磁盘与内存仍为空", async () => {
+    const base = memoryPersistence();
+    let releaseLoad: (() => void) | undefined;
+    const delayedLoad = new Promise<void>((resolve) => { releaseLoad = resolve; });
+    const persistence: AIConversationPersistence = {
+      ...base.persistence,
+      loadAIConversations: async (tableId) => {
+        await delayedLoad;
+        return base.persistence.loadAIConversations(tableId);
+      },
+    };
+    const store = createAIConversationStore({ persistence, createId: () => "delayed-conversation" });
+    const creating = store.getState().createConversation({ tableId: "table-delivery", mode: "general", providerConfigId: "provider", modelId: "model" });
+    await vi.waitFor(() => expect(store.getState().loadingTables["table-delivery"]).toBe(true));
+    const clearing = store.getState().clearAllHistory();
+    releaseLoad?.();
+    await creating;
+    await clearing;
+    expect(store.getState().conversationsByTable).toEqual({});
+    expect(base.conversations.size).toBe(0);
+  });
+
+  it("删除进行中的单会话会等待请求与保存队列，迟到结果不会复活已删会话", async () => {
+    const { persistence, conversations } = memoryPersistence();
+    const store = createAIConversationStore({ persistence, createId: (() => { let id = 0; return () => `id-${id++}`; })() });
+    const controls = createEvaluationTableAdapter();
+    await store.getState().loadTable("table-delivery");
+    const conversation = await store.getState().createConversation({ tableId: "table-delivery", mode: "general", providerConfigId: "provider-old", modelId: "model-old" });
+    let onDelta: ((content: string) => void) | undefined;
+    let resolveCompletion: ((value: { requestId: string; content: string; streamed: boolean; status: "complete" }) => void) | undefined;
+    const transport: AIChatTransport = {
+      start: vi.fn(async (request: AIChatRequest, callback?: (content: string) => void): Promise<AIChatHandle> => {
+        onDelta = callback;
+        const completion = new Promise<{ requestId: string; content: string; streamed: boolean; status: "complete" }>((resolve) => { resolveCompletion = resolve; });
+        return { requestId: request.requestId ?? "delete-request", completion, cancel: async () => undefined };
+      }),
+    };
+    const pending = store.getState().sendMessage({ tableId: "table-delivery", conversationId: conversation.id, question: "请讲一个笑话", runtime: runtime(controls.adapter, transport) });
+    await vi.waitFor(() => expect(onDelta).toBeDefined());
+    const deleting = store.getState().deleteConversation("table-delivery", conversation.id);
+    onDelta?.("迟到片段");
+    resolveCompletion?.({ requestId: "delete-request", content: "迟到完成", streamed: true, status: "complete" });
+    await pending;
+    await expect(deleting).resolves.toEqual({ ok: true });
+    expect(store.getState().conversationsByTable["table-delivery"]).toEqual([]);
+    expect(conversations.get("table-delivery")?.has(conversation.id)).toBe(false);
   });
 
   it("通用会话同步首片段在活动请求注册后写入消息", async () => {

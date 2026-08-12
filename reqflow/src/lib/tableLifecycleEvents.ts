@@ -1,4 +1,9 @@
-type TableDeletedListener = (tableId: string) => void | Promise<void>;
+export interface TableDeletionPreparation {
+  commit: () => void | Promise<void>;
+  rollback: () => void | Promise<void>;
+}
+
+type TableDeletedListener = (tableId: string) => void | TableDeletionPreparation | Promise<void | TableDeletionPreparation>;
 
 const beforeTableDeletedListeners = new Set<TableDeletedListener>();
 const tableDeletedListeners = new Set<TableDeletedListener>();
@@ -12,17 +17,41 @@ export function onBeforeTableDeleted(listener: TableDeletedListener): () => void
   return () => beforeTableDeletedListeners.delete(listener);
 }
 
-export async function emitBeforeTableDeleted(tableId: string): Promise<void> {
-  for (const listener of beforeTableDeletedListeners) await listener(tableId);
+export async function emitBeforeTableDeleted(tableId: string): Promise<TableDeletionPreparation[]> {
+  const preparations: TableDeletionPreparation[] = [];
+  try {
+    for (const listener of beforeTableDeletedListeners) {
+      const preparation = await listener(tableId);
+      if (preparation) preparations.push(preparation);
+    }
+    return preparations;
+  } catch (error) {
+    for (const preparation of preparations.reverse()) await preparation.rollback();
+    throw error;
+  }
 }
 
 /**
  * 删除跨越宿主表与 AI 会话两个存储边界时的唯一顺序：先清理可失败的 AI
  * 数据，再删除物理表，最后广播给 UI。任何前置失败都会阻止物理表删除。
  */
-export async function deleteTableWithLifecycle<T>(tableId: string, deletePhysicalTable: () => Promise<T>): Promise<T> {
-  await emitBeforeTableDeleted(tableId);
-  const result = await deletePhysicalTable();
+export async function deleteTableWithLifecycle<T>(tableId: string, deletePhysicalTable: () => Promise<T>, restorePhysicalTable?: () => Promise<void>): Promise<T> {
+  const preparations = await emitBeforeTableDeleted(tableId);
+  let result: T;
+  try {
+    result = await deletePhysicalTable();
+  } catch (error) {
+    for (const preparation of preparations.reverse()) await preparation.rollback();
+    throw error;
+  }
+  try {
+    for (const preparation of preparations) await preparation.commit();
+  } catch (error) {
+    if (!restorePhysicalTable) throw error;
+    await restorePhysicalTable();
+    for (const preparation of preparations.reverse()) await preparation.rollback();
+    throw error;
+  }
   await emitTableDeleted(tableId);
   return result;
 }

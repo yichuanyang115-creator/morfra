@@ -6,6 +6,7 @@ import { useThemeStore } from "../../stores/themeStore";
 import type { AppSettingsSection } from "../../stores/uiStore";
 import { AppSettingsNav } from "./AppSettingsNav";
 import { AppSettingsPage } from "./AppSettingsPage";
+import { useLayoutStore } from "../../stores/layoutStore";
 
 describe("AppSettingsNav", () => {
   it("提供外观、AI 服务和版本三个独立导航项并标记当前项", () => {
@@ -24,6 +25,7 @@ describe("AppSettingsPage 外观草稿", () => {
       draftTheme: null,
       draftIssues: [],
     });
+    useLayoutStore.setState({ appearanceMode: "system" });
   });
 
   afterEach(() => {
@@ -50,6 +52,16 @@ describe("AppSettingsPage 外观草稿", () => {
     await user.click(screen.getByRole("button", { name: "取消" }));
     expect(useThemeStore.getState().draftTheme).toBeNull();
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("提供跟随系统、浅色和深色三档应用级外观偏好", async () => {
+    const user = userEvent.setup();
+    render(<AppSettingsPage section="appearance" onSelectSection={vi.fn()} onClose={vi.fn()} />);
+
+    expect(screen.getByRole("radio", { name: "跟随系统" })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("radio", { name: "深色" }));
+    expect(useLayoutStore.getState().appearanceMode).toBe("dark");
+    expect(screen.getByRole("radio", { name: "深色" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("输入保留红色时显示字段错误并禁用应用", async () => {

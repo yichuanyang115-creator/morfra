@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { createCurrentStorageHostActions, createCurrentStorageTableAdapter, type CurrentStorageHostActions, type CurrentStorageTableAdapter } from "../../adapters/ai/currentStorageTableAdapter";
 import { findLegacyChatPreferenceMigration } from "../../adapters/ai/legacyChatPreferenceMigrationHost";
 import { ChatPanel } from "../chat/ChatPanel";
-import { deleteTableAIDataAndVerify } from "../../lib/ai/integrationChecks";
+import { prepareTableAIDataDeletion } from "../../lib/ai/integrationChecks";
 import { onBeforeTableDeleted } from "../../lib/tableLifecycleEvents";
 import { useAIProviderStore } from "../../stores/aiProviderStore";
 import { useLayoutStore } from "../../stores/layoutStore";
@@ -14,7 +14,7 @@ function createHostActions(showRecordDetail: () => void): CurrentStorageHostActi
 }
 
 /** 生产 StorageWorkspace 的可替换 AI 宿主：只在 adapter 层读取 Zustand，不反向扩展 AI Core。 */
-export function StorageAIHost({ onClose }: { onClose: () => void }) {
+export function StorageAIHost() {
   const adapterRef = useRef<CurrentStorageTableAdapter | null>(null);
   if (!adapterRef.current) adapterRef.current = createCurrentStorageTableAdapter();
   const adapter = adapterRef.current;
@@ -33,13 +33,13 @@ export function StorageAIHost({ onClose }: { onClose: () => void }) {
   }), [detailOpen, setActiveRightPanel, toggleDetail]);
 
   if (!table) return <div className="morfra-context-empty morfra-ai-empty"><span className="morfra-empty-symbol">✦</span><p>AI 表格助手</p><span>打开包含表格的本地项目后即可分析。</span></div>;
-  return <ChatPanel width={1} fillContainer tableContext={{ table, adapter }} hostActions={hostActions} onClose={onClose} />;
+  return <ChatPanel width={1} fillContainer tableContext={{ table, adapter }} hostActions={hostActions} />;
 }
 
 /** 始终挂在生产外壳内，确保 AI 面板关闭时删表也会精确清理独立会话目录。 */
 export function StorageAICascade() {
   useEffect(() => onBeforeTableDeleted(async (tableId) => {
-    await deleteTableAIDataAndVerify(tableId);
+    return prepareTableAIDataDeletion(tableId);
   }), []);
   return null;
 }

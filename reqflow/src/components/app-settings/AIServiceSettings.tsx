@@ -3,6 +3,7 @@ import { useAIProviderStore } from "../../stores/aiProviderStore";
 import type { AIProviderConfig } from "../../types/ai";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { AIProviderEditor } from "./AIProviderEditor";
+import { useAIConversationStore } from "../../stores/aiConversationStore";
 
 export function AIServiceSettings() {
   const configs = useAIProviderStore((state) => state.configs);
@@ -27,8 +28,11 @@ export function AIServiceSettings() {
   const clearError = useAIProviderStore((state) => state.clearError);
   const loadModels = useAIProviderStore((state) => state.loadModels);
   const testProvider = useAIProviderStore((state) => state.testProvider);
+  const clearAllHistory = useAIConversationStore((state) => state.clearAllHistory);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AIProviderConfig | null>(null);
+  const [clearHistoryConfirmOpen, setClearHistoryConfirmOpen] = useState(false);
+  const [historyStatus, setHistoryStatus] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
 
   useEffect(() => {
     if (!loaded) void load();
@@ -41,6 +45,16 @@ export function AIServiceSettings() {
     if (!deleteTarget) return;
     const result = await deleteProvider(deleteTarget.id);
     if (result.ok) setDeleteTarget(null);
+  };
+  const handleClearHistory = async () => {
+    try {
+      await clearAllHistory();
+      setClearHistoryConfirmOpen(false);
+      setHistoryStatus({ tone: "success", message: "已清空全部 AI 对话历史" });
+    } catch {
+      setClearHistoryConfirmOpen(false);
+      setHistoryStatus({ tone: "danger", message: "AI 对话历史清空失败，数据未被静默删除，请重试" });
+    }
   };
 
   return (
@@ -110,6 +124,12 @@ export function AIServiceSettings() {
             ))}
           </div>
         )}
+        {!editingId && <section className="mt-6 border-t border-(--module-scope-border-subtle) pt-5" aria-labelledby="ai-history-management">
+          <h2 id="ai-history-management" className="m-0 text-[13.5px] font-[590] text-(--module-scope-text-primary)">对话历史</h2>
+          <p className="m-0 mt-1 text-[12px] text-(--module-scope-text-secondary)">清空全部表的 AI 会话与消息，不会删除表、记录、服务配置或 Keychain 密钥。</p>
+          <button type="button" onClick={() => { setHistoryStatus(null); setClearHistoryConfirmOpen(true); }} className="mt-3 rounded-(--r-sm) border border-(--module-scope-feedback-danger) bg-transparent px-3 py-1.5 text-[12px] text-(--module-scope-feedback-danger)">清空全部 AI 对话历史</button>
+          {historyStatus && <p role="status" className={`m-0 mt-2 text-[12px] ${historyStatus.tone === "success" ? "text-(--module-scope-feedback-success)" : "text-(--module-scope-feedback-danger)"}`}>{historyStatus.message}</p>}
+        </section>}
       </div>
       {deleteTarget && (
         <ConfirmDialog
@@ -119,6 +139,7 @@ export function AIServiceSettings() {
           onConfirm={() => void handleDelete()}
         />
       )}
+      {clearHistoryConfirmOpen && <ConfirmDialog title="清空全部 AI 对话历史？" body="所有表的 AI 会话和消息都会被删除，此操作无法撤销。主产品数据、服务配置和 Keychain 密钥不受影响。" confirmLabel="确认清空" onCancel={() => setClearHistoryConfirmOpen(false)} onConfirm={() => void handleClearHistory()} />}
     </section>
   );
 }

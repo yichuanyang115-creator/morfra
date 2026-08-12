@@ -63,12 +63,19 @@ pub fn initialize_blank_project(
     load_snapshot(connection, manifest)
 }
 
-pub fn apply_requirement_template(connection: &mut Connection, manifest: &ProjectManifest, table_id: &str) -> Result<ProjectSnapshot, StorageError> {
+pub fn apply_requirement_template(
+    connection: &mut Connection,
+    manifest: &ProjectManifest,
+    table_id: &str,
+) -> Result<ProjectSnapshot, StorageError> {
     let transaction = connection.transaction()?;
     let now = timestamp();
     let stage_id = new_id("field");
     transaction.execute("INSERT INTO fields (id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES (?1, ?2, NULL, '阶段', 'select', 0, 1, '{\"allowCreate\":true}', ?3, ?3)", (&stage_id, table_id, &now))?;
-    for (position, (name, color)) in [("待处理", "gray"), ("进行中", "blue"), ("已完成", "green")].iter().enumerate() {
+    for (position, (name, color)) in [("待处理", "gray"), ("进行中", "blue"), ("已完成", "green")]
+        .iter()
+        .enumerate()
+    {
         transaction.execute("INSERT INTO field_options (id, field_id, name, color, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)", (new_id("option"), &stage_id, name, color, position as i64, &now))?;
     }
     let priority_id = new_id("field");
@@ -77,7 +84,10 @@ pub fn apply_requirement_template(connection: &mut Connection, manifest: &Projec
     transaction.execute("INSERT INTO views (id, table_id, name, view_type, position, created_at, updated_at) VALUES (?1, ?2, '看板', 'board', 1, ?3, ?3)", (&board_id, table_id, &now))?;
     transaction.execute("INSERT INTO view_configs (view_id, version, config_json, created_at, updated_at) VALUES (?1, 1, ?2, ?3, ?3)", (&board_id, serde_json::json!({"board":{"groupFieldId":stage_id}}).to_string(), &now))?;
     transaction.execute("UPDATE table_configs SET activity_field_id = ?1, activity_tab_enabled = 1, detail_tabs_json = ?2, updated_at = ?3 WHERE table_id = ?4", (&stage_id, REQUIREMENT_DETAIL_TABS, &now, table_id))?;
-    transaction.execute("UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'", [timestamp()])?;
+    transaction.execute(
+        "UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'",
+        [timestamp()],
+    )?;
     transaction.commit()?;
     load_snapshot(connection, manifest)
 }

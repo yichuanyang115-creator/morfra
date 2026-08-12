@@ -30,14 +30,14 @@ describe("StorageAIHost 生产宿主", () => {
     useProjectStore.setState({ projects: [{ id: "project-a", name: "生产项目", sources: [], storageSnapshot: { manifest: { id: "project-a", name: "生产项目", formatVersion: 3, createdAt: "2026-08-10T00:00:00.000Z", updatedAt: "2026-08-10T00:00:00.000Z" }, tables: [{ id: "table-a", name: "真实表", position: 0, titleFieldId: "name", recordCount: 1, views: [] }] } }], currentProjectId: "project-a" });
     useWorkspaceStore.setState({ activeTableByProject: { "project-a": "table-a" } });
     useTableDataStore.setState({ dataByTable: { "table-a": { tableId: "table-a", groups: [], fields: [{ id: "name", tableId: "table-a", groupId: null, name: "Name", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] }], records: [{ id: "record-a", tableId: "table-a", position: 0, autoNumber: 1, createdAt: "2026-08-10T00:00:00.000Z", updatedAt: "2026-08-10T00:00:00.000Z", values: { name: "生产记录" }, multiSelectValues: {} }] } } });
-    useStorageSelectionStore.setState({ selectedRecordByTable: { "table-a": "record-a" } });
+    useStorageSelectionStore.setState({ selectedRecordByTable: { "table-a": "record-a" }, selectedRecordIdsByTable: { "table-a": ["record-a"] } });
     useLayoutStore.setState({ detailOpen: false, activeRightPanel: "ai" });
     useAIProviderStore.setState({ configs: [provider], secretStatus: { "provider-1": true }, defaultProviderConfigId: "provider-1", lastProviderConfigId: "provider-1", lastModelId: "model-a", modelIds: { "provider-1": ["model-a"] }, dataExfiltrationConfirmed: true, loaded: true });
     useAIConversationStore.setState({ conversationsByTable: {}, currentConversationIdByTable: {}, loadedTables: { "table-a": true }, loadingTables: {}, activeRequests: {}, persistenceError: null });
   });
 
   it("将真实 Storage 表传给 Phase 6 ChatPanel，而非 AI 占位宿主", async () => {
-    render(<StorageAIHost onClose={vi.fn()} />);
+    render(<StorageAIHost />);
 
     await waitFor(() => expect(screen.getByTestId("chat-context-bar")).toBeInTheDocument());
     expect(screen.getAllByText("真实表")).toHaveLength(2);

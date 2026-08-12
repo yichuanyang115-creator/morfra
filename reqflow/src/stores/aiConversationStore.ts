@@ -15,18 +15,17 @@ import {
   messageText,
   recoverInterruptedConversation,
 } from "../lib/ai/messagePersistence";
-import {
-  AI_CONVERSATION_DEFAULT_TITLES,
-} from "../lib/ai/titleGenerator";
 import { toAIProviderError } from "../lib/ai/providerClient";
 import type { AIConversation } from "../types/ai";
 import type {
+  AIConversationActionResult,
   AIConversationPersistence,
   AIConversationState,
   AIConversationStoreOptions,
 } from "./aiConversationStoreTypes";
 import { sortRecent } from "./aiConversationStoreTypes";
 import { runConversationRequest } from "./aiConversationStoreRequest";
+import { createConversationMutations } from "./aiConversationStoreMutations";
 
 export type {
   AIActiveRequest,
@@ -49,7 +48,12 @@ export function createAIConversationStore(options: AIConversationStoreOptions = 
   const now = options.now ?? (() => new Date().toISOString());
   const createId = options.createId ?? nanoid;
   const saveQueues = new Map<string, Promise<void>>();
+  const requestTasks = new Map<string, Promise<AIConversationActionResult>>();
+  const mutationTasks = new Set<Promise<unknown>>();
+  const deletedConversationIds = new Set<string>();
   let latestLoadGeneration = 0;
+  let historyGeneration = 0;
+  let clearHistoryTask: Promise<void> | null = null;
 
   return create<AIConversationState>((set, get) => {
     const queueSave = (conversation: AIConversation, makeCurrent = false): Promise<void> => {
@@ -63,7 +67,9 @@ export function createAIConversationStore(options: AIConversationStoreOptions = 
     };
 
     const findConversation = (tableId: string, conversationId: string): AIConversation | null =>
-      get().conversationsByTable[tableId]?.find((conversation) => conversation.id === conversationId) ?? null;
+      deletedConversationIds.has(conversationId)
+        ? null
+        : get().conversationsByTable[tableId]?.find((conversation) => conversation.id === conversationId) ?? null;
 
     const putConversation = (conversation: AIConversation): void => {
       set((state) => {
@@ -75,6 +81,71 @@ export function createAIConversationStore(options: AIConversationStoreOptions = 
 
     const setPersistenceError = (): void => set({ persistenceError: "AI 对话保存失败，请检查应用数据目录" });
 
+    const setActiveRequest = (conversationId: string, request: AIConversationState["activeRequests"][string]): void => {
+      set((state) => {
+        const activeRequests = { ...state.activeRequests };
+        if (request) activeRequests[conversationId] = request;
+        else delete activeRequests[conversationId];
+        return { activeRequests };
+      });
+    };
+
+    const trackRequest = (conversationId: string, task: Promise<AIConversationActionResult>): Promise<AIConversationActionResult> => {
+      const tracked = task.finally(() => {
+        if (requestTasks.get(conversationId) === tracked) requestTasks.delete(conversationId);
+      });
+      requestTasks.set(conversationId, tracked);
+      return tracked;
+    };
+
+    const trackMutation = <T>(operation: () => Promise<T>): Promise<T> => {
+      const tracked = operation().finally(() => mutationTasks.delete(tracked));
+      mutationTasks.add(tracked);
+      return tracked;
+    };
+
+    const drainSaveQueue = async (conversationId?: string): Promise<void> => {
+      do {
+        const pending = conversationId
+          ? [saveQueues.get(conversationId)].filter((task): task is Promise<void> => Boolean(task))
+          : [...saveQueues.values()];
+        if (pending.length === 0) return;
+        await Promise.allSettled(pending);
+      } while (conversationId ? saveQueues.has(conversationId) : saveQueues.size > 0);
+    };
+
+    const requestDeps = (conversationId: string, generation: number) => {
+      const canWrite = () => generation === historyGeneration && !deletedConversationIds.has(conversationId);
+      return {
+        createId,
+        now,
+        findConversation: (tableId: string, targetConversationId: string) => canWrite() ? findConversation(tableId, targetConversationId) : null,
+        putConversation: (conversation: AIConversation) => { if (canWrite()) putConversation(conversation); },
+        queueSave: (conversation: AIConversation, makeCurrent?: boolean) => canWrite() ? queueSave(conversation, makeCurrent) : Promise.resolve(),
+        setPersistenceError: () => { if (canWrite()) setPersistenceError(); },
+        setActiveRequest: (targetConversationId: string, request: AIConversationState["activeRequests"][string]) => {
+          if (canWrite() || !request) setActiveRequest(targetConversationId, request);
+        },
+        getActiveRequest: (targetConversationId: string) => get().activeRequests[targetConversationId],
+      };
+    };
+
+    const mutationActions = createConversationMutations({
+      get,
+      set,
+      now,
+      createId,
+      waitForClear: async () => { if (clearHistoryTask) await clearHistoryTask; },
+      trackMutation,
+      findConversation,
+      putConversation,
+      queueSave,
+      drainSaveQueue,
+      deletePersistedConversation: persistence.deleteAIConversation,
+      deletedConversationIds,
+      requestTask: (conversationId) => requestTasks.get(conversationId),
+    });
+
     return {
       activeTableId: null,
       conversationsByTable: {},
@@ -85,24 +156,19 @@ export function createAIConversationStore(options: AIConversationStoreOptions = 
       activeRequests: {},
       persistenceError: null,
       loadTable: async (tableId) => {
+        if (clearHistoryTask) await clearHistoryTask;
         const generation = ++latestLoadGeneration;
         set((state) => ({ activeTableId: tableId, loadingTables: { ...state.loadingTables, [tableId]: true } }));
         const index = await persistence.loadAIConversationIndex(tableId);
         const loaded = await persistence.loadAIConversations(tableId);
-        if (generation !== latestLoadGeneration) {
-          set((state) => ({ loadingTables: { ...state.loadingTables, [tableId]: false } }));
-          return;
-        }
+        if (generation !== latestLoadGeneration) return;
         const conversations: AIConversation[] = [];
         for (const item of loaded.value) {
           const recovered = recoverInterruptedConversation(item);
           conversations.push(recovered.conversation);
           if (recovered.changed) await queueSave(recovered.conversation).catch(setPersistenceError);
         }
-        if (generation !== latestLoadGeneration) {
-          set((state) => ({ loadingTables: { ...state.loadingTables, [tableId]: false } }));
-          return;
-        }
+        if (generation !== latestLoadGeneration) return;
         const currentId = index.value.currentConversationId && conversations.some((item) => item.id === index.value.currentConversationId)
           ? index.value.currentConversationId
           : conversations[0]?.id ?? null;
@@ -122,67 +188,9 @@ export function createAIConversationStore(options: AIConversationStoreOptions = 
         const currentId = get().currentConversationIdByTable[targetTableId];
         return currentId ? findConversation(targetTableId, currentId) : null;
       },
-      createConversation: async ({ tableId, mode, providerConfigId, modelId }) => {
-        if (!get().loadedTables[tableId]) await get().loadTable(tableId);
-        const timestamp = now();
-        const conversation: AIConversation = {
-          id: createId(),
-          tableId,
-          mode,
-          title: AI_CONVERSATION_DEFAULT_TITLES[mode],
-          providerConfigId,
-          modelId,
-          messages: [],
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        };
-        putConversation(conversation);
-        set((state) => ({ currentConversationIdByTable: { ...state.currentConversationIdByTable, [tableId]: conversation.id } }));
-        await queueSave(conversation, true);
-        return conversation;
-      },
-      selectConversation: async (tableId, conversationId) => {
-        const conversation = findConversation(tableId, conversationId);
-        if (!conversation) return { ok: false, message: "会话不存在" };
-        if (get().activeRequests[conversationId]) return { ok: false, message: "会话正在生成中，请先停止当前请求" };
-        const touched = { ...conversation, updatedAt: now() };
-        putConversation(touched);
-        set((state) => ({ activeTableId: tableId, currentConversationIdByTable: { ...state.currentConversationIdByTable, [tableId]: conversationId } }));
-        await queueSave(touched, true);
-        return { ok: true };
-      },
-      renameConversation: async (tableId, conversationId, title) => {
-        const conversation = findConversation(tableId, conversationId);
-        const normalized = title.replace(/\s+/gu, " ").trim();
-        if (!conversation) return { ok: false, message: "会话不存在" };
-        if (!normalized) return { ok: false, message: "会话标题不能为空" };
-        const renamed = { ...conversation, title: normalized, updatedAt: now() };
-        putConversation(renamed);
-        await queueSave(renamed, true);
-        return { ok: true };
-      },
-      deleteConversation: async (tableId, conversationId) => {
-        const conversation = findConversation(tableId, conversationId);
-        if (!conversation) return { ok: false, message: "会话不存在" };
-        await get().stopConversation(conversationId);
-        await persistence.deleteAIConversation(tableId, conversationId);
-        const remaining = (get().conversationsByTable[tableId] ?? []).filter((item) => item.id !== conversationId);
-        const nextCurrent = get().currentConversationIdByTable[tableId] === conversationId ? remaining[0]?.id ?? null : get().currentConversationIdByTable[tableId] ?? null;
-        set((state) => ({ conversationsByTable: { ...state.conversationsByTable, [tableId]: remaining }, currentConversationIdByTable: { ...state.currentConversationIdByTable, [tableId]: nextCurrent } }));
-        return { ok: true };
-      },
-      setConversationModel: async (tableId, conversationId, providerConfigId, modelId) => {
-        const conversation = findConversation(tableId, conversationId);
-        const normalizedModelId = modelId.trim();
-        if (!conversation) return { ok: false, message: "会话不存在" };
-        if (!providerConfigId.trim() || !normalizedModelId) return { ok: false, message: "服务配置和模型不能为空" };
-        if (get().activeRequests[conversationId]) return { ok: false, message: "生成期间不能切换模型" };
-        const updated = { ...conversation, providerConfigId: providerConfigId.trim(), modelId: normalizedModelId, updatedAt: now() };
-        putConversation(updated);
-        await queueSave(updated, true);
-        return { ok: true };
-      },
+      ...mutationActions,
       sendMessage: async ({ tableId, conversationId, question, selectionReferenced = false, selectedRecordIds, runtime }) => {
+        if (clearHistoryTask) await clearHistoryTask;
         const trimmed = question.trim();
         const id = conversationId ?? get().currentConversationIdByTable[tableId] ?? null;
         const conversation = id ? findConversation(tableId, id) : null;
@@ -203,18 +211,14 @@ export function createAIConversationStore(options: AIConversationStoreOptions = 
         const next = { ...currentWithModel, messages: [...currentWithModel.messages, user, assistant], updatedAt: now() };
         putConversation(next);
         set((state) => ({ currentConversationIdByTable: { ...state.currentConversationIdByTable, [tableId]: next.id } }));
-        return runConversationRequest({ conversation: next, previousMessages: currentWithModel.messages, question: trimmed, contextRef: resolved.contextRef, assistantMessageId: assistant.id, runtime, firstQuestion }, {
-          createId,
-          now,
-          findConversation,
-          putConversation,
-          queueSave,
-          setPersistenceError,
-          setActiveRequest: (conversationId, request) => set((state) => ({ activeRequests: { ...state.activeRequests, [conversationId]: request } })),
-          getActiveRequest: (conversationId) => get().activeRequests[conversationId],
-        });
+        const generation = historyGeneration;
+        return trackRequest(conversation.id, runConversationRequest(
+          { conversation: next, previousMessages: currentWithModel.messages, question: trimmed, contextRef: resolved.contextRef, assistantMessageId: assistant.id, runtime, firstQuestion },
+          requestDeps(conversation.id, generation),
+        ));
       },
       retryMessage: async ({ tableId, conversationId, assistantMessageId, runtime }) => {
+        if (clearHistoryTask) await clearHistoryTask;
         const conversation = findConversation(tableId, conversationId);
         if (!conversation) return { ok: false, message: "会话不存在" };
         if (get().activeRequests[conversationId]) return { ok: false, message: "同一会话正在生成中" };
@@ -227,22 +231,17 @@ export function createAIConversationStore(options: AIConversationStoreOptions = 
         const assistant = createMessage({ id: createId(), conversationId, role: "assistant", content: "", contextRef: user.contextRef, providerConfigId, modelId, status: "pending" });
         const next = { ...conversation, providerConfigId, modelId, messages: [...conversation.messages, assistant], updatedAt: now() };
         putConversation(next);
-        return runConversationRequest({ conversation: next, previousMessages: conversation.messages, question: messageText(user), contextRef: user.contextRef, assistantMessageId: assistant.id, runtime, firstQuestion: false }, {
-          createId,
-          now,
-          findConversation,
-          putConversation,
-          queueSave,
-          setPersistenceError,
-          setActiveRequest: (id, request) => set((state) => ({ activeRequests: { ...state.activeRequests, [id]: request } })),
-          getActiveRequest: (id) => get().activeRequests[id],
-        });
+        const generation = historyGeneration;
+        return trackRequest(conversationId, runConversationRequest(
+          { conversation: next, previousMessages: conversation.messages, question: messageText(user), contextRef: user.contextRef, assistantMessageId: assistant.id, runtime, firstQuestion: false },
+          requestDeps(conversationId, generation),
+        ));
       },
       stopConversation: async (conversationId) => {
         const active = get().activeRequests[conversationId];
         if (!active) return { ok: true };
         try {
-          set((state) => ({ activeRequests: { ...state.activeRequests, [conversationId]: active ? { ...active, acceptDeltas: false } : undefined } }));
+          setActiveRequest(conversationId, { ...active, acceptDeltas: false });
           await get().activeRequests[conversationId]?.stop();
           return { ok: true, requestId: active.requestId };
         } catch (error) {
@@ -254,9 +253,22 @@ export function createAIConversationStore(options: AIConversationStoreOptions = 
         return message ? messageText(message) : "";
       },
       clearAllHistory: async () => {
-        await Promise.all(Object.keys(get().activeRequests).map((conversationId) => get().stopConversation(conversationId)));
-        await persistence.clearAllAIConversationData();
-        set({ conversationsByTable: {}, currentConversationIdByTable: {}, loadedTables: {}, storageIssuesByTable: {}, activeRequests: {} });
+        if (!clearHistoryTask) {
+          const task = (async () => {
+            historyGeneration += 1;
+            latestLoadGeneration += 1;
+            const mutationsBeforeClear = [...mutationTasks];
+            await Promise.allSettled(mutationsBeforeClear);
+            await Promise.all(Object.keys(get().activeRequests).map((conversationId) => get().stopConversation(conversationId)));
+            while (requestTasks.size > 0) await Promise.allSettled([...requestTasks.values()]);
+            await drainSaveQueue();
+            await persistence.clearAllAIConversationData();
+            deletedConversationIds.clear();
+            set({ conversationsByTable: {}, currentConversationIdByTable: {}, loadedTables: {}, loadingTables: {}, storageIssuesByTable: {}, activeRequests: {} });
+          })();
+          clearHistoryTask = task.finally(() => { clearHistoryTask = null; });
+        }
+        await clearHistoryTask;
       },
     };
   });

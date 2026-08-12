@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAIConversationStore } from "../../stores/aiConversationStore";
 import { useAIProviderStore } from "../../stores/aiProviderStore";
 import type { AIConversationMode } from "../../types/ai";
@@ -11,6 +11,7 @@ import { ChatMessage } from "./ChatMessage";
 import type { AIHostActions, ChatTableContext } from "./chatTypes";
 
 const EMPTY_CONVERSATIONS: never[] = [];
+const scrollPositionByConversation = new Map<string, number>();
 
 export interface ChatPanelProps {
   width: number | null;
@@ -18,7 +19,6 @@ export interface ChatPanelProps {
   fillContainer?: boolean;
   tableContext?: ChatTableContext;
   hostActions?: AIHostActions;
-  onClose?: () => void;
   onOpenSettings?: () => void;
 }
 
@@ -26,7 +26,7 @@ function dispatchSettingsRequest(): void {
   window.dispatchEvent(new CustomEvent("open-ai-service-settings"));
 }
 
-export function ChatPanel({ width, fillContainer = false, tableContext, hostActions, onClose = () => undefined, onOpenSettings = dispatchSettingsRequest }: ChatPanelProps) {
+export function ChatPanel({ width, fillContainer = false, tableContext, hostActions, onOpenSettings = dispatchSettingsRequest }: ChatPanelProps) {
   const tableId = tableContext?.table.tableId ?? null;
   const tableName = tableContext?.table.name;
   const adapter = tableContext?.adapter;
@@ -112,9 +112,26 @@ export function ChatPanel({ width, fillContainer = false, tableContext, hostActi
     if (tableId && !tableLoaded) void loadTable(tableId);
   }, [loadTable, tableId, tableLoaded]);
 
+  const scrollKey = tableId && currentConversationId ? `${tableId}:${currentConversationId}` : null;
+  const lastMessage = currentConversation?.messages[(currentConversation?.messages.length ?? 1) - 1];
+  const messageSignature = `${currentConversation?.messages.length ?? 0}:${lastMessage?.id ?? ""}:${lastMessage?.status ?? ""}:${Boolean(activeRequest)}`;
+  const previousMessageSignature = useRef(messageSignature);
+  const previousScrollKey = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!scrollKey || !scrollRef.current) return;
+    const saved = scrollPositionByConversation.get(scrollKey);
+    if (saved !== undefined) scrollRef.current.scrollTop = saved;
+    else if (previousScrollKey.current !== scrollKey) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    previousScrollKey.current = scrollKey;
+  }, [scrollKey]);
+
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [currentConversation?.messages, activeRequest]);
+    if (previousMessageSignature.current !== messageSignature) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+      previousMessageSignature.current = messageSignature;
+    }
+  }, [messageSignature]);
 
   const availableConfigs = useMemo(() => configs.filter((config) => secretStatus[config.id] === true), [configs, secretStatus]);
   const defaultConfig = availableConfigs.find((config) => config.id === (currentConversation?.providerConfigId ?? lastProviderConfigId ?? defaultProviderConfigId)) ?? availableConfigs[0] ?? null;
@@ -155,7 +172,8 @@ export function ChatPanel({ width, fillContainer = false, tableContext, hostActi
     if (!selectedProviderConfig) { setInteractionError("无法找到所选 AI 服务，请重新选择模型。"); return; }
     const result = await sendMessage({ tableId, conversationId: conversation.id, question: trimmed, selectionReferenced: shouldReference, selectedRecordIds: shouldReference ? selectionIds : undefined, runtime: { adapter, providerConfig: { id: selectedProviderConfig.id, baseUrl: selectedProviderConfig.baseUrl, defaultModelId: selectedProviderConfig.defaultModelId }, modelId: selectedModel.modelId, dataExfiltrationConfirmed } });
     if (!result.ok) setInteractionError(result.message ?? "这次请求没有完成，请重试。");
-    else { hostActions?.notifyGenerationCompleted?.({ tableId, conversationId: conversation.id }); window.dispatchEvent(new CustomEvent("ai-generation-completed")); }
+    else if (hostActions?.notifyGenerationCompleted) hostActions.notifyGenerationCompleted({ tableId, conversationId: conversation.id });
+    else window.dispatchEvent(new CustomEvent("ai-generation-completed"));
   }
 
   async function handleRetry(messageId: string): Promise<void> {
@@ -164,7 +182,8 @@ export function ChatPanel({ width, fillContainer = false, tableContext, hostActi
     if (!selectedProviderConfig) { setInteractionError("无法找到所选 AI 服务，请重新选择模型。"); return; }
     const result = await retryMessage({ tableId, conversationId: currentConversation.id, assistantMessageId: messageId, runtime: { adapter, providerConfig: { id: selectedProviderConfig.id, baseUrl: selectedProviderConfig.baseUrl, defaultModelId: selectedProviderConfig.defaultModelId }, modelId: selectedModel.modelId, dataExfiltrationConfirmed } });
     if (!result.ok) setInteractionError(result.message ?? "重试失败，请更换模型后再试。");
-    else { hostActions?.notifyGenerationCompleted?.({ tableId, conversationId: currentConversation.id }); window.dispatchEvent(new CustomEvent("ai-generation-completed")); }
+    else if (hostActions?.notifyGenerationCompleted) hostActions.notifyGenerationCompleted({ tableId, conversationId: currentConversation.id });
+    else window.dispatchEvent(new CustomEvent("ai-generation-completed"));
   }
 
   function handleModelChange(option: ChatModelOption): void {
@@ -191,15 +210,15 @@ export function ChatPanel({ width, fillContainer = false, tableContext, hostActi
 
   if (width == null) return null;
   return <div data-theme-module="chat" className={`theme-module-chat flex h-full min-w-0 flex-col border-l border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) ${fillContainer ? "w-full flex-1" : "flex-none"}`} style={fillContainer ? undefined : { width: `${width}px` }}>
-    <ChatHeader mode={mode} historyOpen={historyOpen} onModeChange={handleModeChange} onOpenHistory={() => setHistoryOpen((value) => !value)} onNewConversation={handleNewConversation} onClose={onClose} />
+    <ChatHeader mode={mode} historyOpen={historyOpen} onModeChange={handleModeChange} onOpenHistory={() => setHistoryOpen((value) => !value)} onNewConversation={handleNewConversation} />
     <ChatContextBar mode={mode} tableName={tableName} recordCount={recordCount} contextRef={lastUserMessage?.contextRef} selectedCount={selectionIds.length} selectionReferenced={selectionReferenced} onToggleSelection={() => setSelectionReferenced((value) => !value)} />
     {historyOpen && tableId ? <ChatHistoryView conversations={conversations} currentConversationId={currentConversationId} onSelect={(conversationId) => { void selectConversation(tableId, conversationId); setHistoryOpen(false); }} onRename={(conversationId, title) => { void renameConversation(tableId, conversationId, title); }} onDelete={(conversationId) => { void deleteConversation(tableId, conversationId); }} onBack={() => setHistoryOpen(false)} /> : <>
-      <div ref={scrollRef} role="log" aria-live="polite" aria-busy={Boolean(activeRequest)} aria-label="AI 对话消息" className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2">
+      <div ref={scrollRef} onScroll={(event) => { if (scrollKey) scrollPositionByConversation.set(scrollKey, event.currentTarget.scrollTop); }} role="log" aria-live="polite" aria-busy={Boolean(activeRequest)} aria-label="AI 对话消息" className="min-h-0 flex-1 overflow-y-auto px-2.5 py-2">
         {!tableReady ? <div className="flex h-full flex-col items-center justify-center gap-1 px-4 text-center text-[12px] text-(--module-scope-text-secondary)"><strong className="font-[590] text-(--module-scope-text-primary)">等待当前表上下文</strong><span>AI 面板会在宿主提供只读表快照后启用分析。</span></div> : !currentConversation ? <ChatEmptyState configured={configured} tableName={tableName} recordCount={recordCount} selectedCount={selectionIds.length} snapshot={snapshot} mode={mode} onOpenSettings={onOpenSettings} onModeChange={handleModeChange} onSuggestion={(question) => { void sendQuestion(question, question === "总结已选记录"); }} /> : <div className="flex flex-col gap-2">{currentConversation.messages.map((message) => <ChatMessage key={message.id} message={message} tableId={tableId ?? ""} hostActions={hostActions} onRetry={(messageId) => { void handleRetry(messageId); }} onCopy={handleCopy} />)}{activeRequest && <span className="sr-only">生成进行中，可以继续浏览表格和记录详情。</span>}</div>}
       </div>
       {snapshotError && <p role="alert" className="m-0 border-t border-(--module-scope-feedback-danger) bg-(--module-scope-feedback-danger-soft) px-2.5 py-1.5 text-[11.5px] text-(--module-scope-feedback-danger)">{snapshotError}</p>}
       {(interactionError || persistenceError) && <p role="alert" className="m-0 border-t border-(--module-scope-feedback-danger) bg-(--module-scope-feedback-danger-soft) px-2.5 py-1.5 text-[11.5px] text-(--module-scope-feedback-danger)">{interactionError ?? persistenceError}</p>}
-      {configured && tableReady && <ChatComposer value={input} onChange={setInput} onSubmit={() => { void sendQuestion(input); }} onStop={() => { if (currentConversation) void stopConversation(currentConversation.id); }} disabled={composerDisabled} generating={Boolean(activeRequest)} selectionReferenced={selectionReferenced} selectedCount={selectionIds.length} modelOptions={modelOptions} selectedModel={selectedModel} onModelChange={handleModelChange} />}
+      {configured && tableReady && <ChatComposer value={input} onChange={setInput} onSubmit={() => { void sendQuestion(input); }} onStop={() => { if (currentConversation) void stopConversation(currentConversation.id); }} disabled={composerDisabled} generating={Boolean(activeRequest)} selectionReferenced={selectionReferenced} selectedCount={selectionIds.length} mode={mode} modelOptions={modelOptions} selectedModel={selectedModel} onModelChange={handleModelChange} />}
     </>}
   </div>;
 }

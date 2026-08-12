@@ -1,15 +1,8 @@
 import { nanoid } from "nanoid";
-import type {
-  AIAnswerBlock,
-  AIConversationMode,
-  AIContextRef,
-  AIMessage,
-  AIAnalysisPlan,
-} from "../../types/ai";
+import type { AIAnswerBlock, AIConversationMode, AIContextRef, AIMessage, AIAnalysisPlan } from "../../types/ai";
 import {
   AIProviderClientError,
   startAIChat,
-  toAIProviderError,
   type AIChatCompletion,
   type AIChatHandle,
   type AIChatMessage,
@@ -18,7 +11,7 @@ import {
 import { prepareAnalysisContext, type MinimalAnswerContext } from "./contextBuilder";
 import { contextRefForRoute, routeContext, type AIContextRoute } from "./contextRouter";
 import { createSafeAnalysisDeltaEmitter, safeAnalysisNarrative } from "./analysisNarrative";
-import { messageText } from "./messagePersistence";
+import { answerMessages, buildAnswerBlocks, parsePlan, plainAnswerMessages, planMessages, providerFailure, restrictPlanToUserScope } from "./chatOrchestratorMessages";
 import type { TableDataAdapter, TableSnapshot } from "./tableDataAdapter";
 
 export interface AIChatTransport {
@@ -40,6 +33,7 @@ export interface ChatOrchestratorInput {
   selectedRecordIds?: readonly string[];
   transport?: AIChatTransport;
   maxContextRecords?: number;
+  providerStageTimeoutMs?: number;
   onDelta?: (content: string) => void;
 }
 
@@ -68,6 +62,8 @@ export interface ResolvedChatContext {
   contextRef: AIContextRef | null;
 }
 
+const DEFAULT_PROVIDER_STAGE_TIMEOUT_MS = 60_000;
+
 export function resolveChatContext(input: {
   mode: AIConversationMode;
   question: string;
@@ -83,128 +79,62 @@ export function resolveChatContext(input: {
   return { route, contextRef: contextRefForRoute(route) };
 }
 
-function historyMessages(messages: readonly AIMessage[] | undefined): AIChatMessage[] {
-  return (messages ?? [])
-    .filter((message) => message.status === "complete" || message.status === "stopped")
-    .map((message) => ({ role: message.role, content: messageText(message) }));
-}
-
-function fieldSchema(snapshot: TableSnapshot): string {
-  return JSON.stringify({
-    tableId: snapshot.tableId,
-    name: snapshot.name,
-    fields: snapshot.fields.map((field) => ({ id: field.id, name: field.name, type: field.type, options: field.options })),
-  });
-}
-
-function planMessages(snapshot: TableSnapshot, question: string, previous: readonly AIMessage[] | undefined, issueText = ""): AIChatMessage[] {
-  return [
-    { role: "system", content: "你是表格分析计划生成器。只返回一个 JSON 对象，不要 Markdown，不要统计结论。计划必须包含 filters、projections、groupBy、aggregates、sort、limit；只能使用给定字段 ID。" },
-    ...historyMessages(previous),
-    { role: "user", content: `问题：${question}\n表结构：${fieldSchema(snapshot)}${issueText ? `\n上次计划校验失败，请修正：${issueText}` : ""}` },
-  ];
-}
-
-function answerMessages(
-  question: string,
-  context: MinimalAnswerContext,
-  previous: readonly AIMessage[] | undefined,
-): AIChatMessage[] {
-  return [
-    { role: "system", content: "你是表格回答助手。只能使用 LOCAL_ANALYSIS_CONTEXT 中的本地校验结果回答。Markdown 叙述不得输出精确数字、范围、字段值或记录名称；这些由本地结构化结果呈现。不得自行计算或补造表内事实，直接数据、确定性计算和推断要区分。" },
-    ...historyMessages(previous),
-    { role: "user", content: `问题：${question}\nLOCAL_ANALYSIS_CONTEXT：${JSON.stringify(context)}` },
-  ];
-}
-
-function plainAnswerMessages(question: string, previous: readonly AIMessage[] | undefined): AIChatMessage[] {
-  return [
-    { role: "system", content: "你是通用对话助手。不要把任何未提供的内容说成当前表事实。" },
-    ...historyMessages(previous),
-    { role: "user", content: question },
-  ];
-}
-
-function parsePlan(content: string): unknown {
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/iu.exec(content)?.[1]?.trim();
-  const candidate = fenced ?? content.trim();
-  try {
-    return JSON.parse(candidate) as unknown;
-  } catch {
-    const start = candidate.indexOf("{");
-    const end = candidate.lastIndexOf("}");
-    if (start < 0 || end <= start) return null;
-    try {
-      return JSON.parse(candidate.slice(start, end + 1)) as unknown;
-    } catch {
-      return null;
-    }
-  }
-}
-
-function restrictPlanToUserScope(candidate: unknown, route: AIContextRoute): unknown {
-  if (route.type === "selectedRecords" || typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return candidate;
-  return Object.fromEntries(Object.entries(candidate).filter(([key]) => key !== "recordIds"));
-}
-
-function primitive(value: unknown): string | number | boolean | null {
-  if (value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
-  return value === undefined ? null : JSON.stringify(value);
-}
-
-function answerBlocks(markdown: string, context?: MinimalAnswerContext): AIAnswerBlock[] {
-  if (!context) return [{ type: "markdown", markdown }];
-  const blocks: AIAnswerBlock[] = [{ type: "markdown", markdown: safeAnalysisNarrative(markdown) }];
-  const metrics = context.analysis.aggregates.map((aggregate) => ({ label: aggregate.id, value: primitive(aggregate.value) }));
-  if (metrics.length > 0) blocks.push({ type: "metrics", items: metrics });
-  if (context.analysis.rows.length > 0) {
-    const fields = context.fields.filter((field) => context.analysis.rows.some((row) => field.id in row.values));
-    blocks.push({
-      type: "table",
-      columns: fields.map((field) => ({ id: field.id, label: field.name })),
-      rows: context.analysis.rows.map((row) => Object.fromEntries(fields.map((field) => [field.id, primitive(row.values[field.id])]))),
-    });
-  }
-  if (context.records.length > 0) {
-    blocks.push({ type: "recordRefs", records: context.records.map((record) => ({ recordId: record.recordId, title: record.title })) });
-  }
-  return blocks;
-}
-
-function providerFailure(error: unknown, requestId: string, contextRef: AIContextRef | null): AIOrchestrationResult {
-  const normalized = error instanceof AIProviderClientError ? error : toAIProviderError(error);
-  return {
-    requestId,
-    status: "failed",
-    content: "",
-    answerBlocks: [],
-    contextRef,
-    errorCode: "provider-error",
-    errorMessage: normalized.message,
-  };
-}
 
 export function startChatOrchestration(input: ChatOrchestratorInput): AIChatOrchestratorHandle {
   const requestId = nanoid();
   const transport = input.transport ?? { start: startAIChat } satisfies AIChatTransport;
   let activeHandle: AIChatHandle | null = null;
   let stopped = false;
+  let resolveStopped: (() => void) | undefined;
+  const stoppedSignal = new Promise<void>((resolve) => { resolveStopped = resolve; });
+  const cancelInBackground = (target: AIChatHandle | null) => {
+    if (!target) return;
+    if (activeHandle === target) activeHandle = null;
+    void target.cancel().catch(() => undefined);
+  };
 
   const runProvider = async (messages: AIChatMessage[], childRequestId: string, onDelta?: (content: string) => void): Promise<AIChatCompletion> => {
     if (stopped) return { requestId: childRequestId, content: "", streamed: true, status: "stopped" };
-    const handle = await transport.start({
-      requestId: childRequestId,
-      providerConfigId: input.providerConfigId,
-      baseUrl: input.baseUrl,
-      modelId: input.modelId,
-      messages,
-      dataExfiltrationConfirmed: input.dataExfiltrationConfirmed,
-    }, onDelta);
-    activeHandle = handle;
-    if (stopped) await handle.cancel();
-    const completion = await handle.completion;
-    activeHandle = null;
-    return completion;
+    const timeoutMs = Math.max(1, input.providerStageTimeoutMs ?? DEFAULT_PROVIDER_STAGE_TIMEOUT_MS);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let handle: AIChatHandle | null = null;
+    let stageClosed = false;
+    const providerStage = (async (): Promise<AIChatCompletion> => {
+      const started = await transport.start({
+        requestId: childRequestId,
+        providerConfigId: input.providerConfigId,
+        baseUrl: input.baseUrl,
+        modelId: input.modelId,
+        messages,
+        dataExfiltrationConfirmed: input.dataExfiltrationConfirmed,
+      }, (content) => {
+        if (!stageClosed && !stopped) onDelta?.(content);
+      });
+      handle = started;
+      if (stageClosed || stopped) {
+        cancelInBackground(started);
+        return { requestId: childRequestId, content: "", streamed: true, status: "stopped" };
+      }
+      activeHandle = started;
+      return started.completion;
+    })();
+    try {
+      return await Promise.race([
+        providerStage,
+        stoppedSignal.then((): AIChatCompletion => ({ requestId: childRequestId, content: "", streamed: true, status: "stopped" })),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => {
+            stageClosed = true;
+            cancelInBackground(handle);
+            reject(new AIProviderClientError({ code: "network_unavailable", message: "AI 服务响应超时，请重试或更换模型。", retryable: true }));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      stageClosed = true;
+      if (timer !== undefined) clearTimeout(timer);
+      if (activeHandle === handle) activeHandle = null;
+    }
   };
 
   const completion = (async (): Promise<AIOrchestrationResult> => {
@@ -261,7 +191,7 @@ export function startChatOrchestration(input: ChatOrchestratorInput): AIChatOrch
         requestId,
         status: answer.status,
         content: safeContent,
-        answerBlocks: answerBlocks(safeContent, prepared.context),
+        answerBlocks: buildAnswerBlocks(safeContent, prepared.context),
         contextRef: resolved.contextRef,
         minimalContext: prepared.context,
       };
@@ -274,8 +204,10 @@ export function startChatOrchestration(input: ChatOrchestratorInput): AIChatOrch
     requestId,
     completion,
     stop: async () => {
+      if (stopped) return;
       stopped = true;
-      await activeHandle?.cancel();
+      resolveStopped?.();
+      cancelInBackground(activeHandle);
     },
   };
 }

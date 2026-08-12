@@ -5,7 +5,7 @@ import type { ProjectSnapshot } from "../types/domain";
 import type { SchemaTemplate } from "../types/templates";
 import { ensureDir, listDirNames, removeDir } from "../lib/fs";
 import { projectDir, projectsRootDir } from "../lib/paths";
-import { closeStorageProject, createStorageTable, createStorageView, deleteStorageTable, deleteStorageView, duplicateStorageView, isTauriRuntime, renameStorageProject, renameStorageTable, renameStorageView, reorderStorageTables, reorderStorageViews, undoStorageChange, } from "../lib/ipc/storageClient";
+import { closeStorageProject, createStorageTable, createStorageView, deleteStorageTable, deleteStorageView, duplicateStorageView, isTauriRuntime, renameStorageProject, renameStorageTable, renameStorageView, reorderStorageTables, reorderStorageViews, restoreDeletedStorageTable, undoStorageChange, } from "../lib/ipc/storageClient";
 import { loadRecentProjects, removeRecentProject as removeRecentRecord, touchRecentProject } from "../lib/recentProjects";
 import { deleteTableWithLifecycle } from "../lib/tableLifecycleEvents";
 import { createDefaultLegacyProject, createStorageProjectFromName, initLegacySchema, legacySchemaForTemplate, loadLegacyProject, loadStorageProjects, openStorageProjectAt, reorderRecentProjects, saveLegacyProject, updateProjectSnapshot } from "./projectStoreHelpers";
@@ -170,7 +170,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   deleteTable: async (tableId) => {
     if (!isTauriRuntime()) return;
-    const snapshot = await deleteTableWithLifecycle(tableId, () => deleteStorageTable(tableId));
+    const snapshot = await deleteTableWithLifecycle(tableId, () => deleteStorageTable(tableId), async () => { await restoreDeletedStorageTable(tableId); });
     replaceCurrentSnapshot(set, get, snapshot);
     set({ canUndo: true });
   },

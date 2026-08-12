@@ -8,7 +8,7 @@ pub fn delete_table(
     if count <= 1 {
         return Err(StorageError::validation("项目至少需要保留一张表"));
     }
-    let backup = capture(&transaction, table_id)?;
+    let mut backup = capture(&transaction, table_id)?;
     let deleted = transaction.execute("DELETE FROM data_tables WHERE id = ?1", [table_id])?;
     if deleted != 1 {
         return Err(StorageError::new(
@@ -17,10 +17,12 @@ pub fn delete_table(
             false,
         ));
     }
+    let deleted_at = timestamp();
     transaction.execute(
         "UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'",
-        [timestamp()],
+        [&deleted_at],
     )?;
+    backup.delete_updated_at = deleted_at;
     transaction.commit()?;
     Ok(backup)
 }
@@ -30,6 +32,19 @@ pub fn restore_table(
     backup: &DeletedTable,
 ) -> Result<(), StorageError> {
     let transaction = connection.transaction()?;
+    restore_table_in_transaction(&transaction, backup)?;
+    transaction.execute(
+        "UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'",
+        [timestamp()],
+    )?;
+    transaction.commit()?;
+    Ok(())
+}
+
+pub fn restore_table_in_transaction(
+    transaction: &Transaction<'_>,
+    backup: &DeletedTable,
+) -> Result<(), StorageError> {
     let exists: Option<String> = transaction
         .query_row(
             "SELECT id FROM data_tables WHERE id = ?1",
@@ -40,14 +55,13 @@ pub fn restore_table(
     if exists.is_some() {
         return Err(StorageError::validation("要恢复的表已存在"));
     }
-    let position: i64 = transaction.query_row(
-        "SELECT COALESCE(MAX(position), -1) + 1 FROM data_tables WHERE project_id = ?1",
-        [&backup.table.project_id],
-        |row| row.get(0),
+    transaction.execute(
+        "UPDATE data_tables SET position = position + 1 WHERE project_id = ?1 AND position >= ?2",
+        (&backup.table.project_id, backup.table.position),
     )?;
     transaction.execute(
         "INSERT INTO data_tables (id, project_id, name, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        (&backup.table.id, &backup.table.project_id, &backup.table.name, position, &backup.table.created_at, &backup.table.updated_at),
+        (&backup.table.id, &backup.table.project_id, &backup.table.name, backup.table.position, &backup.table.created_at, &backup.table.updated_at),
     )?;
     transaction.execute("INSERT INTO table_configs (table_id, detail_field_ids_json, updated_at) VALUES (?1, ?2, ?3)", (&backup.table.id, &backup.table_config_json, &backup.table_config_updated_at))?;
     for group in &backup.groups {
@@ -101,11 +115,5 @@ pub fn restore_table(
     for attachment in &backup.attachments {
         transaction.execute("INSERT INTO attachments (id, record_id, field_id, relative_path, original_name, media_type, byte_size, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)", (&attachment.id, &attachment.record_id, &attachment.field_id, &attachment.relative_path, &attachment.original_name, &attachment.media_type, attachment.byte_size, &attachment.created_at))?;
     }
-    transaction.execute(
-        "UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'",
-        [timestamp()],
-    )?;
-    transaction.commit()?;
     Ok(())
 }
-

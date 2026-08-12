@@ -17,7 +17,10 @@ const MIGRATIONS: &[(i64, &str)] = &[
         include_str!("../../migrations/003_phase35_detail_config.sql"),
     ),
     (4, include_str!("../../migrations/004_phase41_activity.sql")),
-    (5, include_str!("../../migrations/005_phase42_attachments.sql")),
+    (
+        5,
+        include_str!("../../migrations/005_phase42_attachments.sql"),
+    ),
 ];
 
 pub fn configure_connection(connection: &Connection) -> Result<(), StorageError> {
@@ -155,11 +158,26 @@ fn create_online_backup(
                 true,
             )
         });
-    if result.is_err() { let _ = std::fs::remove_dir_all(&directory); }
+    if result.is_err() {
+        let _ = std::fs::remove_dir_all(&directory);
+    }
     result?;
-    let root = backups_dir.parent().ok_or_else(|| StorageError::new(StorageErrorCode::MigrationFailed, "数据库升级前保护备份路径无效", true))?;
+    let root = backups_dir.parent().ok_or_else(|| {
+        StorageError::new(
+            StorageErrorCode::MigrationFailed,
+            "数据库升级前保护备份路径无效",
+            true,
+        )
+    })?;
     let manifest = root.join("project.json");
-    if !manifest.is_file() { let _ = std::fs::remove_dir_all(&directory); return Err(StorageError::new(StorageErrorCode::MigrationFailed, "数据库升级前缺少可恢复项目元信息", true)); }
+    if !manifest.is_file() {
+        let _ = std::fs::remove_dir_all(&directory);
+        return Err(StorageError::new(
+            StorageErrorCode::MigrationFailed,
+            "数据库升级前缺少可恢复项目元信息",
+            true,
+        ));
+    }
     std::fs::copy(manifest, directory.join("project.json"))?;
     copy_directory(&root.join("attachments"), &directory.join("attachments"))?;
     super::backup::retain_latest(&super::connection::ProjectPaths::existing(root)?)?;
@@ -168,7 +186,15 @@ fn create_online_backup(
 
 fn copy_directory(source: &Path, destination: &Path) -> Result<(), StorageError> {
     std::fs::create_dir_all(destination)?;
-    for entry in std::fs::read_dir(source)? { let entry = entry?; let target = destination.join(entry.file_name()); if entry.file_type()?.is_dir() { copy_directory(&entry.path(), &target)?; } else if entry.file_type()?.is_file() { std::fs::copy(entry.path(), target)?; } }
+    for entry in std::fs::read_dir(source)? {
+        let entry = entry?;
+        let target = destination.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_directory(&entry.path(), &target)?;
+        } else if entry.file_type()?.is_file() {
+            std::fs::copy(entry.path(), target)?;
+        }
+    }
     Ok(())
 }
 

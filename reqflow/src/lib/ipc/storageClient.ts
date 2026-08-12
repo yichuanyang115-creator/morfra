@@ -47,6 +47,10 @@ export async function deleteStorageTable(tableId: string): Promise<ProjectSnapsh
   return invoke<ProjectSnapshot>("storage_delete_table", { tableId });
 }
 
+export async function restoreDeletedStorageTable(tableId: string): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_restore_deleted_table", { tableId });
+}
+
 export async function reorderStorageTables(tableIds: string[]): Promise<ProjectSnapshot> {
   return invoke<ProjectSnapshot>("storage_reorder_tables", { tableIds });
 }

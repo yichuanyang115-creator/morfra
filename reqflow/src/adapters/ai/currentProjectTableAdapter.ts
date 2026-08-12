@@ -42,7 +42,7 @@ export interface CurrentProjectTableAdapter extends TableDataAdapter {
 }
 
 export interface CurrentProjectHostActions {
-  openRecord: (input: { tableId: string; recordId: string }) => void;
+  openRecord: (input: { tableId: string; recordId: string }) => Promise<import("../../lib/ai/tableDataAdapter").AIHostActionResult>;
 }
 
 const defaultDependencies: CurrentProjectTableAdapterDependencies = {
@@ -202,11 +202,15 @@ export function createCurrentProjectTableAdapter(
 }
 
 export function createCurrentProjectHostActions(
-  uiStore: CurrentProjectStore<CurrentProjectUIState> = defaultDependencies.uiStore,
+  dependencies: Pick<CurrentProjectTableAdapterDependencies, "projectStore" | "requirementStore" | "uiStore"> = defaultDependencies,
 ): CurrentProjectHostActions {
   return {
-    openRecord: (input) => {
-      uiStore.getState().selectRequirement(input.recordId);
+    openRecord: async (input) => {
+      const project = dependencies.projectStore.getState().projects.find((candidate) => candidate.id === dependencies.projectStore.getState().currentProjectId);
+      if (!project || project.id !== input.tableId) return { ok: false, code: "table-not-found", message: "目标表不存在，无法打开引用。", retryable: false };
+      if (!dependencies.requirementStore.getState().requirements.some((requirement) => requirement.id === input.recordId)) return { ok: false, code: "record-not-found", message: "这条记录已不存在，请刷新后重试。", retryable: true };
+      dependencies.uiStore.getState().selectRequirement(input.recordId);
+      return { ok: true };
     },
   };
 }

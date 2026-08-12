@@ -1,33 +1,8 @@
 import { exists, mkdir, readDir, readTextFile, remove, rename, writeTextFile } from "@tauri-apps/plugin-fs";
 import { parseFrontmatter, stringifyFrontmatter } from "../frontmatter";
-import {
-  AI_PERSISTENCE_VERSION,
-  type AIConversation,
-  type AIConversationDocument,
-  type AIConversationIndexDocument,
-  type AIConversationIndexEntry,
-  type AIPanelPreference,
-  type AIProviderConfig,
-} from "../../types/ai";
-import {
-  aiConversationIndexPath,
-  aiConversationPath,
-  aiConversationsDir,
-  aiPreferencesPath,
-  aiProvidersPath,
-  aiRootDir,
-  aiTableDir,
-  aiTablesDir,
-} from "./paths";
-import {
-  isConversation,
-  normalizePanelPreference,
-  normalizeProviderConfig,
-  parseConversationDocument,
-  parseConversationIndex,
-  parsePanelPreferenceDocument,
-  parseProviderDocument,
-} from "./persistenceValidation";
+import { AI_PERSISTENCE_VERSION, type AIConversation, type AIConversationDocument, type AIConversationIndexDocument, type AIConversationIndexEntry, type AIPanelPreference, type AIProviderConfig } from "../../types/ai";
+import { aiConversationIndexPath, aiConversationPath, aiConversationsDir, aiPreferencesPath, aiProvidersPath, aiRootDir, aiTableDir, aiTablesDir } from "./paths";
+import { isConversation, normalizePanelPreference, normalizeProviderConfig, parseConversationDocument, parseConversationIndex, parsePanelPreferenceDocument, parseProviderDocument } from "./persistenceValidation";
 
 export interface AIStorageIssue {
   path: string;
@@ -275,6 +250,38 @@ export function deleteTableAIData(tableId: string): Promise<void> {
   return runConversationOperation(async () => {
     const path = await aiTableDir(tableId);
     if (await exists(path)) await remove(path, { recursive: true });
+  });
+}
+
+export interface StagedTableAIDataDeletion {
+  commit: () => Promise<void>;
+  rollback: () => Promise<void>;
+}
+
+/** 将目标表 AI 目录先原子改名隔离，宿主物理删除成功后才真正移除。 */
+export function stageTableAIDataDeletion(tableId: string): Promise<StagedTableAIDataDeletion> {
+  return runConversationOperation(async () => {
+    const path = await aiTableDir(tableId);
+    if (!(await exists(path))) return { commit: async () => undefined, rollback: async () => undefined };
+    const stagedPath = `${path}.deleting-${Date.now()}-${temporaryFileSequence++}`;
+    await rename(path, stagedPath);
+    let settled = false;
+    return {
+      commit: async () => {
+        if (settled) return;
+        await runConversationOperation(async () => {
+          await remove(stagedPath, { recursive: true });
+          settled = true;
+        });
+      },
+      rollback: async () => {
+        if (settled || !(await exists(stagedPath))) return;
+        await runConversationOperation(async () => {
+          await rename(stagedPath, path);
+          settled = true;
+        });
+      },
+    };
   });
 }
 

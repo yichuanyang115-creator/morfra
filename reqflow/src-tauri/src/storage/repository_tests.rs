@@ -1,12 +1,16 @@
-use super::{apply_requirement_template, create_table, create_table_for_test, initialize_blank_project, load_snapshot};
+use super::{
+    apply_requirement_template, create_table, create_table_for_test, initialize_blank_project,
+    load_snapshot,
+};
 use crate::storage::connection::ProjectManifest;
-use crate::storage::migrations::{apply_pending_migrations, configure_connection};
-use crate::storage::undo::{UndoAction, UndoStack};
-use crate::storage::record_repository::{self, CellUpdate, NewRecord};
 use crate::storage::field_repository;
-use std::collections::HashMap;
-use serde_json::json;
+use crate::storage::migrations::{apply_pending_migrations, configure_connection};
+use crate::storage::record_repository::{self, CellUpdate, NewRecord};
+use crate::storage::undo::{UndoAction, UndoStack};
 use crate::storage::{detail_content_repository, lifecycle, table_backup};
+use rusqlite::params;
+use serde_json::json;
+use std::collections::HashMap;
 
 fn database() -> (rusqlite::Connection, ProjectManifest) {
     let mut connection = rusqlite::Connection::open_in_memory().expect("database");
@@ -33,18 +37,58 @@ fn blank_project_has_one_title_field_and_table_view() {
 }
 
 #[test]
+fn table_data_snapshot_carries_table_identity_metadata() {
+    let (connection, manifest) = database();
+    let table = load_snapshot(&connection, &manifest)
+        .expect("snapshot")
+        .tables[0]
+        .clone();
+
+    let data = field_repository::load_table_data(&connection, &table.id).expect("table data");
+
+    assert_eq!(data.table_id, table.id);
+    assert_eq!(data.table_name, table.name);
+    assert_eq!(data.title_field_id, table.title_field_id);
+    let serialized = serde_json::to_value(data).expect("serialize table data");
+    assert_eq!(serialized["tableName"], json!(table.name));
+    assert_eq!(serialized["titleFieldId"], json!(table.title_field_id));
+}
+
+#[test]
 fn requirement_template_uses_normal_fields_and_visible_activity_binding() {
     let (mut connection, manifest) = database();
-    let table_id = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].id.clone();
-    let snapshot = apply_requirement_template(&mut connection, &manifest, &table_id).expect("template");
+    let table_id = load_snapshot(&connection, &manifest)
+        .expect("snapshot")
+        .tables[0]
+        .id
+        .clone();
+    let snapshot =
+        apply_requirement_template(&mut connection, &manifest, &table_id).expect("template");
     let table = &snapshot.tables[0];
     assert_eq!(snapshot.tables.len(), 1);
     assert!(table.views.iter().any(|view| view.view_type == "board"));
-    let stage: String = connection.query_row("SELECT id FROM fields WHERE table_id = ?1 AND name = '阶段' AND field_type = 'select'", [&table_id], |row| row.get(0)).expect("stage");
-    let binding: String = connection.query_row("SELECT activity_field_id FROM table_configs WHERE table_id = ?1", [&table_id], |row| row.get(0)).expect("binding");
+    let stage: String = connection
+        .query_row(
+            "SELECT id FROM fields WHERE table_id = ?1 AND name = '阶段' AND field_type = 'select'",
+            [&table_id],
+            |row| row.get(0),
+        )
+        .expect("stage");
+    let binding: String = connection
+        .query_row(
+            "SELECT activity_field_id FROM table_configs WHERE table_id = ?1",
+            [&table_id],
+            |row| row.get(0),
+        )
+        .expect("binding");
     assert_eq!(binding, stage);
     let tabs = detail_content_repository::load_detail_tabs(&connection, &table_id).expect("tabs");
-    assert_eq!(tabs.iter().map(|tab| tab.renderer.as_str()).collect::<Vec<_>>(), vec!["body", "deliverables", "tasks", "acceptance", "activity"]);
+    assert_eq!(
+        tabs.iter()
+            .map(|tab| tab.renderer.as_str())
+            .collect::<Vec<_>>(),
+        vec!["body", "deliverables", "tasks", "acceptance", "activity"]
+    );
 }
 
 #[test]
@@ -96,80 +140,182 @@ fn undo_removes_the_created_table_and_keeps_the_default_table() {
 #[test]
 fn batch_mutation_is_atomic_and_undo_restores_changed_and_created_records() {
     let (mut connection, manifest) = database();
-    let table = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].clone();
+    let table = load_snapshot(&connection, &manifest)
+        .expect("snapshot")
+        .tables[0]
+        .clone();
     let mut first = HashMap::new();
     first.insert(table.title_field_id.clone(), json!("原始记录"));
-    let record_id = record_repository::create_record(&mut connection, &table.id, first).expect("record");
+    let record_id =
+        record_repository::create_record(&mut connection, &table.id, first).expect("record");
 
     let mut invalid = HashMap::new();
     invalid.insert(table.title_field_id.clone(), json!(""));
     let failed = record_repository::apply_batch_mutation(
         &mut connection,
         &table.id,
-        vec![CellUpdate { record_id: record_id.clone(), field_id: table.title_field_id.clone(), value: json!("不应写入") }],
+        vec![CellUpdate {
+            record_id: record_id.clone(),
+            field_id: table.title_field_id.clone(),
+            value: json!("不应写入"),
+        }],
         vec![NewRecord { values: invalid }],
         vec![],
     );
     assert!(failed.is_err());
     let unchanged = field_repository::load_table_data(&connection, &table.id).expect("data");
-    assert_eq!(unchanged.records[0].values[&table.title_field_id], json!("原始记录"));
+    assert_eq!(
+        unchanged.records[0].values[&table.title_field_id],
+        json!("原始记录")
+    );
 
     let mut second = HashMap::new();
     second.insert(table.title_field_id.clone(), json!("新记录"));
     let backup = record_repository::apply_batch_mutation(
         &mut connection,
         &table.id,
-        vec![CellUpdate { record_id, field_id: table.title_field_id.clone(), value: json!("已修改") }],
+        vec![CellUpdate {
+            record_id,
+            field_id: table.title_field_id.clone(),
+            value: json!("已修改"),
+        }],
         vec![NewRecord { values: second }],
         vec![],
-    ).expect("batch");
+    )
+    .expect("batch");
     let after = field_repository::load_table_data(&connection, &table.id).expect("data");
     assert_eq!(after.records.len(), 2);
     record_repository::restore_batch_mutation(&mut connection, &backup).expect("undo batch");
     let restored = field_repository::load_table_data(&connection, &table.id).expect("data");
     assert_eq!(restored.records.len(), 1);
-    assert_eq!(restored.records[0].values[&table.title_field_id], json!("原始记录"));
+    assert_eq!(
+        restored.records[0].values[&table.title_field_id],
+        json!("原始记录")
+    );
 }
 
 #[test]
 fn record_reorder_is_persisted_validated_and_undoable() {
     let (mut connection, manifest) = database();
-    let table = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].clone();
-    let create = |connection: &mut rusqlite::Connection, title: &str| { let mut values = HashMap::new(); values.insert(table.title_field_id.clone(), json!(title)); record_repository::create_record(connection, &table.id, values).expect("record") };
+    let table = load_snapshot(&connection, &manifest)
+        .expect("snapshot")
+        .tables[0]
+        .clone();
+    let create = |connection: &mut rusqlite::Connection, title: &str| {
+        let mut values = HashMap::new();
+        values.insert(table.title_field_id.clone(), json!(title));
+        record_repository::create_record(connection, &table.id, values).expect("record")
+    };
     let first = create(&mut connection, "第一条");
     let second = create(&mut connection, "第二条");
-    let backup = record_repository::reorder_records(&mut connection, &table.id, &[second.clone(), first.clone()]).expect("reorder");
+    let backup = record_repository::reorder_records(
+        &mut connection,
+        &table.id,
+        &[second.clone(), first.clone()],
+    )
+    .expect("reorder");
     let reordered = field_repository::load_table_data(&connection, &table.id).expect("data");
-    assert_eq!(reordered.records.iter().map(|record| record.id.as_str()).collect::<Vec<_>>(), vec![second.as_str(), first.as_str()]);
-    assert!(record_repository::reorder_records(&mut connection, &table.id, std::slice::from_ref(&first)).is_err());
+    assert_eq!(
+        reordered
+            .records
+            .iter()
+            .map(|record| record.id.as_str())
+            .collect::<Vec<_>>(),
+        vec![second.as_str(), first.as_str()]
+    );
+    assert!(record_repository::reorder_records(
+        &mut connection,
+        &table.id,
+        std::slice::from_ref(&first)
+    )
+    .is_err());
     record_repository::restore_batch_mutation(&mut connection, &backup).expect("undo reorder");
     let restored = field_repository::load_table_data(&connection, &table.id).expect("data");
-    assert_eq!(restored.records.iter().map(|record| record.id.as_str()).collect::<Vec<_>>(), vec![first.as_str(), second.as_str()]);
+    assert_eq!(
+        restored
+            .records
+            .iter()
+            .map(|record| record.id.as_str())
+            .collect::<Vec<_>>(),
+        vec![first.as_str(), second.as_str()]
+    );
 }
 
 #[test]
 fn file_fields_persist_multiple_attachment_urls() {
     let (mut connection, manifest) = database();
-    let table = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].clone();
-    let file_id = field_repository::create_field(&mut connection, &table.id, "附件", "file", json!({}), None).expect("file field");
+    let table = load_snapshot(&connection, &manifest)
+        .expect("snapshot")
+        .tables[0]
+        .clone();
+    let file_id =
+        field_repository::create_field(&mut connection, &table.id, "附件", "file", json!({}), None)
+            .expect("file field");
     let mut values = HashMap::new();
     values.insert(table.title_field_id.clone(), json!("多附件记录"));
-    values.insert(file_id.clone(), json!(["https://files.test/one.pdf", "https://files.test/two.pdf"]));
+    values.insert(
+        file_id.clone(),
+        json!(["https://files.test/one.pdf", "https://files.test/two.pdf"]),
+    );
     record_repository::create_record(&mut connection, &table.id, values).expect("record");
     let data = field_repository::load_table_data(&connection, &table.id).expect("data");
-    assert_eq!(data.records[0].values[&file_id], json!(["https://files.test/one.pdf", "https://files.test/two.pdf"]));
+    assert_eq!(
+        data.records[0].values[&file_id],
+        json!(["https://files.test/one.pdf", "https://files.test/two.pdf"])
+    );
+}
+
+#[test]
+fn table_data_snapshot_exposes_attachment_metadata_without_file_body_or_path() {
+    let (mut connection, manifest) = database();
+    let table = load_snapshot(&connection, &manifest)
+        .expect("snapshot")
+        .tables[0]
+        .clone();
+    let file_id =
+        field_repository::create_field(&mut connection, &table.id, "附件", "file", json!({}), None)
+            .expect("file field");
+    let mut values = HashMap::new();
+    values.insert(table.title_field_id.clone(), json!("元数据记录"));
+    let record_id =
+        record_repository::create_record(&mut connection, &table.id, values).expect("record");
+    connection.execute(
+        "INSERT INTO attachments (id, record_id, field_id, relative_path, original_name, media_type, byte_size, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        params!["attachment-1", record_id, file_id, "attachments/attachment-1.bin", "交付说明.pdf", "application/pdf", 42_i64, "2026-08-12T00:00:00Z"],
+    ).expect("attachment metadata");
+    let data = field_repository::load_table_data(&connection, &table.id).expect("data");
+    assert_eq!(data.attachments.len(), 1);
+    assert_eq!(data.attachments[0].id, "attachment-1");
+    assert_eq!(data.attachments[0].original_name, "交付说明.pdf");
+    assert_eq!(
+        data.attachments[0].media_type.as_deref(),
+        Some("application/pdf")
+    );
 }
 
 #[test]
 fn clearing_an_existing_title_cell_is_allowed_after_record_creation() {
     let (mut connection, manifest) = database();
-    let table = load_snapshot(&connection, &manifest).expect("snapshot").tables[0].clone();
+    let table = load_snapshot(&connection, &manifest)
+        .expect("snapshot")
+        .tables[0]
+        .clone();
     let mut values = HashMap::new();
     values.insert(table.title_field_id.clone(), json!("待清空标题"));
-    let record_id = record_repository::create_record(&mut connection, &table.id, values).expect("record");
-    record_repository::update_cell(&mut connection, &record_id, &table.title_field_id, serde_json::Value::Null).expect("clear title");
+    let record_id =
+        record_repository::create_record(&mut connection, &table.id, values).expect("record");
+    record_repository::update_cell(
+        &mut connection,
+        &record_id,
+        &table.title_field_id,
+        serde_json::Value::Null,
+    )
+    .expect("clear title");
     let data = field_repository::load_table_data(&connection, &table.id).expect("data");
-    assert_eq!(data.records[0].values[&table.title_field_id], serde_json::Value::Null);
+    assert_eq!(
+        data.records[0].values[&table.title_field_id],
+        serde_json::Value::Null
+    );
 }
 
 #[test]

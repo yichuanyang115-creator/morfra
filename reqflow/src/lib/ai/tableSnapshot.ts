@@ -214,8 +214,8 @@ export function normalizeTableSnapshot(input: unknown): TableSnapshot {
     }
     const fieldType = type as TableFieldType;
     const options = field.options === undefined ? undefined : normalizeOptions(field.options, `fields[${index}].options`);
-    if ((fieldType === "singleSelect" || fieldType === "multiSelect") && (!options || options.length === 0)) {
-      throw new TableSnapshotValidationError(`fields[${index}].options`, "选择字段必须定义选项");
+    if ((fieldType === "singleSelect" || fieldType === "multiSelect") && options === undefined) {
+      throw new TableSnapshotValidationError(`fields[${index}].options`, "选择字段必须提供选项数组");
     }
     if (fieldType !== "singleSelect" && fieldType !== "multiSelect" && options !== undefined) {
       throw new TableSnapshotValidationError(`fields[${index}].options`, "非选择字段不能定义选项");

@@ -133,6 +133,49 @@ describe("Phase 5 chatOrchestrator", () => {
     expect(fake.calls).toHaveLength(2);
   });
 
+  it("Provider 启动阶段无终态时也在上限内返回局部可重试超时", async () => {
+    vi.useFakeTimers();
+    try {
+      const { adapter } = createEvaluationTableAdapter();
+      const transport = { start: vi.fn(() => new Promise<AIChatHandle>(() => undefined)) };
+      const handle = startChatOrchestration({ ...input(adapter, "统计整张表", { transport, providerStageTimeoutMs: 50 }) });
+
+      await vi.advanceTimersByTimeAsync(50);
+      await expect(handle.completion).resolves.toMatchObject({ status: "failed", errorCode: "provider-error", errorMessage: "AI 服务响应超时，请重试或更换模型。" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("Provider 完成与取消均挂起时仍按时失败并丢弃迟到增量", async () => {
+    vi.useFakeTimers();
+    try {
+      const { adapter } = createEvaluationTableAdapter();
+      const cancel = vi.fn(() => new Promise<void>(() => undefined));
+      let emitDelta: ((content: string) => void) | undefined;
+      const onDelta = vi.fn();
+      const transport = {
+        start: vi.fn(async (request: AIChatRequest, nextDelta?: (content: string) => void): Promise<AIChatHandle> => {
+          emitDelta = nextDelta;
+          return {
+            requestId: request.requestId ?? "hanging",
+            completion: new Promise(() => undefined),
+            cancel,
+          };
+        }),
+      };
+      const handle = startChatOrchestration({ ...input(adapter, "统计整张表", { transport, providerStageTimeoutMs: 50, onDelta }) });
+
+      await vi.advanceTimersByTimeAsync(50);
+      await expect(handle.completion).resolves.toMatchObject({ status: "failed", errorCode: "provider-error", errorMessage: "AI 服务响应超时，请重试或更换模型。" });
+      expect(cancel).toHaveBeenCalledOnce();
+      emitDelta?.("不应写入的迟到内容");
+      expect(onDelta).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("同名记录按稳定 tableId 隔离，不会把表 A 的记录带入表 B", async () => {
     const controls = createEvaluationTableAdapter();
     controls.setActiveTable("table-same-name-a");

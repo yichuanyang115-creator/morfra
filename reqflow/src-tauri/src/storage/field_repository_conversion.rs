@@ -47,12 +47,10 @@ fn convert_field_values(
                     }
                 }
             }
-            let mut position = 0_i64;
-            for name in generated_names {
+            for (position, name) in generated_names.into_iter().enumerate() {
                 let id = generated.get(&name).expect("generated option id");
                 let now = timestamp();
-                transaction.execute("INSERT INTO field_options (id, field_id, name, color, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)", params![id, field.id, name, DEFAULT_OPTION_COLORS[(position as usize) % DEFAULT_OPTION_COLORS.len()], position, now])?;
-                position += 1;
+                transaction.execute("INSERT INTO field_options (id, field_id, name, color, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)", params![id, field.id, name, DEFAULT_OPTION_COLORS[position % DEFAULT_OPTION_COLORS.len()], position as i64, now])?;
             }
         }
     } else {
@@ -194,5 +192,4 @@ fn write_converted_value(
     }
     Ok(())
 }
-
 

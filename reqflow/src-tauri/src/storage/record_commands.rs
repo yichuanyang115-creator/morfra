@@ -4,8 +4,8 @@ use std::sync::Mutex;
 use serde_json::Value;
 use tauri::State;
 
-use super::commands::active_project_path;
 use super::activity_repository;
+use super::commands::active_project_path;
 use super::connection;
 use super::detail_content_repository;
 use super::domain::TableDataSnapshot;
@@ -128,56 +128,106 @@ pub fn storage_move_board_card(
 }
 
 #[tauri::command]
-pub fn storage_get_activity_binding(table_id: String, state: State<'_, Mutex<StorageState>>) -> Result<activity_repository::ActivityBinding, StorageError> {
+pub fn storage_get_activity_binding(
+    table_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<activity_repository::ActivityBinding, StorageError> {
     let path = active_project_path(state.inner())?;
     let opened = connection::open_project(&path)?;
     activity_repository::activity_binding(&opened.connection, &table_id)
 }
 
 #[tauri::command]
-pub fn storage_update_activity_binding(table_id: String, field_id: Option<String>, state: State<'_, Mutex<StorageState>>) -> Result<activity_repository::ActivityBinding, StorageError> {
+pub fn storage_update_activity_binding(
+    table_id: String,
+    field_id: Option<String>,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<activity_repository::ActivityBinding, StorageError> {
     let path = active_project_path(state.inner())?;
     let mut opened = connection::open_project(&path)?;
     let transaction = opened.connection.transaction()?;
     activity_repository::bind_activity_field(&transaction, &table_id, field_id.as_deref())?;
-    transaction.execute("UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'", [super::connection::timestamp()])?;
+    transaction.execute(
+        "UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'",
+        [super::connection::timestamp()],
+    )?;
     transaction.commit()?;
     activity_repository::activity_binding(&opened.connection, &table_id)
 }
 
 #[tauri::command]
-pub fn storage_load_activity_events(record_id: String, state: State<'_, Mutex<StorageState>>) -> Result<Vec<activity_repository::ActivityEvent>, StorageError> {
+pub fn storage_load_activity_events(
+    record_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<Vec<activity_repository::ActivityEvent>, StorageError> {
     let path = active_project_path(state.inner())?;
     let opened = connection::open_project(&path)?;
     activity_repository::load_events(&opened.connection, &record_id)
 }
 
 #[tauri::command]
-pub fn storage_update_activity_note(event_id: String, note: Option<String>, state: State<'_, Mutex<StorageState>>) -> Result<(), StorageError> { let path = active_project_path(state.inner())?; let mut opened = connection::open_project(&path)?; activity_repository::update_note(&mut opened.connection, &event_id, note.as_deref()) }
+pub fn storage_update_activity_note(
+    event_id: String,
+    note: Option<String>,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<(), StorageError> {
+    let path = active_project_path(state.inner())?;
+    let mut opened = connection::open_project(&path)?;
+    activity_repository::update_note(&mut opened.connection, &event_id, note.as_deref())
+}
 
 #[tauri::command]
-pub fn storage_create_activity_comment(event_id: String, content: String, state: State<'_, Mutex<StorageState>>) -> Result<activity_repository::ActivityComment, StorageError> { let path = active_project_path(state.inner())?; let mut opened = connection::open_project(&path)?; activity_repository::create_comment(&mut opened.connection, &event_id, &content) }
+pub fn storage_create_activity_comment(
+    event_id: String,
+    content: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<activity_repository::ActivityComment, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let mut opened = connection::open_project(&path)?;
+    activity_repository::create_comment(&mut opened.connection, &event_id, &content)
+}
 
 #[tauri::command]
-pub fn storage_delete_activity_event(event_id: String, state: State<'_, Mutex<StorageState>>) -> Result<(), StorageError> { let path = active_project_path(state.inner())?; let mut opened = connection::open_project(&path)?; activity_repository::delete_event(&mut opened.connection, &event_id) }
+pub fn storage_delete_activity_event(
+    event_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<(), StorageError> {
+    let path = active_project_path(state.inner())?;
+    let mut opened = connection::open_project(&path)?;
+    activity_repository::delete_event(&mut opened.connection, &event_id)
+}
 
 #[tauri::command]
-pub fn storage_get_detail_tabs(table_id: String, state: State<'_, Mutex<StorageState>>) -> Result<Vec<detail_content_repository::DetailTabDefinition>, StorageError> {
+pub fn storage_get_detail_tabs(
+    table_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<Vec<detail_content_repository::DetailTabDefinition>, StorageError> {
     let path = active_project_path(state.inner())?;
     let opened = connection::open_project(&path)?;
     detail_content_repository::load_detail_tabs(&opened.connection, &table_id)
 }
 
 #[tauri::command]
-pub fn storage_load_record_detail_content(record_id: String, state: State<'_, Mutex<StorageState>>) -> Result<detail_content_repository::RecordDetailContent, StorageError> {
+pub fn storage_load_record_detail_content(
+    record_id: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<detail_content_repository::RecordDetailContent, StorageError> {
     let path = active_project_path(state.inner())?;
     let opened = connection::open_project(&path)?;
     detail_content_repository::load_record_detail_content(&opened.connection, &record_id)
 }
 
 #[tauri::command]
-pub fn storage_save_record_detail_content(record_id: String, content: detail_content_repository::RecordDetailContentInput, state: State<'_, Mutex<StorageState>>) -> Result<detail_content_repository::RecordDetailContent, StorageError> {
+pub fn storage_save_record_detail_content(
+    record_id: String,
+    content: detail_content_repository::RecordDetailContentInput,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<detail_content_repository::RecordDetailContent, StorageError> {
     let path = active_project_path(state.inner())?;
     let mut opened = connection::open_project(&path)?;
-    detail_content_repository::save_record_detail_content(&mut opened.connection, &record_id, content)
+    detail_content_repository::save_record_detail_content(
+        &mut opened.connection,
+        &record_id,
+        content,
+    )
 }

@@ -119,14 +119,13 @@ fn normalize_field_config(field_type: &str, config: Value) -> Result<String, Sto
                 object.insert("includeTime".into(), Value::Bool(false));
             }
         }
-        "select" | "multi_select" => {
+        "select" | "multi_select"
             if !object
                 .get("allowCreate")
                 .map(Value::is_boolean)
-                .unwrap_or(false)
-            {
-                object.insert("allowCreate".into(), Value::Bool(true));
-            }
+                .unwrap_or(false) =>
+        {
+            object.insert("allowCreate".into(), Value::Bool(true));
         }
         _ => {}
     }
@@ -191,4 +190,3 @@ fn option_belongs_to_field(
         .optional()?
         .is_some())
 }
-
