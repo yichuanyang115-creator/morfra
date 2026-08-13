@@ -273,7 +273,7 @@ fn file_fields_persist_multiple_attachment_urls() {
         .tables[0]
         .clone();
     let file_id =
-        field_repository::create_field(&mut connection, &table.id, "附件", "file", json!({}), None)
+        field_repository::create_field(&mut connection, &table.id, "附件", "file", json!({}))
             .expect("file field");
     let mut values = HashMap::new();
     values.insert(table.title_field_id.clone(), json!("多附件记录"));
@@ -297,7 +297,7 @@ fn table_data_snapshot_exposes_attachment_metadata_without_file_body_or_path() {
         .tables[0]
         .clone();
     let file_id =
-        field_repository::create_field(&mut connection, &table.id, "附件", "file", json!({}), None)
+        field_repository::create_field(&mut connection, &table.id, "附件", "file", json!({}))
             .expect("file field");
     let mut values = HashMap::new();
     values.insert(table.title_field_id.clone(), json!("元数据记录"));

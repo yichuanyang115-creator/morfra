@@ -43,7 +43,6 @@ pub fn storage_create_field(
     name: String,
     field_type: String,
     config: Value,
-    group_id: Option<String>,
     state: State<'_, Mutex<StorageState>>,
 ) -> Result<TableDataSnapshot, StorageError> {
     let path = active_project_path(state.inner())?;
@@ -54,7 +53,6 @@ pub fn storage_create_field(
         &name,
         &field_type,
         config,
-        group_id.as_deref(),
     )?;
     push_undo(state.inner(), UndoAction::DeleteField { field_id })?;
     table_data(&path, &table_id)
@@ -66,7 +64,6 @@ pub fn storage_update_field(
     name: String,
     field_type: String,
     config: Value,
-    group_id: Option<String>,
     state: State<'_, Mutex<StorageState>>,
 ) -> Result<TableDataSnapshot, StorageError> {
     let path = active_project_path(state.inner())?;
@@ -77,7 +74,6 @@ pub fn storage_update_field(
         &name,
         &field_type,
         config,
-        group_id.as_deref(),
     )?;
     let table_id = backup.field.table_id.clone();
     push_undo(state.inner(), UndoAction::RestoreField { backup })?;
@@ -94,79 +90,6 @@ pub fn storage_delete_field(
     let backup = field_repository::delete_field(&mut opened.connection, &field_id)?;
     let table_id = backup.field.table_id.clone();
     push_undo(state.inner(), UndoAction::RestoreField { backup })?;
-    table_data(&path, &table_id)
-}
-
-#[tauri::command]
-pub fn storage_create_field_group(
-    table_id: String,
-    name: String,
-    state: State<'_, Mutex<StorageState>>,
-) -> Result<TableDataSnapshot, StorageError> {
-    let path = active_project_path(state.inner())?;
-    let mut opened = connection::open_project(&path)?;
-    let group_id = field_repository::create_group(&mut opened.connection, &table_id, &name)?;
-    push_undo(state.inner(), UndoAction::DeleteGroup { group_id })?;
-    table_data(&path, &table_id)
-}
-
-#[tauri::command]
-pub fn storage_rename_field_group(
-    group_id: String,
-    name: String,
-    state: State<'_, Mutex<StorageState>>,
-) -> Result<TableDataSnapshot, StorageError> {
-    let path = active_project_path(state.inner())?;
-    let mut opened = connection::open_project(&path)?;
-    let backup = field_repository::rename_group(&mut opened.connection, &group_id, &name)?;
-    let table_id = backup.group.table_id.clone();
-    push_undo(
-        state.inner(),
-        UndoAction::RenameGroup {
-            group_id,
-            previous_name: backup.group.name.clone(),
-        },
-    )?;
-    table_data(&path, &table_id)
-}
-
-#[tauri::command]
-pub fn storage_delete_field_group(
-    group_id: String,
-    state: State<'_, Mutex<StorageState>>,
-) -> Result<TableDataSnapshot, StorageError> {
-    let path = active_project_path(state.inner())?;
-    let mut opened = connection::open_project(&path)?;
-    let backup = field_repository::delete_group(&mut opened.connection, &group_id)?;
-    let table_id = backup.group.table_id.clone();
-    push_undo(state.inner(), UndoAction::RestoreGroup { backup })?;
-    table_data(&path, &table_id)
-}
-
-#[tauri::command]
-pub fn storage_move_field(
-    field_id: String,
-    group_id: Option<String>,
-    state: State<'_, Mutex<StorageState>>,
-) -> Result<TableDataSnapshot, StorageError> {
-    let path = active_project_path(state.inner())?;
-    let mut opened = connection::open_project(&path)?;
-    let backup =
-        field_repository::move_field(&mut opened.connection, &field_id, group_id.as_deref())?;
-    let table_id = backup.field.table_id.clone();
-    push_undo(state.inner(), UndoAction::RestoreField { backup })?;
-    table_data(&path, &table_id)
-}
-
-#[tauri::command]
-pub fn storage_reorder_field_groups(
-    table_id: String,
-    group_ids: Vec<String>,
-    state: State<'_, Mutex<StorageState>>,
-) -> Result<TableDataSnapshot, StorageError> {
-    let path = active_project_path(state.inner())?;
-    let mut opened = connection::open_project(&path)?;
-    lifecycle::reorder_field_groups(&mut opened.connection, &table_id, &group_ids)?;
     table_data(&path, &table_id)
 }
 

@@ -5,12 +5,10 @@ use serde_json::{json, Value};
 
 use super::activity_repository;
 use super::connection::timestamp;
-use super::domain::{
-    FieldGroupSummary, FieldOptionSummary, FieldSummary, OptionUsage, TableDataSnapshot,
-};
+use super::domain::{FieldOptionSummary, FieldSummary, OptionUsage, TableDataSnapshot};
 use super::error::StorageError;
 use super::field_models::{
-    CellValueRow, FieldBackup, FieldGroupBackup, FieldGroupRow, FieldOptionRow, FieldRow,
+    CellValueRow, FieldBackup, FieldOptionRow, FieldRow,
     MultiSelectValueRow, OptionBackup, ViewConfigRow,
 };
 use super::record_repository;

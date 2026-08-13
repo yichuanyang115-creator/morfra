@@ -17,34 +17,13 @@ fn capture(transaction: &Transaction<'_>, table_id: &str) -> Result<DeletedTable
         )
         .optional()?
         .unwrap_or_else(|| ("[]".into(), timestamp()));
-    let mut groups = Vec::new();
-    let mut statement = transaction.prepare("SELECT id, table_id, name, position, created_at, updated_at FROM field_groups WHERE table_id = ?1 ORDER BY position")?;
-    for row in statement.query_map([table_id], |row| {
-        Ok(FieldGroupRow {
-            id: row.get(0)?,
-            table_id: row.get(1)?,
-            name: row.get(2)?,
-            position: row.get(3)?,
-            created_at: row.get(4)?,
-            updated_at: row.get(5)?,
-        })
-    })? {
-        groups.push(row?);
-    }
     let mut fields = Vec::new();
-    let mut statement = transaction.prepare("SELECT id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at FROM fields WHERE table_id = ?1 ORDER BY position")?;
+    let mut statement = transaction.prepare("SELECT id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at FROM fields WHERE table_id = ?1 ORDER BY position")?;
     for row in statement.query_map([table_id], |row| {
         Ok(FieldRow {
             id: row.get(0)?,
             table_id: row.get(1)?,
-            group_id: row.get(2)?,
-            name: row.get(3)?,
-            field_type: row.get(4)?,
-            is_title: row.get(5)?,
-            position: row.get(6)?,
-            config_json: row.get(7)?,
-            created_at: row.get(8)?,
-            updated_at: row.get(9)?,
+            name: row.get(2)?, field_type: row.get(3)?, is_title: row.get(4)?, position: row.get(5)?, config_json: row.get(6)?, created_at: row.get(7)?, updated_at: row.get(8)?,
         })
     })? {
         fields.push(row?);
@@ -139,7 +118,6 @@ fn capture(transaction: &Transaction<'_>, table_id: &str) -> Result<DeletedTable
         delete_updated_at: String::new(),
         table_config_json: table_config.0,
         table_config_updated_at: table_config.1,
-        groups,
         fields,
         options,
         views,

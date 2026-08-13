@@ -3,18 +3,15 @@ import type { FieldType } from "../../types/domain";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { FieldTypePicker } from "../fields/FieldTypePicker";
 
-interface GridHeaderProps { layouts: ColumnLayout[]; groupNames: Record<string, string>; rowHeight: number; collapsedGroupIds: string[]; onCreateField?: (fieldType: FieldType, name: string) => Promise<string>; onRenameField?: (fieldId: string, name: string) => Promise<void>; onToggleGroup: (groupId: string) => void; onReorderGroup: (sourceId: string, targetId: string) => void; onResize: (fieldId: string, width: number) => void; onAutoFit: (fieldId: string) => void; onFreezeTo: (fieldId: string) => void; onClearExtraFreeze: () => void; }
+interface GridHeaderProps { layouts: ColumnLayout[]; rowHeight: number; onCreateField?: (fieldType: FieldType, name: string) => Promise<string>; onRenameField?: (fieldId: string, name: string) => Promise<void>; onResize: (fieldId: string, width: number) => void; onAutoFit: (fieldId: string) => void; onFreezeTo: (fieldId: string) => void; onClearExtraFreeze: () => void; }
 
 const FIELD_TYPE_ICONS: Record<FieldType, string> = { text: "T", number: "#", select: "⌄", multi_select: "≡", date: "◷", checkbox: "☑", progress: "%", link: "↗", image: "▧", file: "▤", auto_number: "#", created_time: "◷", updated_time: "◷" };
 const FIELD_TYPE_LABELS: Record<FieldType, string> = { text: "文本", number: "数字", select: "单选", multi_select: "多选", date: "日期", checkbox: "复选框", progress: "进度", link: "链接", image: "图片", file: "文件", auto_number: "自动编号", created_time: "创建时间", updated_time: "最后编辑时间" };
 
-export function GridHeader({ layouts, groupNames, rowHeight, collapsedGroupIds, onCreateField, onRenameField, onToggleGroup, onReorderGroup, onResize, onAutoFit, onFreezeTo, onClearExtraFreeze }: GridHeaderProps) {
-  const groups = groupSegments(layouts);
-  const [draggedGroupId, setDraggedGroupId] = useState<string | null>(null);
+export function GridHeader({ layouts, rowHeight, onCreateField, onRenameField, onResize, onAutoFit, onFreezeTo, onClearExtraFreeze }: GridHeaderProps) {
   const [createdFieldId, setCreatedFieldId] = useState<string | null>(null);
   return <div className="morfra-grid-header" style={{ gridTemplateColumns: gridTemplate(layouts, Boolean(onCreateField)) }}>
     <div className="morfra-grid-row-number morfra-grid-sticky">#</div>
-    {groups.map((group) => <div key={group.key} className={`morfra-grid-group ${group.frozen ? "is-frozen" : ""}`} draggable onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; setDraggedGroupId(group.id); }} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (draggedGroupId && draggedGroupId !== group.id) onReorderGroup(draggedGroupId, group.id); setDraggedGroupId(null); }} style={{ gridColumn: `${group.start + 2} / span ${group.count}`, ...(group.frozen ? { left: `var(--grid-sticky-${group.firstFieldId})` } : {}) }}>{group.groupId ? <button type="button" onClick={() => onToggleGroup(group.groupId!)}>{collapsedGroupIds.includes(group.groupId) ? "›" : "⌄"} {groupNames[group.groupId] ?? "字段组"}</button> : "未分组"}</div>)}
     {layouts.map((layout) => <GridHeaderCell key={layout.field.id} layout={layout} rowHeight={rowHeight} autoEdit={layout.field.id === createdFieldId} onAutoEditEnd={() => setCreatedFieldId(null)} onRename={onRenameField} onResize={onResize} onAutoFit={onAutoFit} onFreezeTo={onFreezeTo} onClearExtraFreeze={onClearExtraFreeze} />)}
     {onCreateField && <QuickAddField onCreate={onCreateField} onCreated={setCreatedFieldId} />}
   </div>;
@@ -45,5 +42,4 @@ function QuickAddField({ onCreate, onCreated }: { onCreate: (fieldType: FieldTyp
   </div>;
 }
 
-function groupSegments(layouts: ColumnLayout[]) { const result: { id: string; key: string; groupId: string | null; name: string; start: number; count: number; frozen: boolean; firstFieldId: string }[] = []; for (let index = 0; index < layouts.length;) { const field = layouts[index].field; if (field.isTitle) { index += 1; continue; } const id = field.groupId ?? "ungrouped"; const frozen = layouts[index].frozen; let end = index + 1; while (end < layouts.length && !layouts[end].field.isTitle && (layouts[end].field.groupId ?? "ungrouped") === id && layouts[end].frozen === frozen) end += 1; result.push({ id, key: `${id}-${frozen ? "frozen" : "scroll"}-${index}`, groupId: field.groupId, name: field.groupId ? "字段组" : "未分组", start: index, count: end - index, frozen, firstFieldId: field.id }); index = end; } return result; }
 function gridTemplate(layouts: ColumnLayout[], includeAddField: boolean) { return `${ROW_NUMBER_WIDTH}px ${layouts.map((layout) => `${layout.width}px`).join(" ")}${includeAddField ? " 112px" : ""}`; }

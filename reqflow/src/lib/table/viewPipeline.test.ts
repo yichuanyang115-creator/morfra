@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FieldSummary, RecordData, TableDataSnapshot } from "../../types/domain";
-import { buildGroupProjection, uniqueProjectedRecordCount } from "./groupProjection";
+import { buildGroupProjection, isGroupable } from "./groupProjection";
 import { EMPTY_VIEW_PIPELINE, matchesCondition, parseViewPipelineConfig, runViewPipeline, searchableText, stableSort } from "./viewPipeline";
 
 const fields: FieldSummary[] = [
@@ -30,13 +30,12 @@ describe("view pipeline", () => {
     expect(desc.records[desc.records.length - 1]?.id).toBe("empty");
   });
 
-  it("projects multi-select groups without inflating the unique record total", () => {
-    const groups = buildGroupProjection(data.records, fields[2], "asc");
-    expect(groups.map((group) => [group.label, group.count])).toEqual([["缺陷", 1], ["紧急", 2], ["未分组", 1]]);
-    expect(uniqueProjectedRecordCount(groups)).toBe(3);
-    const result = runViewPipeline(data, { ...EMPTY_VIEW_PIPELINE, group: { fieldId: "tags", direction: "asc", collapsedKeys: [] } }, "");
-    expect(result.records.map((item) => item.id)).toEqual(["alpha", "beta", "alpha", "gamma"]);
-    expect(result.recordGroups.map((group) => group.label)).toEqual(["缺陷", "紧急", "紧急", "未分组"]);
+  it("拒绝多选和链接分组，并保证单值记录只出现一次", () => {
+    expect(isGroupable(fields[2])).toBe(false);
+    expect(isGroupable({ ...fields[0], id: "link", isTitle: false, fieldType: "link" })).toBe(false);
+    const result = runViewPipeline(data, { ...EMPTY_VIEW_PIPELINE, group: { fieldId: "status", direction: "asc", collapsedKeys: [] } }, "");
+    expect(result.records.map((item) => item.id)).toEqual(["alpha", "beta", "gamma"]);
+    expect(result.recordGroups.map((group) => group.label)).toEqual(["待办", "完成", "未分组"]);
   });
 
   it("retains defined empty option groups and always places ungrouped last", () => {
@@ -70,7 +69,7 @@ describe("view pipeline", () => {
     const systemData = { ...data, fields: [...fields, ...systemFields], records: data.records.map((item, index) => ({ ...item, autoNumber: index + 7, createdAt: index === 0 ? "2026-08-10T09:00:00Z" : "2026-08-11T09:00:00Z" })) };
     expect(runViewPipeline(systemData, { ...EMPTY_VIEW_PIPELINE, filters: [{ id: "auto", fieldId: "auto", operator: "greaterThan", value: 7 }] }, "").records).toHaveLength(2);
     const grouped = runViewPipeline(systemData, { ...EMPTY_VIEW_PIPELINE, group: { fieldId: "created", direction: "asc", collapsedKeys: [] } }, "");
-    expect(grouped.groups.map((group) => group.key)).toEqual(["2026-08-10", "2026-08-11", "__empty__"]);
+    expect(grouped.groups.map((group) => group.key)).toEqual(["2026-08-10", "2026-08-11"]);
     expect(runViewPipeline(systemData, EMPTY_VIEW_PIPELINE, "2026-08-10").records.map((item) => item.id)).toEqual(["alpha"]);
   });
 

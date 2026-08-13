@@ -3,7 +3,7 @@ fn detail_fields_are_persisted_and_view_option_clear_removes_nested_rules() {
     let (mut connection, table_id) = setup();
     let title = title_id(&connection, &table_id);
     let detail =
-        field_repository::create_field(&mut connection, &table_id, "详情", "text", json!({}), None)
+        field_repository::create_field(&mut connection, &table_id, "详情", "text", json!({}))
             .expect("detail");
     let select = field_repository::create_field(
         &mut connection,
@@ -11,7 +11,6 @@ fn detail_fields_are_persisted_and_view_option_clear_removes_nested_rules() {
         "状态",
         "select",
         json!({}),
-        None,
     )
     .expect("select");
     let old_option = field_repository::create_option(&mut connection, &select, "旧", Some("red"))
@@ -45,7 +44,7 @@ fn detail_fields_are_persisted_and_view_option_clear_removes_nested_rules() {
 fn activity_tracks_bound_select_changes_with_snapshots_and_undo() {
     let (mut connection, table_id) = setup();
     let title = title_id(&connection, &table_id);
-    let stage = field_repository::create_field(&mut connection, &table_id, "阶段", "select", json!({"allowCreate": false}), None).expect("stage");
+    let stage = field_repository::create_field(&mut connection, &table_id, "阶段", "select", json!({"allowCreate": false})).expect("stage");
     let draft = field_repository::create_option(&mut connection, &stage, "草稿", Some("gray")).expect("draft");
     let review = field_repository::create_option(&mut connection, &stage, "评审", Some("blue")).expect("review");
     let record = record_repository::create_record(&mut connection, &table_id, HashMap::from([(title, json!("需求")), (stage.clone(), json!(draft))])).expect("record");
@@ -68,7 +67,7 @@ fn activity_tracks_bound_select_changes_with_snapshots_and_undo() {
 fn converting_or_deleting_bound_field_stops_tracking_but_keeps_history() {
     let (mut connection, table_id) = setup();
     let title = title_id(&connection, &table_id);
-    let stage = field_repository::create_field(&mut connection, &table_id, "阶段", "select", json!({"allowCreate": false}), None).expect("stage");
+    let stage = field_repository::create_field(&mut connection, &table_id, "阶段", "select", json!({"allowCreate": false})).expect("stage");
     let draft = field_repository::create_option(&mut connection, &stage, "草稿", Some("gray")).expect("draft");
     let review = field_repository::create_option(&mut connection, &stage, "评审", Some("blue")).expect("review");
     let record = record_repository::create_record(&mut connection, &table_id, HashMap::from([(title, json!("需求")), (stage.clone(), json!(draft))])).expect("record");
@@ -77,7 +76,7 @@ fn converting_or_deleting_bound_field_stops_tracking_but_keeps_history() {
     transaction.commit().expect("commit binding");
     record_repository::update_cell(&mut connection, &record, &stage, json!(review)).expect("event");
 
-    field_repository::update_field(&mut connection, &stage, "阶段", "text", json!({}), None).expect("convert");
+    field_repository::update_field(&mut connection, &stage, "阶段", "text", json!({})).expect("convert");
     let transaction = connection.transaction().expect("read binding");
     assert!(crate::storage::activity_repository::activity_field_id(&transaction, &table_id).expect("binding").is_none());
     drop(transaction);
@@ -90,7 +89,7 @@ fn converting_or_deleting_bound_field_stops_tracking_but_keeps_history() {
 fn activity_note_comments_and_manual_delete_share_the_node_lifecycle() {
     let (mut connection, table_id) = setup();
     let title = title_id(&connection, &table_id);
-    let stage = field_repository::create_field(&mut connection, &table_id, "阶段", "select", json!({"allowCreate": false}), None).expect("stage");
+    let stage = field_repository::create_field(&mut connection, &table_id, "阶段", "select", json!({"allowCreate": false})).expect("stage");
     let draft = field_repository::create_option(&mut connection, &stage, "草稿", Some("gray")).expect("draft");
     let review = field_repository::create_option(&mut connection, &stage, "评审", Some("blue")).expect("review");
     let record = record_repository::create_record(&mut connection, &table_id, HashMap::from([(title, json!("需求")), (stage.clone(), json!(draft))])).expect("record");
@@ -116,7 +115,7 @@ fn activity_note_comments_and_manual_delete_share_the_node_lifecycle() {
 fn replacing_or_clearing_a_bound_select_option_creates_activity_nodes_and_undo_removes_them() {
     let (mut connection, table_id) = setup();
     let title = title_id(&connection, &table_id);
-    let stage = field_repository::create_field(&mut connection, &table_id, "阶段", "select", json!({"allowCreate": false}), None).expect("stage");
+    let stage = field_repository::create_field(&mut connection, &table_id, "阶段", "select", json!({"allowCreate": false})).expect("stage");
     let draft = field_repository::create_option(&mut connection, &stage, "草稿", Some("gray")).expect("draft");
     let review = field_repository::create_option(&mut connection, &stage, "评审", Some("blue")).expect("review");
     let record = record_repository::create_record(&mut connection, &table_id, HashMap::from([(title, json!("需求")), (stage.clone(), json!(draft.clone()))])).expect("record");

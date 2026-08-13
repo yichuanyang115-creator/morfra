@@ -21,20 +21,14 @@ export interface ViewSummary {
 export interface FieldSummary {
   id: string;
   tableId: string;
-  groupId: string | null;
+  /** 仅用于读取旧项目与旧测试夹具；运行时迁移后恒为 null。 */
+  groupId?: string | null;
   name: string;
   fieldType: FieldType;
   isTitle: boolean;
   position: number;
   config: JsonValue;
   options: FieldOptionSummary[];
-}
-
-export interface FieldGroupSummary {
-  id: string;
-  tableId: string;
-  name: string;
-  position: number;
 }
 
 export interface FieldOptionSummary {
@@ -61,11 +55,15 @@ export interface TableDataSnapshot {
   /** 与字段、记录、附件在同一 SQLite 读事务内捕获；旧测试夹具可省略。 */
   tableName?: string;
   titleFieldId?: string;
-  groups: FieldGroupSummary[];
+  /** 仅为历史测试夹具保留；运行时迁移后后端不再返回。 */
+  groups?: FieldGroupSummary[];
   fields: FieldSummary[];
   records: RecordData[];
   attachments?: TableAttachmentMetadata[];
 }
+
+/** 仅为历史测试夹具保留；当前产品不提供字段分组能力。 */
+export interface FieldGroupSummary { id: string; tableId: string; name: string; position: number; }
 
 export interface TableAttachmentMetadata {
   id: string;

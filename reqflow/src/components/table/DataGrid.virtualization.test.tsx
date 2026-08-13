@@ -11,7 +11,7 @@ function virtualItem(index: number, start: number) { return { index, start }; }
 const fields: FieldSummary[] = Array.from({ length: 200 }, (_, index) => ({ id: `field-${index}`, tableId: "table-1", groupId: null, name: `字段 ${index}`, fieldType: "text", isTitle: index === 0, position: index, config: {}, options: [] }));
 const records: RecordData[] = Array.from({ length: 10_000 }, (_, index) => ({ id: `record-${index}`, tableId: "table-1", position: index, autoNumber: index + 1, createdAt: "", updatedAt: "", values: { "field-199": index === 9_999 ? "x".repeat(60) : "短文本" }, multiSelectValues: {} }));
 const data: TableDataSnapshot = { tableId: "table-1", groups: [], fields, records };
-const config: GridLayoutConfig = { fieldIds: fields.map((field) => field.id), groupOrder: [], columnWidths: {}, frozenFieldId: null, rowHeight: 40, collapsedGroupIds: [] };
+const config: GridLayoutConfig = { fieldIds: fields.map((field) => field.id), columnWidths: {}, frozenFieldId: null, rowHeight: 40 };
 
 describe("DataGrid 虚拟化与自动适配", () => {
   beforeEach(() => {

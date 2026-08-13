@@ -25,15 +25,6 @@ pub fn is_supported_field_type(field_type: &str) -> bool {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct FieldGroupSummary {
-    pub id: String,
-    pub table_id: String,
-    pub name: String,
-    pub position: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
 pub struct FieldOptionSummary {
     pub id: String,
     pub field_id: String,
@@ -47,7 +38,6 @@ pub struct FieldOptionSummary {
 pub struct FieldSummary {
     pub id: String,
     pub table_id: String,
-    pub group_id: Option<String>,
     pub name: String,
     pub field_type: String,
     pub is_title: bool,
@@ -75,7 +65,6 @@ pub struct TableDataSnapshot {
     pub table_id: String,
     pub table_name: String,
     pub title_field_id: String,
-    pub groups: Vec<FieldGroupSummary>,
     pub fields: Vec<FieldSummary>,
     pub records: Vec<RecordData>,
     pub attachments: Vec<TableAttachmentMetadata>,

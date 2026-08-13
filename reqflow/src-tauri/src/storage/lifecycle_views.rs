@@ -254,18 +254,3 @@ pub fn reorder_views(
         "视图",
     )
 }
-
-pub fn reorder_field_groups(
-    connection: &mut Connection,
-    table_id: &str,
-    ids: &[String],
-) -> Result<(), StorageError> {
-    reorder(
-        connection,
-        "field_groups",
-        "table_id = ?1",
-        Some(table_id),
-        ids,
-        "字段组",
-    )
-}

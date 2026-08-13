@@ -33,6 +33,7 @@ const MIGRATIONS: &[(i64, &str)] = &[
         8,
         include_str!("../../migrations/008_allow_duplicate_field_names.sql"),
     ),
+    (9, include_str!("../../migrations/009_remove_field_groups.sql")),
 ];
 
 pub fn configure_connection(connection: &Connection) -> Result<(), StorageError> {
@@ -84,10 +85,10 @@ pub fn apply_pending_migrations(
         // v2 rebuilds the two v1 tables whose CHECK/FK definitions cannot be
         // altered in place by SQLite. The migration itself is still atomic;
         // foreign-key checks are restored before returning, including errors.
-        let foreign_keys_were_disabled = *version == 2 || *version == 8;
+        let foreign_keys_were_disabled = *version == 2 || *version == 8 || *version == 9;
         if foreign_keys_were_disabled {
             connection
-                .execute_batch(if *version == 8 { "PRAGMA foreign_keys = OFF; PRAGMA legacy_alter_table = ON;" } else { "PRAGMA foreign_keys = OFF;" })
+                .execute_batch(if *version == 8 || *version == 9 { "PRAGMA foreign_keys = OFF; PRAGMA legacy_alter_table = ON;" } else { "PRAGMA foreign_keys = OFF;" })
                 .map_err(|_| {
                     StorageError::new(
                         StorageErrorCode::MigrationFailed,
@@ -143,7 +144,7 @@ pub fn apply_pending_migrations(
             )),
         };
         if foreign_keys_were_disabled {
-            let _ = connection.execute_batch(if *version == 8 { "PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;" } else { "PRAGMA foreign_keys = ON;" });
+            let _ = connection.execute_batch(if *version == 8 || *version == 9 { "PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;" } else { "PRAGMA foreign_keys = ON;" });
         }
         migration_result?;
         current_version = *version;
@@ -252,7 +253,7 @@ mod tests {
                 row.get(0)
             })
             .expect("version");
-        assert_eq!(version, 8);
+        assert_eq!(version, 9);
         let has_group_column: i64 = connection
             .query_row(
                 "SELECT COUNT(*) FROM pragma_table_info('fields') WHERE name = 'group_id'",
@@ -260,7 +261,7 @@ mod tests {
                 |row| row.get(0),
             )
             .expect("fields schema");
-        assert_eq!(has_group_column, 1);
+        assert_eq!(has_group_column, 0);
         let default_icon: String = connection
             .query_row(
                 "SELECT dflt_value FROM pragma_table_info('data_tables') WHERE name = 'icon'",
@@ -285,6 +286,25 @@ mod tests {
             )
             .expect("fields indexes");
         assert_eq!(duplicate_name_constraint, 1);
+    }
+
+    #[test]
+    fn flattens_legacy_field_groups_without_losing_field_order_or_view_references() {
+        let mut connection = Connection::open_in_memory().expect("database");
+        configure_connection(&connection).expect("configure");
+        connection.execute_batch("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);").expect("ledger");
+        for (version, sql) in MIGRATIONS.iter().take(8) {
+            connection.execute_batch(sql).expect("legacy schema");
+            connection.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (?1, 'before')", [version]).expect("version");
+        }
+        connection.execute_batch("INSERT INTO project_meta (id, project_id, name, format_version, created_at, updated_at) VALUES ('project', 'p', 'P', 1, '1', '1'); INSERT INTO data_tables (id, project_id, name, icon, emoji, position, created_at, updated_at) VALUES ('t', 'project', 'T', 'grid', '📋', 0, '1', '1'); INSERT INTO field_groups (id, table_id, name, position, created_at, updated_at) VALUES ('a','t','A',0,'1','1'),('b','t','B',1,'1','1'); INSERT INTO fields (id,table_id,group_id,name,field_type,is_title,position,config_json,created_at,updated_at) VALUES ('title','t',NULL,'标题','text',1,0,'{}','1','1'),('first','t','a','第一','text',0,2,'{}','1','1'),('second','t','b','第二','text',0,1,'{}','1','1'); INSERT INTO views (id,table_id,name,view_type,position,created_at,updated_at) VALUES ('v','t','表格','table',0,'1','1'); INSERT INTO view_configs (view_id,version,config_json,created_at,updated_at) VALUES ('v',1,'{\"fieldIds\":[\"title\",\"first\",\"second\"],\"groupOrder\":[\"b\",\"a\"]}','1','1');").expect("legacy data");
+        apply_pending_migrations(&mut connection, None).expect("flatten");
+        let fields: Vec<String> = connection.prepare("SELECT id FROM fields WHERE table_id = 't' ORDER BY position").expect("fields").query_map([], |row| row.get(0)).expect("rows").collect::<Result<_, _>>().expect("collect");
+        assert_eq!(fields, ["title", "first", "second"]);
+        let config: String = connection.query_row("SELECT config_json FROM view_configs WHERE view_id = 'v'", [], |row| row.get(0)).expect("config");
+        assert!(config.contains("[\"title\",\"second\",\"first\"]"));
+        assert!(!config.contains("groupOrder"));
+        assert_eq!(connection.query_row::<i64, _, _>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'field_groups'", [], |row| row.get(0)).expect("groups"), 0);
     }
 
     #[test]

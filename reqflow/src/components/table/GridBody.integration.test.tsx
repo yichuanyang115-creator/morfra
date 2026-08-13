@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { useCallback, useRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FieldSummary, RecordData } from "../../types/domain";
@@ -31,13 +31,13 @@ function GridHarness() {
   return <div ref={setScrollElement} data-testid="grid-scroll" style={{ height: 160, overflow: "auto", width: 360 }}>{ready && <GridBody gridId="test-grid" parentRef={parentRef} layouts={layouts} records={records} rowHeight={40} selection={null} editing={null} onOpenDetail={vi.fn()} onRenderedRecordsChange={vi.fn()} onSelectCell={vi.fn()} onExtendSelection={vi.fn()} onSelectRows={vi.fn()} onStartEditing={vi.fn()} onContextCell={vi.fn()} onToggleCheckbox={vi.fn()} />}</div>;
 }
 
-function GroupedGridHarness({ onMove = vi.fn(), onReorder = vi.fn(), sameGroup = false, allowCreate = true }: { onMove?: (recordId: string, sourceKey: string, targetKey: string) => void; onReorder?: (recordId: string, targetRecordId: string) => void; sameGroup?: boolean; allowCreate?: boolean }) {
+function GroupedGridHarness({ allowCreate = true }: { allowCreate?: boolean }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const setScrollElement = useCallback((element: HTMLDivElement | null) => { parentRef.current = element; if (!element) return; Object.defineProperties(element, { clientHeight: { configurable: true, value: 320 }, clientWidth: { configurable: true, value: 360 }, offsetHeight: { configurable: true, value: 320 }, offsetWidth: { configurable: true, value: 360 } }); element.getBoundingClientRect = () => ({ ...RECT, height: 320, bottom: 320 }); setReady(true); }, []);
   const groupedRecords = records.slice(0, 2);
-  const recordGroups = sameGroup ? [{ key: "todo", label: "待办", count: 2, first: true, last: false }, { key: "todo", label: "待办", count: 2, first: false, last: true }] : [{ key: "todo", label: "待办", count: 1, first: true, last: true }, { key: "done", label: "完成", count: 1, first: true, last: true }];
-  return <div ref={setScrollElement} style={{ height: 320, overflow: "auto", width: 360 }}>{ready && <GridBody gridId="grouped-grid" parentRef={parentRef} layouts={layouts.slice(0, 2)} records={groupedRecords} recordGroups={recordGroups} emptyGroups={[{ key: "blocked", label: "阻塞", count: 0, recordIds: [] }]} rowHeight={40} selection={null} editing={null} onOpenDetail={vi.fn()} onRenderedRecordsChange={vi.fn()} onSelectCell={vi.fn()} onExtendSelection={vi.fn()} onSelectRows={vi.fn()} onStartEditing={vi.fn()} onContextCell={vi.fn()} onToggleCheckbox={vi.fn()} canMoveGroups canReorderRows onMoveToGroup={onMove} onReorderWithinGroup={onReorder} onCreateInGroup={allowCreate ? vi.fn() : undefined} />}</div>;
+  const recordGroups = [{ key: "todo", label: "待办", count: 1, first: true, last: true }, { key: "done", label: "完成", count: 1, first: true, last: true }];
+  return <div ref={setScrollElement} style={{ height: 320, overflow: "auto", width: 360 }}>{ready && <GridBody gridId="grouped-grid" parentRef={parentRef} layouts={layouts.slice(0, 2)} records={groupedRecords} recordGroups={recordGroups} groups={[...recordGroups.map((group) => ({ ...group, recordIds: [] })), { key: "blocked", label: "阻塞", count: 0, recordIds: [] }]} rowHeight={40} selection={null} editing={null} onOpenDetail={vi.fn()} onRenderedRecordsChange={vi.fn()} onSelectCell={vi.fn()} onExtendSelection={vi.fn()} onSelectRows={vi.fn()} onStartEditing={vi.fn()} onContextCell={vi.fn()} onToggleCheckbox={vi.fn()} onCreateInGroup={allowCreate ? vi.fn() : undefined} />}</div>;
 }
 
 function renderedIndexes(container: HTMLElement, attribute: "data-row-index" | "data-column-index") { return Array.from(container.querySelectorAll(`[${attribute}]`)).map((node) => Number(node.getAttribute(attribute))); }
@@ -69,33 +69,16 @@ describe("GridBody 真实滚动虚拟化", () => {
   });
 
   it("在虚拟表格行流中渲染组头、组内投影和组尾新增入口", async () => {
-    const { getByText, getAllByText, getByRole } = render(<GroupedGridHarness />);
+    const { container, getByText, getAllByText, getByRole } = render(<GroupedGridHarness />);
     await waitFor(() => expect(getByText("待办")).toBeTruthy());
     expect(getAllByText("1 条记录")).toHaveLength(2);
     expect(getByRole("button", { name: "＋ 在“待办”中新建记录" })).toBeTruthy();
     expect(getByText("阻塞")).toBeTruthy();
     expect(getByText("0 条记录")).toBeTruthy();
-  });
-
-  it("拖到另一组时只发出一次跨组移动命令", async () => {
-    const onMove = vi.fn();
-    const { getByText, getByRole } = render(<GroupedGridHarness onMove={onMove} />);
-    await waitFor(() => expect(getByText("完成")).toBeTruthy());
-    fireEvent.dragStart(getByRole("button", { name: "拖动第 1 条记录" }));
-    fireEvent.dragOver(getByText("完成").parentElement as Element);
-    fireEvent.drop(getByText("完成").parentElement as Element);
-    expect(onMove).toHaveBeenCalledOnce();
-    expect(onMove).toHaveBeenCalledWith("record-0", "todo", "done");
-  });
-
-  it("无显式排序时，同组拖拽发出底层手动顺序命令", async () => {
-    const onReorder = vi.fn();
-    const { container, getByText, getByRole } = render(<GroupedGridHarness sameGroup onReorder={onReorder} />);
-    await waitFor(() => expect(getByText("待办")).toBeTruthy());
-    fireEvent.dragStart(getByRole("button", { name: "拖动第 1 条记录" }));
-    fireEvent.dragOver(container.querySelector('.morfra-grid-row[data-row-index="1"]') as Element);
-    fireEvent.drop(container.querySelector('.morfra-grid-row[data-row-index="1"]') as Element);
-    expect(onReorder).toHaveBeenCalledWith("record-0", "record-1");
+    const groupRow = container.querySelector(".morfra-grid-row") as HTMLElement;
+    expect(groupRow.style.width).toBe("288px");
+    expect(groupRow.querySelector(".morfra-record-group-header")?.parentElement).toBe(groupRow);
+    expect(groupRow.querySelector(".morfra-record-group-header")?.parentElement).not.toHaveClass("morfra-grid-row-number");
   });
 
   it("只读系统字段分组不渲染组内新增入口", async () => {

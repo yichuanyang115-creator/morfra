@@ -2,22 +2,17 @@ import { create } from "zustand";
 import {
   applyStorageTableMutation,
   createStorageField,
-  createStorageFieldGroup,
   createStorageFieldOption,
   createStorageRecord,
   deleteStorageField,
-  deleteStorageFieldGroup,
   deleteStorageFieldOption,
   deleteStorageRecord,
   getStorageFieldOptionUsage,
   loadStorageTableData,
-  moveStorageField,
-  reorderStorageFieldGroups,
   reorderStorageFieldOptions,
   reorderStorageFields,
   reorderStorageRecords,
   moveStorageBoardCard,
-  renameStorageFieldGroup,
   updateStorageField,
   updateStorageFieldOption,
   updateStorageCell,
@@ -30,14 +25,9 @@ interface TableDataState {
   loadingByTable: Record<string, boolean | undefined>;
   errorByTable: Record<string, string | undefined>;
   load: (tableId: string) => Promise<TableDataSnapshot>;
-  createField: (tableId: string, name: string, fieldType: FieldType, config: JsonValue, groupId: string | null) => Promise<TableDataSnapshot>;
-  updateField: (fieldId: string, name: string, fieldType: FieldType, config: JsonValue, groupId: string | null) => Promise<TableDataSnapshot>;
+  createField: (tableId: string, name: string, fieldType: FieldType, config: JsonValue) => Promise<TableDataSnapshot>;
+  updateField: (fieldId: string, name: string, fieldType: FieldType, config: JsonValue) => Promise<TableDataSnapshot>;
   deleteField: (fieldId: string) => Promise<TableDataSnapshot>;
-  createGroup: (tableId: string, name: string) => Promise<TableDataSnapshot>;
-  renameGroup: (groupId: string, name: string) => Promise<TableDataSnapshot>;
-  deleteGroup: (groupId: string) => Promise<TableDataSnapshot>;
-  moveField: (fieldId: string, groupId: string | null) => Promise<TableDataSnapshot>;
-  reorderGroups: (tableId: string, groupIds: string[]) => Promise<TableDataSnapshot>;
   reorderFields: (tableId: string, fieldIds: string[]) => Promise<TableDataSnapshot>;
   createOption: (fieldId: string, name: string, color?: string) => Promise<TableDataSnapshot>;
   updateOption: (optionId: string, name: string, color: string) => Promise<TableDataSnapshot>;
@@ -74,14 +64,9 @@ export const useTableDataStore = create<TableDataState>((set) => ({
     catch (error) { set({ errorByTable: { ...useTableDataStore.getState().errorByTable, [tableId]: error instanceof Error ? error.message : "表数据读取失败" } }); throw error; }
     finally { set({ loadingByTable: { ...useTableDataStore.getState().loadingByTable, [tableId]: false } }); }
   },
-  createField: (tableId, name, fieldType, config, groupId) => runMutation(set, () => createStorageField(tableId, name, fieldType, config, groupId)),
-  updateField: (fieldId, name, fieldType, config, groupId) => runMutation(set, () => updateStorageField(fieldId, name, fieldType, config, groupId)),
+  createField: (tableId, name, fieldType, config) => runMutation(set, () => createStorageField(tableId, name, fieldType, config)),
+  updateField: (fieldId, name, fieldType, config) => runMutation(set, () => updateStorageField(fieldId, name, fieldType, config)),
   deleteField: (fieldId) => runMutation(set, () => deleteStorageField(fieldId)),
-  createGroup: (tableId, name) => runMutation(set, () => createStorageFieldGroup(tableId, name)),
-  renameGroup: (groupId, name) => runMutation(set, () => renameStorageFieldGroup(groupId, name)),
-  deleteGroup: (groupId) => runMutation(set, () => deleteStorageFieldGroup(groupId)),
-  moveField: (fieldId, groupId) => runMutation(set, () => moveStorageField(fieldId, groupId)),
-  reorderGroups: (tableId, groupIds) => runMutation(set, () => reorderStorageFieldGroups(tableId, groupIds)),
   reorderFields: (tableId, fieldIds) => runMutation(set, () => reorderStorageFields(tableId, fieldIds)),
   createOption: (fieldId, name, color) => runMutation(set, () => createStorageFieldOption(fieldId, name, color)),
   updateOption: (optionId, name, color) => runMutation(set, () => updateStorageFieldOption(optionId, name, color)),

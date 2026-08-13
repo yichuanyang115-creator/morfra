@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::Value;

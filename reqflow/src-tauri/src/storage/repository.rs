@@ -72,7 +72,7 @@ pub fn apply_requirement_template(
     let transaction = connection.transaction()?;
     let now = timestamp();
     let stage_id = new_id("field");
-    transaction.execute("INSERT INTO fields (id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES (?1, ?2, NULL, '阶段', 'select', 0, 1, '{\"allowCreate\":true}', ?3, ?3)", (&stage_id, table_id, &now))?;
+    transaction.execute("INSERT INTO fields (id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES (?1, ?2, '阶段', 'select', 0, 1, '{\"allowCreate\":true}', ?3, ?3)", (&stage_id, table_id, &now))?;
     for (position, (name, color)) in [("待处理", "gray"), ("进行中", "blue"), ("已完成", "green")]
         .iter()
         .enumerate()
@@ -80,7 +80,7 @@ pub fn apply_requirement_template(
         transaction.execute("INSERT INTO field_options (id, field_id, name, color, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)", (new_id("option"), &stage_id, name, color, position as i64, &now))?;
     }
     let priority_id = new_id("field");
-    transaction.execute("INSERT INTO fields (id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES (?1, ?2, NULL, '优先级', 'select', 0, 2, '{\"allowCreate\":true}', ?3, ?3)", (&priority_id, table_id, &now))?;
+    transaction.execute("INSERT INTO fields (id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES (?1, ?2, '优先级', 'select', 0, 2, '{\"allowCreate\":true}', ?3, ?3)", (&priority_id, table_id, &now))?;
     let board_id = new_id("view");
     transaction.execute("INSERT INTO views (id, table_id, name, view_type, position, created_at, updated_at) VALUES (?1, ?2, '看板', 'board', 1, ?3, ?3)", (&board_id, table_id, &now))?;
     transaction.execute("INSERT INTO view_configs (view_id, version, config_json, created_at, updated_at) VALUES (?1, 1, ?2, ?3, ?3)", (&board_id, serde_json::json!({"board":{"groupFieldId":stage_id}}).to_string(), &now))?;
@@ -277,8 +277,8 @@ fn insert_table_defaults(
     let now = timestamp();
     let field_id = new_id("field");
     transaction.execute(
-        "INSERT INTO fields (id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at)
-         VALUES (?1, ?2, NULL, '标题', 'text', 1, 0, '{}', ?3, ?3)",
+        "INSERT INTO fields (id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at)
+         VALUES (?1, ?2, '标题', 'text', 1, 0, '{}', ?3, ?3)",
         (&field_id, table_id, &now),
     )?;
     let view_id = new_id("view");

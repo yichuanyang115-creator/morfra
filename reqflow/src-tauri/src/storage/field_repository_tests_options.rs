@@ -7,7 +7,6 @@ fn used_option_requires_strategy_and_clear_removes_only_that_option() {
         "状态",
         "select",
         json!({}),
-        None,
     )
     .expect("field");
     let option_id = field_repository::create_option(&mut connection, &field_id, "旧", Some("red"))
@@ -38,4 +37,3 @@ fn used_option_requires_strategy_and_clear_removes_only_that_option() {
         json!(replacement_id)
     );
 }
-

@@ -1,11 +1,10 @@
 fn load_field(transaction: &Transaction<'_>, field_id: &str) -> Result<FieldRow, StorageError> {
-    transaction.query_row("SELECT id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at FROM fields WHERE id = ?1", [field_id], |row| Ok(FieldRow { id: row.get(0)?, table_id: row.get(1)?, group_id: row.get(2)?, name: row.get(3)?, field_type: row.get(4)?, is_title: row.get(5)?, position: row.get(6)?, config_json: row.get(7)?, created_at: row.get(8)?, updated_at: row.get(9)? })).optional()?.ok_or_else(|| StorageError::validation("字段不存在"))
+    transaction.query_row("SELECT id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at FROM fields WHERE id = ?1", [field_id], |row| Ok(FieldRow { id: row.get(0)?, table_id: row.get(1)?, name: row.get(2)?, field_type: row.get(3)?, is_title: row.get(4)?, position: row.get(5)?, config_json: row.get(6)?, created_at: row.get(7)?, updated_at: row.get(8)? })).optional()?.ok_or_else(|| StorageError::validation("字段不存在"))
 }
 fn field_row_from_summary(field: &FieldSummary) -> Result<FieldRow, StorageError> {
     Ok(FieldRow {
         id: field.id.clone(),
         table_id: field.table_id.clone(),
-        group_id: field.group_id.clone(),
         name: field.name.clone(),
         field_type: field.field_type.clone(),
         is_title: i64::from(field.is_title),

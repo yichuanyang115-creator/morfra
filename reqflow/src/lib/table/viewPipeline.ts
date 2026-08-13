@@ -7,8 +7,8 @@ export interface ViewFilter { id: string; fieldId: string; operator: FilterOpera
 export interface ViewSort { id: string; fieldId: string; direction: "asc" | "desc"; }
 export interface ViewGroup { fieldId: string | null; direction: "asc" | "desc"; collapsedKeys: string[]; }
 export interface ConditionalColorRule { id: string; fieldId: string; operator: FilterOperator; value?: JsonValue; color: "gray" | "blue" | "green" | "yellow" | "red" | "purple"; enabled: boolean; }
-export interface ViewPipelineConfig { filters: ViewFilter[]; filterMode: "all" | "any"; sorts: ViewSort[]; group: ViewGroup; conditionalColors: ConditionalColorRule[]; }
-export interface RecordGroupMeta { key: string; label: string; count: number; first: boolean; last: boolean; }
+export interface ViewPipelineConfig { filters: ViewFilter[]; filterMode: "all"; sorts: ViewSort[]; group: ViewGroup; conditionalColors: ConditionalColorRule[]; }
+export interface RecordGroupMeta { key: string; label: string; count: number; first: boolean; last: boolean; collapsed?: boolean; }
 export interface ViewPipelineResult { records: RecordData[]; recordGroups: RecordGroupMeta[]; groups: ProjectedGroup[]; total: number; matched: number; }
 
 export const EMPTY_VIEW_PIPELINE: ViewPipelineConfig = { filters: [], filterMode: "all", sorts: [], group: { fieldId: null, direction: "asc", collapsedKeys: [] }, conditionalColors: [] };
@@ -23,7 +23,8 @@ export function parseViewPipelineConfig(value: JsonValue): ViewPipelineConfig {
   const rules = Array.isArray(source.conditionalColors) ? source.conditionalColors.flatMap(parseRule) : [];
   return {
     filters,
-    filterMode: source.filterMode === "any" ? "any" : "all",
+    // v3 只保留“同时满足”。历史 `any` 配置在读取时不会继续参与计算。
+    filterMode: "all",
     sorts,
     group: { fieldId: typeof groupSource.fieldId === "string" ? groupSource.fieldId : null, direction: groupSource.direction === "desc" ? "desc" : "asc", collapsedKeys: Array.isArray(groupSource.collapsedKeys) ? groupSource.collapsedKeys.filter((key): key is string => typeof key === "string") : [] },
     conditionalColors: rules,
@@ -33,16 +34,23 @@ export function parseViewPipelineConfig(value: JsonValue): ViewPipelineConfig {
 export function runViewPipeline(data: TableDataSnapshot, config: ViewPipelineConfig, search: string): ViewPipelineResult {
   const searchedTerms = search.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
   const searchIndex = searchedTerms.length ? searchableTextIndex(data) : null;
-  const filtered = data.records.filter((record) => matchesFilters(record, data.fields, config.filters, config.filterMode) && (!searchIndex || searchedTerms.every((term) => searchIndex.get(record)?.includes(term))));
+  const filters = config.filters.filter((filter) => isCompleteFilter(filter, data.fields));
+  const sorts = config.sorts.filter((sort, index, all) => isSortableField(fieldsById(data.fields, sort.fieldId)) && all.findIndex((item) => item.fieldId === sort.fieldId) === index);
+  const filtered = data.records.filter((record) => matchesFilters(record, data.fields, filters) && (!searchIndex || searchedTerms.every((term) => searchIndex.get(record)?.includes(term))));
   const groupField = data.fields.find((field) => field.id === config.group.fieldId);
-  if (!groupField) return { records: stableSort(filtered, data.fields, config.sorts), recordGroups: [], groups: [], total: data.records.length, matched: filtered.length };
+  if (!groupField) return { records: stableSort(filtered, data.fields, sorts), recordGroups: [], groups: [], total: data.records.length, matched: filtered.length };
   const groups = buildGroupProjection(filtered, groupField, config.group.direction);
   const byId = new Map(filtered.map((record) => [record.id, record]));
   const records: RecordData[] = [];
   const recordGroups: RecordGroupMeta[] = [];
   for (const group of groups) {
-    if (config.group.collapsedKeys.includes(group.key)) continue;
-    const groupRecords = stableSort(group.recordIds.map((id) => byId.get(id)).filter((record): record is RecordData => Boolean(record)), data.fields, config.sorts);
+    const collapsed = config.group.collapsedKeys.includes("__all__") || config.group.collapsedKeys.includes(group.key);
+    const groupRecords = stableSort(group.recordIds.map((id) => byId.get(id)).filter((record): record is RecordData => Boolean(record)), data.fields, sorts);
+    if (collapsed) {
+      const anchor = groupRecords[0];
+      if (anchor) { records.push(anchor); recordGroups.push({ key: group.key, label: group.label, count: group.count, first: true, last: true, collapsed: true }); }
+      continue;
+    }
     groupRecords.forEach((record, index) => { records.push(record); recordGroups.push({ key: group.key, label: group.label, count: group.count, first: index === 0, last: index === groupRecords.length - 1 }); });
   }
   return { records, recordGroups, groups, total: data.records.length, matched: filtered.length };
@@ -56,13 +64,40 @@ function searchableTextIndex(data: TableDataSnapshot): Map<RecordData, string> {
   return index;
 }
 
-export function matchesFilters(record: RecordData, fields: FieldSummary[], filters: ViewFilter[], mode: "all" | "any"): boolean {
+export function matchesFilters(record: RecordData, fields: FieldSummary[], filters: ViewFilter[]): boolean {
   if (!filters.length) return true;
   const matches = filters.map((filter) => {
     const field = fields.find((item) => item.id === filter.fieldId);
     return field ? matchesCondition(valueFor(record, field), filter.operator, filter.value) : false;
   });
-  return mode === "all" ? matches.every(Boolean) : matches.some(Boolean);
+  return matches.every(Boolean);
+}
+
+export function isCompleteCondition(condition: Pick<ViewFilter, "fieldId" | "operator" | "value">, fields: FieldSummary[]): boolean {
+  if (!fields.some((field) => field.id === condition.fieldId)) return false;
+  if (["isEmpty", "isNotEmpty", "isChecked", "isUnchecked", "hasFiles"].includes(condition.operator)) return true;
+  if (Array.isArray(condition.value)) return condition.value.length > 0 && condition.value.every((value) => value !== null && value !== "");
+  return condition.value !== undefined && condition.value !== null && String(condition.value).trim() !== "";
+}
+
+export function isCompleteFilter(condition: Pick<ViewFilter, "fieldId" | "operator" | "value">, fields: FieldSummary[]): boolean {
+  const field = fields.find((item) => item.id === condition.fieldId);
+  return Boolean(field && filterOperatorsFor(field).includes(condition.operator) && isCompleteCondition(condition, fields));
+}
+
+export function filterOperatorsFor(field?: FieldSummary): FilterOperator[] {
+  if (!field) return [];
+  if (field.fieldType === "checkbox") return ["isChecked", "isUnchecked"];
+  if (["number", "progress", "auto_number"].includes(field.fieldType)) return ["equals", "notEquals", "greaterThan", "lessThan", "isEmpty", "isNotEmpty"];
+  if (["date", "created_time", "updated_time"].includes(field.fieldType)) return ["equals", "notEquals", "before", "after", "isEmpty", "isNotEmpty"];
+  if (field.fieldType === "select") return ["equals", "notEquals", "isEmpty", "isNotEmpty"];
+  if (field.fieldType === "multi_select") return ["contains", "notContains", "isEmpty", "isNotEmpty"];
+  if (["image", "file"].includes(field.fieldType)) return [];
+  return ["contains", "notContains", "equals", "notEquals", "isEmpty", "isNotEmpty"];
+}
+
+export function isSortableField(field: FieldSummary | undefined): boolean {
+  return Boolean(field && !["image", "file", "link"].includes(field.fieldType));
 }
 
 export function matchesCondition(value: JsonValue, operator: FilterOperator, expected?: JsonValue): boolean {
@@ -127,6 +162,7 @@ export function groupKey(record: RecordData, field: FieldSummary): string {
 }
 
 function valueFor(record: RecordData, field: FieldSummary): JsonValue { if (field.fieldType === "auto_number") return record.autoNumber; if (field.fieldType === "created_time") return record.createdAt || record.values[field.id] || null; if (field.fieldType === "updated_time") return record.updatedAt || record.values[field.id] || null; return field.fieldType === "multi_select" ? record.multiSelectValues[field.id] ?? [] : record.values[field.id] ?? null; }
+function fieldsById(fields: FieldSummary[], fieldId: string): FieldSummary | undefined { return fields.find((field) => field.id === fieldId); }
 function comparable(value: JsonValue): number | string { if (typeof value === "number") return value; const numeric = Number(value); return Number.isFinite(numeric) && String(value).trim() !== "" ? numeric : String(value ?? "").toLocaleLowerCase(); }
 function rangeValues(value: JsonValue | undefined): [JsonValue, JsonValue] { if (Array.isArray(value)) return [value[0] ?? null, value[1] ?? null]; const [minimum = "", maximum = ""] = String(value ?? "").split(".."); return [minimum, maximum]; }
 function fileName(value: string): string { try { return decodeURIComponent(new URL(value).pathname.split("/").pop() ?? value); } catch { return value.split("/").pop() ?? value; } }

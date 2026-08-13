@@ -10,7 +10,6 @@ pub struct DeletedTable {
     delete_updated_at: String,
     table_config_json: String,
     table_config_updated_at: String,
-    groups: Vec<FieldGroupRow>,
     fields: Vec<FieldRow>,
     options: Vec<FieldOptionRow>,
     views: Vec<ViewRow>,
@@ -50,21 +49,11 @@ struct TableRow {
 struct FieldRow {
     id: String,
     table_id: String,
-    group_id: Option<String>,
     name: String,
     field_type: String,
     is_title: i64,
     position: i64,
     config_json: String,
-    created_at: String,
-    updated_at: String,
-}
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct FieldGroupRow {
-    id: String,
-    table_id: String,
-    name: String,
-    position: i64,
     created_at: String,
     updated_at: String,
 }

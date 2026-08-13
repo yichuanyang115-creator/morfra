@@ -17,7 +17,6 @@ export function isReadOnlyField(field: FieldSummary): boolean {
 }
 
 export function editableFieldReason(field: FieldSummary): string | null {
-  if (field.id.startsWith("collapsed:")) return "请先展开字段组后编辑。";
   if (isReadOnlyField(field)) return `${field.name} 是自动维护字段，不能编辑。`;
   return null;
 }

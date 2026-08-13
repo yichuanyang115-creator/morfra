@@ -13,22 +13,6 @@ pub fn capture_field(connection: &Connection, field_id: &str) -> Result<FieldBac
     })
 }
 
-pub fn capture_group(
-    connection: &Connection,
-    group_id: &str,
-) -> Result<FieldGroupBackup, StorageError> {
-    let group = connection.query_row("SELECT id, table_id, name, position, created_at, updated_at FROM field_groups WHERE id = ?1", [group_id], |row| Ok(FieldGroupRow { id: row.get(0)?, table_id: row.get(1)?, name: row.get(2)?, position: row.get(3)?, created_at: row.get(4)?, updated_at: row.get(5)? })).optional()?.ok_or_else(|| StorageError::validation("字段组不存在"))?;
-    let mut statement =
-        connection.prepare("SELECT id, group_id FROM fields WHERE group_id = ?1")?;
-    let member_fields = statement
-        .query_map([group_id], |row| Ok((row.get(0)?, row.get(1)?)))?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(FieldGroupBackup {
-        group,
-        member_fields,
-    })
-}
-
 pub fn capture_option(
     connection: &Connection,
     option_id: &str,
@@ -47,26 +31,25 @@ pub fn capture_option(
 }
 
 fn load_field_row(connection: &Connection, field_id: &str) -> Result<FieldRow, StorageError> {
-    connection.query_row("SELECT id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at FROM fields WHERE id = ?1", [field_id], field_row_from_row).optional()?.ok_or_else(|| StorageError::validation("字段不存在"))
+    connection.query_row("SELECT id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at FROM fields WHERE id = ?1", [field_id], field_row_from_row).optional()?.ok_or_else(|| StorageError::validation("字段不存在"))
 }
 fn load_field_row_tx(
     transaction: &Transaction<'_>,
     field_id: &str,
 ) -> Result<FieldRow, StorageError> {
-    transaction.query_row("SELECT id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at FROM fields WHERE id = ?1", [field_id], field_row_from_row).optional()?.ok_or_else(|| StorageError::validation("字段不存在"))
+    transaction.query_row("SELECT id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at FROM fields WHERE id = ?1", [field_id], field_row_from_row).optional()?.ok_or_else(|| StorageError::validation("字段不存在"))
 }
 fn field_row_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<FieldRow> {
     Ok(FieldRow {
         id: row.get(0)?,
         table_id: row.get(1)?,
-        group_id: row.get(2)?,
-        name: row.get(3)?,
-        field_type: row.get(4)?,
-        is_title: row.get(5)?,
-        position: row.get(6)?,
-        config_json: row.get(7)?,
-        created_at: row.get(8)?,
-        updated_at: row.get(9)?,
+        name: row.get(2)?,
+        field_type: row.get(3)?,
+        is_title: row.get(4)?,
+        position: row.get(5)?,
+        config_json: row.get(6)?,
+        created_at: row.get(7)?,
+        updated_at: row.get(8)?,
     })
 }
 fn load_option_rows(
@@ -140,7 +123,7 @@ fn load_view_configs(
         .map_err(StorageError::from)
 }
 fn insert_field(transaction: &Transaction<'_>, field: &FieldRow) -> Result<(), StorageError> {
-    transaction.execute("INSERT INTO fields (id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)", params![field.id, field.table_id, field.group_id, field.name, field.field_type, field.is_title, field.position, field.config_json, field.created_at, field.updated_at])?;
+    transaction.execute("INSERT INTO fields (id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)", params![field.id, field.table_id, field.name, field.field_type, field.is_title, field.position, field.config_json, field.created_at, field.updated_at])?;
     Ok(())
 }
 fn insert_option(

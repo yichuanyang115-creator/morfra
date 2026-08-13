@@ -20,7 +20,7 @@ const data: TableDataSnapshot = {
   records: [{ id: "record-1", tableId: "table-1", position: 0, autoNumber: 1, createdAt: "", updatedAt: "", values: { title: "旧标题", progress: 20, done: false, created: "2026-08-10" }, multiSelectValues: { tags: [] } }],
 };
 const twoRowData: TableDataSnapshot = { ...data, records: [data.records[0], { ...data.records[0], id: "record-2", position: 1, autoNumber: 2, values: { ...data.records[0].values, title: "第二条" } }] };
-const config: GridLayoutConfig = { fieldIds: data.fields.map((field) => field.id), groupOrder: [], columnWidths: {}, frozenFieldId: null, rowHeight: 40, collapsedGroupIds: [] };
+const config: GridLayoutConfig = { fieldIds: data.fields.map((field) => field.id), columnWidths: {}, frozenFieldId: null, rowHeight: 40 };
 
 describe("DataGrid Phase 37 交互", () => {
   let hideVirtualCells = false;

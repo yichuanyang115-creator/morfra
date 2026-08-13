@@ -44,25 +44,6 @@ fn ensure_table_tx(transaction: &Transaction<'_>, table_id: &str) -> Result<(), 
         .ok_or_else(|| StorageError::validation("目标表不存在"))
         .map(|_| ())
 }
-fn validate_group_tx(
-    transaction: &Transaction<'_>,
-    table_id: &str,
-    group_id: Option<&str>,
-) -> Result<(), StorageError> {
-    if let Some(group_id) = group_id {
-        let found: Option<String> = transaction
-            .query_row(
-                "SELECT id FROM field_groups WHERE id = ?1 AND table_id = ?2",
-                params![group_id, table_id],
-                |row| row.get(0),
-            )
-            .optional()?;
-        if found.is_none() {
-            return Err(StorageError::validation("字段组不属于当前表"));
-        }
-    }
-    Ok(())
-}
 fn validate_field_type(field_type: &str) -> Result<(), StorageError> {
     if super::domain::is_supported_field_type(field_type) {
         Ok(())

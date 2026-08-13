@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { FieldSummary, JsonValue } from "../../../types/domain";
-import type { FilterOperator, ViewFilter, ViewPipelineConfig } from "../../../lib/table/viewPipeline";
+import { filterOperatorsFor, type FilterOperator, type ViewFilter, type ViewPipelineConfig } from "../../../lib/table/viewPipeline";
 
 export interface PanelProps {
   fields: FieldSummary[];
@@ -16,9 +16,11 @@ const OPERATOR_LABELS: Record<FilterOperator, string> = {
   hasFiles: "有附件", fileNameContains: "文件名包含", fileCountEquals: "附件数等于", fileCountGreaterThan: "附件数大于", fileCountLessThan: "附件数小于",
 };
 
-export function Panel({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
-  return <section className="morfra-view-tool-panel" role="dialog" aria-label={title}>
-    <header><strong>{title}</strong><button type="button" aria-label={`关闭${title}`} onClick={onClose}>×</button></header>
+export function Panel({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  const panelRef = useRef<HTMLElement>(null);
+  useEffect(() => { panelRef.current?.querySelector<HTMLElement>("input, select, button:not([disabled])")?.focus(); }, []);
+  return <section ref={panelRef} className={`morfra-view-tool-panel${wide ? " is-wide" : ""}`} role="dialog" aria-label={title} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}>
+    <header><strong>{title}</strong></header>
     {children}
   </section>;
 }
@@ -31,7 +33,7 @@ export function ConditionRow({ fields, condition, onChange, onRemove }: { fields
       const nextField = fields.find((item) => item.id === event.target.value);
       onChange({ ...condition, fieldId: event.target.value, operator: operatorsFor(nextField)[0] ?? "equals", value: "" });
     }}>{fieldOptions(fields)}</select>
-    <select aria-label="筛选条件" value={condition.operator} onChange={(event) => onChange({ ...condition, operator: event.target.value as FilterOperator })}>{operatorOptions(operators)}</select>
+    <select aria-label="筛选条件" value={condition.operator} onChange={(event) => onChange({ ...condition, operator: event.target.value as FilterOperator })}>{operatorOptions(operators, field)}</select>
     <ConditionValue field={field} operator={condition.operator} value={condition.value} label="筛选值" onChange={(value) => onChange({ ...condition, value })} />
     <button type="button" aria-label="删除筛选条件" onClick={onRemove}>×</button>
   </div>;
@@ -56,14 +58,7 @@ export function replace<T>(items: T[], index: number, value: T): T[] { return it
 export function move<T>(items: T[], from: number, to: number): T[] { const next = [...items]; const [item] = next.splice(from, 1); if (item !== undefined) next.splice(to, 0, item); return next; }
 export function newId() { return `view-rule-${Date.now()}-${Math.random().toString(36).slice(2)}`; }
 
-export function operatorsFor(field?: FieldSummary): FilterOperator[] {
-  if (!field) return ["equals"];
-  if (field.fieldType === "checkbox") return ["isChecked", "isUnchecked"];
-  if (["number", "progress", "auto_number"].includes(field.fieldType)) return ["equals", "notEquals", "greaterThan", "greaterOrEqual", "lessThan", "lessOrEqual", "between", "isEmpty", "isNotEmpty"];
-  if (["date", "created_time", "updated_time"].includes(field.fieldType)) return ["on", "before", "after", "dateBetween", "isEmpty", "isNotEmpty"];
-  if (["image", "file"].includes(field.fieldType)) return ["hasFiles", "fileNameContains", "fileCountEquals", "fileCountGreaterThan", "fileCountLessThan", "isEmpty"];
-  if (["select", "multi_select"].includes(field.fieldType)) return ["contains", "notContains", "equals", "notEquals", "isEmpty", "isNotEmpty"];
-  return ["contains", "notContains", "equals", "notEquals", "isEmpty", "isNotEmpty"];
-}
-
-export function operatorOptions(operators: FilterOperator[]) { return operators.map((operator) => <option key={operator} value={operator}>{OPERATOR_LABELS[operator]}</option>); }
+export const operatorsFor = filterOperatorsFor;
+export function operatorLabel(operator: FilterOperator, field?: FieldSummary) { return operator === "equals" && ["select", "date", "created_time", "updated_time"].includes(field?.fieldType ?? "") ? "是" : operator === "notEquals" && ["select", "date", "created_time", "updated_time"].includes(field?.fieldType ?? "") ? "不是" : OPERATOR_LABELS[operator]; }
+export function operatorOptions(operators: FilterOperator[], field?: FieldSummary) { return operators.map((operator) => <option key={operator} value={operator}>{operatorLabel(operator, field)}</option>); }
+export function fieldTypeIcon(field: FieldSummary) { return ({ text: "T", number: "#", progress: "%", select: "⌄", multi_select: "≡", date: "◷", checkbox: "☑", link: "↗", image: "▧", file: "▤", auto_number: "#", created_time: "◷", updated_time: "◷" } as const)[field.fieldType]; }

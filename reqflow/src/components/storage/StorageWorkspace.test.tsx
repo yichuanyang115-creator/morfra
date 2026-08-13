@@ -15,11 +15,9 @@ describe("parseCachedGridLayout", () => {
   it("数据首次加载时从当前视图缓存恢复骨架列数、隐藏列结果和列宽", () => {
     expect(parseLoadingGridLayout('{"fieldIds":["title","owner"],"columnWidths":{"title":280,"owner":120},"rowHeight":56}', "title")).toEqual({
       fieldIds: ["title", "owner"],
-      groupOrder: [],
       columnWidths: { title: 280, owner: 120 },
       frozenFieldId: null,
       rowHeight: 56,
-      collapsedGroupIds: [],
     });
   });
 
@@ -43,22 +41,7 @@ describe("parseCachedGridLayout", () => {
     expect(parseCachedGridLayout("not-json", fields).fieldIds).toEqual(["title", "status"]);
   });
 
-  it("新格式缓存保留完整字段布局配置", () => {
-    expect(parseCachedGridLayout('{"fieldIds":["status"],"groupOrder":["group-1"]}', fields, [{ id: "group-1", tableId: "table-1", name: "阶段", position: 0 }])).toMatchObject({ fieldIds: ["title", "status"], groupOrder: ["group-1", "ungrouped"] });
-  });
-
-  it("重启后按已保存的 groupOrder 恢复字段顺序", () => {
-    const groupedFields: FieldSummary[] = [
-      fields[0],
-      { ...fields[1], groupId: "group-a" },
-      { id: "owner", tableId: "table-1", groupId: "group-b", name: "负责人", fieldType: "text", isTitle: false, position: 2, config: {}, options: [] },
-    ];
-
-    expect(parseCachedGridLayout('{"fieldIds":["title","status","owner"],"groupOrder":["group-b","group-a","ungrouped"]}', groupedFields, [
-      { id: "group-a", tableId: "table-1", name: "阶段", position: 0 },
-      { id: "group-b", tableId: "table-1", name: "负责人", position: 1 },
-    ]).fieldIds).toEqual(["title", "owner", "status"]);
-  });
+  it("旧字段组缓存不影响普通字段顺序", () => expect(parseCachedGridLayout('{"fieldIds":["status"],"groupOrder":["group-1"]}', fields).fieldIds).toEqual(["title", "status"]));
 
   it("连续保存失败时回到最后确认持久化的布局，而非较早的乐观状态", () => {
     const confirmed = parseCachedGridLayout('{"fieldIds":["title","status"]}', fields);

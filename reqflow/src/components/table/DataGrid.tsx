@@ -13,16 +13,16 @@ import { GridHeader } from "./GridHeader";
 import { BulkDeleteDialog } from "./BulkDeleteDialog";
 import { GridContextMenu, uniformValueAvailability } from "./GridContextMenu";
 import { GridPersistentEditor } from "./GridPersistentEditor";
-import type { RecordGroupMeta } from "../../lib/table/viewPipeline";
+import { EMPTY_VIEW_PIPELINE, type RecordGroupMeta } from "../../lib/table/viewPipeline";
 import type { ProjectedGroup } from "../../lib/table/groupProjection";
-import { buildGroupedRowTops, groupMoveValue, moveGroup, moveRecordBefore, nextGridScrollTop, normalizeGridValue, orderedFields, orderGridFieldIdsByGroup, type GridLayoutConfig } from "./gridConfig";
+import { buildGroupedRowTops, nextGridScrollTop, normalizeGridValue, orderedFields, type GridLayoutConfig } from "./gridConfig";
 import { useStableRowSelection } from "./useStableRowSelection";
-export { groupMoveValue, moveRecordBefore, nextGridScrollTop, normalizeGridFieldIds, normalizeGridGroupOrder, normalizeGridValue, orderGridFieldIdsByGroup, parseGridLayout, type GridLayoutConfig } from "./gridConfig";
+export { nextGridScrollTop, normalizeGridFieldIds, normalizeGridValue, parseGridLayout, type GridLayoutConfig } from "./gridConfig";
 export { GridLoadingSkeleton as DataGridLoadingSkeleton } from "./GridLoadingSkeleton";
 
-interface DataGridProps { viewId: string; data: TableDataSnapshot; config: GridLayoutConfig; recordGroups?: RecordGroupMeta[]; groups?: ProjectedGroup[]; groupField?: FieldSummary; manualRecordIds?: string[]; onConfigChange: (config: GridLayoutConfig) => void; onOpenDetail: (recordId: string) => void; onSelectionChange?: (recordIds: string[]) => void; onCreate?: () => void; onCreateField?: (fieldType: FieldSummary["fieldType"], name: string) => Promise<string>; onRenameField?: (fieldId: string, name: string) => Promise<void>; onCreateInGroup?: (key: string) => void; onUpdateCell: (recordId: string, fieldId: string, value: JsonValue) => Promise<unknown>; onApplyTableMutation?: (tableId: string, plan: PastePlan, deleteRecordIds?: string[]) => Promise<unknown>; onReorderRecords?: (recordIds: string[]) => Promise<unknown>; onUndo?: () => Promise<unknown>; }
+interface DataGridProps { viewId: string; data: TableDataSnapshot; config: GridLayoutConfig; recordGroups?: RecordGroupMeta[]; groups?: ProjectedGroup[]; groupField?: FieldSummary; onConfigChange: (config: GridLayoutConfig) => void; onOpenDetail: (recordId: string) => void; onSelectionChange?: (recordIds: string[]) => void; onCreate?: () => void; onCreateField?: (fieldType: FieldSummary["fieldType"], name: string) => Promise<string>; onRenameField?: (fieldId: string, name: string) => Promise<void>; onCreateInGroup?: (key: string) => void; onUpdateCell: (recordId: string, fieldId: string, value: JsonValue) => Promise<unknown>; onApplyTableMutation?: (tableId: string, plan: PastePlan, deleteRecordIds?: string[]) => Promise<unknown>; onUndo?: () => Promise<unknown>; }
 
-export function DataGrid({ viewId, data, config, recordGroups, groups = [], groupField, manualRecordIds = [], onConfigChange, onOpenDetail, onSelectionChange, onCreateField, onRenameField, onCreateInGroup, onUpdateCell, onApplyTableMutation, onReorderRecords, onUndo }: DataGridProps) {
+export function DataGrid({ viewId, data, config, recordGroups, groups = [], groupField, onConfigChange, onOpenDetail, onSelectionChange, onCreateField, onRenameField, onCreateInGroup, onUpdateCell, onApplyTableMutation, onUndo }: DataGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const renderedRecordsRef = useRef<RecordData[]>([]);
   const committingRef = useRef(false);
@@ -36,9 +36,7 @@ export function DataGrid({ viewId, data, config, recordGroups, groups = [], grou
   const [operationFailure, setOperationFailure] = useState<{ message: string; retry: () => void } | null>(null);
   const interaction = useGridInteractionStore();
   const currentEditing = interaction.editing?.viewId === viewId && !interaction.editing.direct ? interaction.editing : null;
-  const renderedFieldIds = useMemo(() => orderGridFieldIdsByGroup(config.fieldIds, data.fields, config.groupOrder), [config.fieldIds, config.groupOrder, data.fields]);
-  const visibleFields = useMemo(() => orderedFields(data.fields, data.groups, renderedFieldIds, config.collapsedGroupIds), [config.collapsedGroupIds, data.fields, data.groups, renderedFieldIds]);
-  const groupNames = useMemo(() => Object.fromEntries(data.groups.map((group) => [group.id, group.name])), [data.groups]);
+  const visibleFields = useMemo(() => orderedFields(data.fields, config.fieldIds), [config.fieldIds, data.fields]);
   const layouts = useMemo(() => buildColumnLayouts(visibleFields, config.columnWidths, config.frozenFieldId, width), [config.columnWidths, config.frozenFieldId, visibleFields, width]);
   const table = useReactTable<RecordData>({ data: data.records, columns: layouts.map((layout) => ({ id: layout.field.id, accessorFn: (row) => row.values[layout.field.id] })), getCoreRowModel: getCoreRowModel() });
   const rowTops = useMemo(() => buildGroupedRowTops(data.records.length, recordGroups, config.rowHeight, Boolean(groupField && !isReadOnlyField(groupField))), [config.rowHeight, data.records.length, groupField, recordGroups]);
@@ -64,7 +62,7 @@ export function DataGrid({ viewId, data, config, recordGroups, groups = [], grou
     if (!node) return;
     const left = layouts.slice(0, point.column).reduce((sum, layout) => sum + layout.width, 68);
     const right = left + (layouts[point.column]?.width ?? 0);
-    const top = 64 + (rowTops[point.row] ?? point.row * config.rowHeight);
+    const top = 40 + (rowTops[point.row] ?? point.row * config.rowHeight);
     const bottom = top + config.rowHeight;
     if (left < node.scrollLeft) node.scrollLeft = left;
     else if (right > node.scrollLeft + node.clientWidth) node.scrollLeft = Math.max(0, right - node.clientWidth);
@@ -262,26 +260,10 @@ export function DataGrid({ viewId, data, config, recordGroups, groups = [], grou
     if (deleteRecordIds.length) void applyPlan({ updates: [], newRecords: [] }, `已删除 ${deleteRecordIds.length} 条记录`, deleteRecordIds);
   }
 
-  function moveRecordToGroup(recordId: string, sourceKey: string, targetKey: string) {
-    if (!groupField || isReadOnlyField(groupField)) return;
-    const record = data.records.find((item) => item.id === recordId);
-    if (!record) return;
-    const value = groupMoveValue(record, groupField, sourceKey, targetKey);
-    void applyPlan({ updates: [{ recordId, fieldId: groupField.id, value }], newRecords: [] }, `已移动记录到${targetKey === "__empty__" ? "未分组" : "目标分组"}`);
-  }
-
-  async function reorderRecord(recordId: string, targetRecordId: string) {
-    if (!onReorderRecords) return;
-    const orderedIds = moveRecordBefore(manualRecordIds, recordId, targetRecordId);
-    if (orderedIds === manualRecordIds) return;
-    try { await onReorderRecords(orderedIds); setOperationFailure(null); setOperationToast("已调整组内顺序"); }
-    catch { setOperationFailure({ message: "记录顺序保存失败，已恢复", retry: () => { void reorderRecord(recordId, targetRecordId); } }); }
-  }
-
   return <section className="morfra-data-grid" aria-label={`表格画布，${table.getRowModel().rows.length} 条记录`} style={gridStyle}>
     <div className="morfra-grid-scroll" ref={scrollRef} role="grid" tabIndex={0} aria-rowcount={data.records.length} aria-colcount={layouts.length} aria-activedescendant={interaction.selection ? `${gridId}-cell-${interaction.selection.active.row}-${interaction.selection.active.column}` : undefined} aria-label="可编辑表格" onScroll={(event) => { if (interaction.editing && layouts[interaction.editing.point.column]?.frozen) setScrollLeft(event.currentTarget.scrollLeft); }} onKeyDown={handleGridKeyDown} onCopy={handleGridCopy} onPaste={handleGridPaste}>
-      <GridHeader layouts={layouts} groupNames={groupNames} rowHeight={config.rowHeight} collapsedGroupIds={config.collapsedGroupIds} onCreateField={onCreateField} onRenameField={onRenameField} onToggleGroup={(groupId) => update({ collapsedGroupIds: config.collapsedGroupIds.includes(groupId) ? config.collapsedGroupIds.filter((id) => id !== groupId) : [...config.collapsedGroupIds, groupId] })} onReorderGroup={(sourceId, targetId) => { const groupOrder = moveGroup(config.groupOrder, sourceId, targetId); update({ groupOrder, fieldIds: orderGridFieldIdsByGroup(config.fieldIds, data.fields, groupOrder) }); }} onResize={(fieldId, nextWidth) => { const field = data.fields.find((item) => item.id === fieldId); if (field) update({ columnWidths: { ...config.columnWidths, [fieldId]: clampColumnWidth(field, nextWidth) } }); }} onAutoFit={(fieldId) => { const field = data.fields.find((item) => item.id === fieldId); if (!field) return; const longest = Math.max(field.name.length, ...renderedRecordsRef.current.map((record) => String(record.values[fieldId] ?? record.multiSelectValues[fieldId]?.length ?? "").length)); update({ columnWidths: { ...config.columnWidths, [fieldId]: clampColumnWidth(field, longest * 8 + 48) } }); }} onFreezeTo={(fieldId) => update({ frozenFieldId: fieldId })} onClearExtraFreeze={() => update({ frozenFieldId: null })} />
-      {data.records.length || groups.length ? <GridBody gridId={gridId} parentRef={scrollRef} layouts={layouts} records={data.records} rowHeight={config.rowHeight} conditionalColors={config.pipeline?.conditionalColors} recordGroups={recordGroups} emptyGroups={groups.filter((group) => group.count === 0 && !(config.pipeline?.group.collapsedKeys ?? []).includes(group.key))} rowTops={rowTops} canMoveGroups={Boolean(groupField && !isReadOnlyField(groupField))} canReorderRows={Boolean(groupField && !config.pipeline?.sorts.length && onReorderRecords)} onCreateInGroup={groupField && !isReadOnlyField(groupField) ? onCreateInGroup : undefined} onMoveToGroup={moveRecordToGroup} onReorderWithinGroup={(recordId, targetRecordId) => void reorderRecord(recordId, targetRecordId)} selection={interaction.selection} editing={currentEditing?.point ?? null} onOpenDetail={onOpenDetail} onRenderedRecordsChange={updateRenderedRecords} onSelectCell={selectCell} onExtendSelection={(point) => { const current = useGridInteractionStore.getState().selection; if (current && !current.rows.length) { interaction.setSelection(moveActive(current, point, true)); scrollToPoint(point); } }} onSelectRows={applyRowSelection} onStartEditing={startEditing} onContextCell={openCellContextMenu} onContextRow={openRowContextMenu} onToggleCheckbox={toggleCheckbox} /> : <div className="morfra-grid-empty-state">还没有符合当前视图条件的记录。</div>}
+      <GridHeader layouts={layouts} rowHeight={config.rowHeight} onCreateField={onCreateField} onRenameField={onRenameField} onResize={(fieldId, nextWidth) => { const field = data.fields.find((item) => item.id === fieldId); if (field) update({ columnWidths: { ...config.columnWidths, [fieldId]: clampColumnWidth(field, nextWidth) } }); }} onAutoFit={(fieldId) => { const field = data.fields.find((item) => item.id === fieldId); if (!field) return; const longest = Math.max(field.name.length, ...renderedRecordsRef.current.map((record) => String(record.values[fieldId] ?? record.multiSelectValues[fieldId]?.length ?? "").length)); update({ columnWidths: { ...config.columnWidths, [fieldId]: clampColumnWidth(field, longest * 8 + 48) } }); }} onFreezeTo={(fieldId) => update({ frozenFieldId: fieldId })} onClearExtraFreeze={() => update({ frozenFieldId: null })} />
+      {data.records.length || groups.length ? <GridBody key={groupField?.id ?? "flat"} gridId={gridId} parentRef={scrollRef} layouts={layouts} records={data.records} rowHeight={config.rowHeight} conditionalColors={config.pipeline?.conditionalColors} recordGroups={recordGroups} groups={groups} collapsedKeys={config.pipeline?.group.collapsedKeys ?? []} rowTops={rowTops} onToggleGroup={(key) => { const current = config.pipeline?.group ?? EMPTY_VIEW_PIPELINE.group; const collapsedKeys = current.collapsedKeys.includes("__all__") ? groups.filter((group) => group.key !== key).map((group) => group.key) : current.collapsedKeys.includes(key) ? current.collapsedKeys.filter((item) => item !== key) : [...current.collapsedKeys, key]; update({ pipeline: { ...(config.pipeline ?? EMPTY_VIEW_PIPELINE), group: { ...current, collapsedKeys } } }); }} onCreateInGroup={groupField && !isReadOnlyField(groupField) ? onCreateInGroup : undefined} selection={interaction.selection} editing={currentEditing?.point ?? null} onOpenDetail={onOpenDetail} onRenderedRecordsChange={updateRenderedRecords} onSelectCell={selectCell} onExtendSelection={(point) => { const current = useGridInteractionStore.getState().selection; if (current && !current.rows.length) { interaction.setSelection(moveActive(current, point, true)); scrollToPoint(point); } }} onSelectRows={applyRowSelection} onStartEditing={startEditing} onContextCell={openCellContextMenu} onContextRow={openRowContextMenu} onToggleCheckbox={toggleCheckbox} /> : <div className="morfra-grid-empty-state">还没有符合当前视图条件的记录。</div>}
       <GridPersistentEditor editing={currentEditing} layouts={layouts} records={data.records} rowHeight={config.rowHeight} rowTops={rowTops} scrollLeft={scrollLeft} error={interaction.error} onChange={interaction.setDraft} onCommit={(direction) => void commitEditing(direction)} onCancel={stopEditingAndFocus} />
     </div>
     <div className="morfra-grid-announcement" aria-live="polite">{interaction.saving ? "正在保存修改…" : interaction.error ?? interaction.notice}{interaction.error && interaction.pendingCommit && <><button type="button" onClick={() => void commitEditing()}>重试保存</button><button type="button" onClick={stopEditingAndFocus}>放弃草稿</button></>}</div>

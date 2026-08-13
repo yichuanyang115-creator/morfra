@@ -124,36 +124,16 @@ export async function loadStorageTableData(tableId: string): Promise<TableDataSn
   return invoke<TableDataSnapshot>("storage_load_table_data", { tableId });
 }
 
-export async function createStorageField(tableId: string, name: string, fieldType: FieldType, config: JsonValue, groupId: string | null): Promise<TableDataSnapshot> {
-  return invoke<TableDataSnapshot>("storage_create_field", { tableId, name, fieldType, config, groupId });
+export async function createStorageField(tableId: string, name: string, fieldType: FieldType, config: JsonValue): Promise<TableDataSnapshot> {
+  return invoke<TableDataSnapshot>("storage_create_field", { tableId, name, fieldType, config });
 }
 
-export async function updateStorageField(fieldId: string, name: string, fieldType: FieldType, config: JsonValue, groupId: string | null): Promise<TableDataSnapshot> {
-  return invoke<TableDataSnapshot>("storage_update_field", { fieldId, name, fieldType, config, groupId });
+export async function updateStorageField(fieldId: string, name: string, fieldType: FieldType, config: JsonValue): Promise<TableDataSnapshot> {
+  return invoke<TableDataSnapshot>("storage_update_field", { fieldId, name, fieldType, config });
 }
 
 export async function deleteStorageField(fieldId: string): Promise<TableDataSnapshot> {
   return invoke<TableDataSnapshot>("storage_delete_field", { fieldId });
-}
-
-export async function createStorageFieldGroup(tableId: string, name: string): Promise<TableDataSnapshot> {
-  return invoke<TableDataSnapshot>("storage_create_field_group", { tableId, name });
-}
-
-export async function renameStorageFieldGroup(groupId: string, name: string): Promise<TableDataSnapshot> {
-  return invoke<TableDataSnapshot>("storage_rename_field_group", { groupId, name });
-}
-
-export async function deleteStorageFieldGroup(groupId: string): Promise<TableDataSnapshot> {
-  return invoke<TableDataSnapshot>("storage_delete_field_group", { groupId });
-}
-
-export async function moveStorageField(fieldId: string, groupId: string | null): Promise<TableDataSnapshot> {
-  return invoke<TableDataSnapshot>("storage_move_field", { fieldId, groupId });
-}
-
-export async function reorderStorageFieldGroups(tableId: string, groupIds: string[]): Promise<TableDataSnapshot> {
-  return invoke<TableDataSnapshot>("storage_reorder_field_groups", { tableId, groupIds });
 }
 
 export async function reorderStorageFields(tableId: string, fieldIds: string[]): Promise<TableDataSnapshot> {

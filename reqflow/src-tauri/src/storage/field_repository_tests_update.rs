@@ -2,7 +2,7 @@
 fn invalid_cell_update_is_atomic_and_type_conversion_is_undoable_by_backup() {
     let (mut connection, table_id) = setup();
     let field_id =
-        field_repository::create_field(&mut connection, &table_id, "分数", "text", json!({}), None)
+        field_repository::create_field(&mut connection, &table_id, "分数", "text", json!({}))
             .expect("field");
     let mut values = HashMap::new();
     values.insert(title_id(&connection, &table_id), json!("第一条"));
@@ -22,7 +22,6 @@ fn invalid_cell_update_is_atomic_and_type_conversion_is_undoable_by_backup() {
         "分数",
         "number",
         json!({}),
-        None,
     )
     .expect("convert");
     assert_eq!(
@@ -40,7 +39,7 @@ fn invalid_cell_update_is_atomic_and_type_conversion_is_undoable_by_backup() {
 fn board_move_updates_record_and_view_config_in_one_undoable_backup() {
     let (mut connection, table_id) = setup();
     let status_id =
-        field_repository::create_field(&mut connection, &table_id, "状态", "text", json!({}), None)
+        field_repository::create_field(&mut connection, &table_id, "状态", "text", json!({}))
             .expect("status field");
     let mut values = HashMap::new();
     values.insert(title_id(&connection, &table_id), json!("第一条"));

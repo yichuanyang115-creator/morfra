@@ -2,7 +2,6 @@
 pub struct FieldRow {
     pub id: String,
     pub table_id: String,
-    pub group_id: Option<String>,
     pub name: String,
     pub field_type: String,
     pub is_title: i64,
@@ -12,15 +11,6 @@ pub struct FieldRow {
     pub updated_at: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FieldGroupRow {
-    pub id: String,
-    pub table_id: String,
-    pub name: String,
-    pub position: i64,
-    pub created_at: String,
-    pub updated_at: String,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldOptionRow {
@@ -67,11 +57,6 @@ pub struct FieldBackup {
     pub view_configs: Vec<ViewConfigRow>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FieldGroupBackup {
-    pub group: FieldGroupRow,
-    pub member_fields: Vec<(String, Option<String>)>,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OptionBackup {

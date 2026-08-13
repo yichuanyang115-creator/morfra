@@ -64,16 +64,10 @@ pub fn restore_table_in_transaction(
         (&backup.table.id, &backup.table.project_id, &backup.table.name, &backup.table.icon, &backup.table.emoji, backup.table.position, &backup.table.created_at, &backup.table.updated_at),
     )?;
     transaction.execute("INSERT INTO table_configs (table_id, detail_field_ids_json, updated_at) VALUES (?1, ?2, ?3)", (&backup.table.id, &backup.table_config_json, &backup.table_config_updated_at))?;
-    for group in &backup.groups {
-        transaction.execute(
-            "INSERT INTO field_groups (id, table_id, name, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            (&group.id, &group.table_id, &group.name, group.position, &group.created_at, &group.updated_at),
-        )?;
-    }
     for field in &backup.fields {
         transaction.execute(
-            "INSERT INTO fields (id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-            (&field.id, &field.table_id, &field.group_id, &field.name, &field.field_type, field.is_title, field.position, &field.config_json, &field.created_at, &field.updated_at),
+            "INSERT INTO fields (id, table_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            (&field.id, &field.table_id, &field.name, &field.field_type, field.is_title, field.position, &field.config_json, &field.created_at, &field.updated_at),
         )?;
     }
     for option in &backup.options {

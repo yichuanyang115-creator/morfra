@@ -393,7 +393,6 @@ mod tests {
             "文件",
             "file",
             json!({}),
-            None,
         )
         .unwrap();
         let title = table
@@ -448,7 +447,6 @@ mod tests {
             "文件",
             "file",
             json!({}),
-            None,
         )
         .unwrap();
         let title = table
@@ -504,7 +502,6 @@ mod tests {
             "文件",
             "file",
             json!({}),
-            None,
         )
         .unwrap();
         let title = table
@@ -558,7 +555,6 @@ mod tests {
             "文件",
             "file",
             json!({}),
-            None,
         )
         .unwrap();
         let title = table
@@ -611,7 +607,6 @@ mod tests {
             "文件",
             "file",
             json!({}),
-            None,
         )
         .unwrap();
         let title = table
