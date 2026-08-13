@@ -100,6 +100,10 @@ export function isSortableField(field: FieldSummary | undefined): boolean {
   return Boolean(field && !["image", "file", "link"].includes(field.fieldType));
 }
 
+export function validSorts(sorts: ViewSort[], fields: FieldSummary[]): ViewSort[] {
+  return sorts.filter((sort, index) => isSortableField(fieldsById(fields, sort.fieldId)) && sorts.findIndex((item) => item.fieldId === sort.fieldId) === index);
+}
+
 export function matchesCondition(value: JsonValue, operator: FilterOperator, expected?: JsonValue): boolean {
   const empty = value === null || value === "" || (Array.isArray(value) && value.length === 0);
   if (operator === "isEmpty") return empty;

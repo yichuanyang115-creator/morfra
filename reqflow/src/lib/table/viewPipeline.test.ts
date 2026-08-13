@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FieldSummary, RecordData, TableDataSnapshot } from "../../types/domain";
 import { buildGroupProjection, isGroupable } from "./groupProjection";
-import { EMPTY_VIEW_PIPELINE, matchesCondition, parseViewPipelineConfig, runViewPipeline, searchableText, stableSort } from "./viewPipeline";
+import { EMPTY_VIEW_PIPELINE, matchesCondition, parseViewPipelineConfig, runViewPipeline, searchableText } from "./viewPipeline";
 
 const fields: FieldSummary[] = [
   { id: "title", tableId: "table", groupId: null, name: "标题", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] },
@@ -52,7 +52,7 @@ describe("view pipeline", () => {
     expect(matchesCondition(["one.pdf", "two.pdf"], "fileCountEquals", 2)).toBe(true);
   });
 
-  it("searches formatted user-facing values and sorts attachments by count then first name", () => {
+  it("searches formatted user-facing attachment and link values", () => {
     const readableFields: FieldSummary[] = [{ id: "amount", tableId: "table", groupId: null, name: "百分比", fieldType: "number", isTitle: false, position: 4, config: { format: "percent" }, options: [] }, { id: "due", tableId: "table", groupId: null, name: "日期", fieldType: "date", isTitle: false, position: 5, config: { includeTime: true }, options: [] }, { id: "link", tableId: "table", groupId: null, name: "链接", fieldType: "link", isTitle: false, position: 6, config: {}, options: [] }, { id: "files", tableId: "table", groupId: null, name: "附件", fieldType: "file", isTitle: false, position: 7, config: {}, options: [] }];
     const first = { ...record("first", 0, null, [], 0), values: { amount: 1234, due: "2026-08-11T09:30:00Z", link: "[Morfra 首页](https://morfra.example)", files: ["z.pdf", "a.pdf"] } };
     const second = { ...record("second", 1, null, [], 0), values: { files: ["b.pdf"] } };
@@ -61,7 +61,7 @@ describe("view pipeline", () => {
     expect(text).toContain(new Intl.DateTimeFormat(undefined, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date("2026-08-11T09:30:00Z")).toLocaleLowerCase());
     expect(text).toContain("morfra 首页");
     expect(text).toContain("https://morfra.example");
-    expect(stableSort([first, second], readableFields, [{ id: "files", fieldId: "files", direction: "asc" }]).map((item) => item.id)).toEqual(["second", "first"]);
+    expect(runViewPipeline({ ...data, fields: readableFields, records: [first, second] }, { ...EMPTY_VIEW_PIPELINE, sorts: [{ id: "files", fieldId: "files", direction: "asc" }] }, "").records.map((item) => item.id)).toEqual(["first", "second"]);
   });
 
   it("reads auto number and system timestamps from their real record properties", () => {

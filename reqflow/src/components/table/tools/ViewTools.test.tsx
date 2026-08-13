@@ -10,6 +10,7 @@ const fields: FieldSummary[] = [
   { id: "title", tableId: "table", name: "标题", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] },
   { id: "score", tableId: "table", name: "分数", fieldType: "number", isTitle: false, position: 1, config: {}, options: [] },
   { id: "score-copy", tableId: "table", name: "分数", fieldType: "number", isTitle: false, position: 2, config: {}, options: [] },
+  { id: "files", tableId: "table", name: "附件", fieldType: "file", isTitle: false, position: 3, config: {}, options: [] },
 ];
 
 function Harness() {
@@ -26,7 +27,7 @@ describe("ViewTools", () => {
     expect(screen.queryByRole("combobox")).toBeNull();
     await user.click(screen.getByRole("button", { name: "＋ 添加筛选条件" }));
     const picker = screen.getByRole("listbox", { name: "选择筛选字段" });
-    expect(picker.querySelectorAll('[role="option"]')).toHaveLength(3);
+    expect(picker.querySelectorAll('[role="option"]')).toHaveLength(4);
     expect(screen.getByRole("option", { name: /标题/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /分数.*已隐藏/ })).toBeTruthy();
     await user.click(screen.getAllByRole("option", { name: /分数/ })[0]);
@@ -47,6 +48,37 @@ describe("ViewTools", () => {
     await user.click(screen.getByRole("button", { name: "筛选，1 项" }));
     await user.click(screen.getByRole("button", { name: "筛选，1 项" }));
     expect(screen.getByText("标题 包含 需求")).toBeTruthy();
+  });
+
+  it("排序先选可排序字段，隐藏字段可选，已选与附件字段不会再次出现", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "排序" }));
+    expect(screen.queryByRole("combobox")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "＋ 添加排序字段" }));
+    screen.getByRole("listbox", { name: "选择排序字段" });
+    expect(screen.queryByRole("option", { name: /附件/ })).toBeNull();
+    expect(screen.getByRole("option", { name: /分数.*已隐藏/ })).toBeTruthy();
+    await user.click(screen.getByRole("option", { name: /标题/ }));
+    expect(screen.getByLabelText("标题 排序方向")).toHaveValue("asc");
+    expect(screen.getByRole("button", { name: "排序，1 项" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "＋ 添加排序字段" }));
+    expect(screen.queryByRole("option", { name: /标题/ })).toBeNull();
+  });
+
+  it("排序规则提供方向和键盘可达的优先级调整", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "排序" }));
+    await user.click(screen.getByRole("button", { name: "＋ 添加排序字段" }));
+    await user.click(screen.getByRole("option", { name: /标题/ }));
+    await user.selectOptions(screen.getByLabelText("标题 排序方向"), "desc");
+    expect(screen.getByLabelText("标题 排序方向")).toHaveValue("desc");
+    await user.click(screen.getByRole("button", { name: "＋ 添加排序字段" }));
+    await user.click(screen.getAllByRole("option", { name: /分数/ })[0]);
+    expect(screen.getByRole("button", { name: "上移 分数 排序" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "上移 分数 排序" }));
+    expect(screen.getByRole("button", { name: "下移 分数 排序" })).toBeTruthy();
   });
 
   it("条件填色规则支持复制和启停", async () => {

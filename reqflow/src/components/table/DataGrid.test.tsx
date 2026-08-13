@@ -34,6 +34,12 @@ describe("parseGridLayout", () => {
 
   it("保留当前视图的普通字段横向顺序", () => expect(parseGridLayout({ fieldIds: ["title", "status"] }, fields).fieldIds).toEqual(["title", "status"]));
 
+  it("恢复旧视图时清理图片、文件和链接等无效排序引用", () => {
+    const file = { ...fields[1], id: "files", fieldType: "file" as const };
+    const layout = parseGridLayout({ sorts: [{ id: "file-sort", fieldId: "files", direction: "asc" }, { id: "title-sort", fieldId: "title", direction: "desc" }] }, [...fields, file]);
+    expect(layout.pipeline?.sorts).toEqual([{ id: "title-sort", fieldId: "title", direction: "desc" }]);
+  });
+
   it("将图片和文件编辑草稿规范化为多附件 URL 列表", () => {
     const file: FieldSummary = { ...fields[1], id: "files", fieldType: "file" };
     expect(normalizeGridValue(file, "https://a.test/one.pdf, https://a.test/two.pdf")).toEqual(["https://a.test/one.pdf", "https://a.test/two.pdf"]);
