@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { ColumnLayout } from "../../lib/table/columnLayout";
 import type { FieldSummary } from "../../types/domain";
@@ -27,5 +27,17 @@ describe("GridHeader 冻结菜单", () => {
     fireEvent.dragStart(screen.getByText("⌄ 阶段").parentElement!, { dataTransfer: { effectAllowed: "" } });
     fireEvent.drop(screen.getByText("⌄ 负责人").parentElement!);
     expect(onReorderGroup).toHaveBeenCalledWith("group-a", "group-b");
+  });
+
+  it("字段类型只作为装饰图标，类型文字只在更多菜单中出现，并支持快速添加字段", async () => {
+    const onCreateField = vi.fn().mockResolvedValue("new-field");
+    render(<GridHeader layouts={layouts} groupNames={{ "group-a": "阶段", "group-b": "负责人" }} rowHeight={40} collapsedGroupIds={[]} onCreateField={onCreateField} onToggleGroup={vi.fn()} onReorderGroup={vi.fn()} onResize={vi.fn()} onAutoFit={vi.fn()} onFreezeTo={vi.fn()} onClearExtraFreeze={vi.fn()} />);
+    expect(screen.queryByText("文本")).toBeNull();
+    expect(screen.getAllByText("T")[0]).toHaveAttribute("aria-hidden", "true");
+    fireEvent.click(screen.getByRole("button", { name: "打开 状态 字段菜单" }));
+    expect(screen.getByText("类型：单选")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "＋ 添加字段" }));
+    fireEvent.click(screen.getByRole("option", { name: "数字" }));
+    await waitFor(() => expect(onCreateField).toHaveBeenCalledWith("number", "数字"));
   });
 });

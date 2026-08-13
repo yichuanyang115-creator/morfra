@@ -83,6 +83,7 @@ export interface OptionUsage {
 export interface TableSummary {
   id: string;
   name: string;
+  emoji: string;
   position: number;
   titleFieldId: string;
   recordCount: number;

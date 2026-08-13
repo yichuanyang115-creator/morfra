@@ -60,8 +60,8 @@ pub fn restore_table_in_transaction(
         (&backup.table.project_id, backup.table.position),
     )?;
     transaction.execute(
-        "INSERT INTO data_tables (id, project_id, name, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        (&backup.table.id, &backup.table.project_id, &backup.table.name, backup.table.position, &backup.table.created_at, &backup.table.updated_at),
+        "INSERT INTO data_tables (id, project_id, name, icon, emoji, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        (&backup.table.id, &backup.table.project_id, &backup.table.name, &backup.table.icon, &backup.table.emoji, backup.table.position, &backup.table.created_at, &backup.table.updated_at),
     )?;
     transaction.execute("INSERT INTO table_configs (table_id, detail_field_ids_json, updated_at) VALUES (?1, ?2, ?3)", (&backup.table.id, &backup.table_config_json, &backup.table_config_updated_at))?;
     for group in &backup.groups {

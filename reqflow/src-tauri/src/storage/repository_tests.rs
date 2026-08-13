@@ -34,6 +34,30 @@ fn blank_project_has_one_title_field_and_table_view() {
     assert_eq!(snapshot.tables.len(), 1);
     assert_eq!(snapshot.tables[0].views[0].view_type, "table");
     assert_eq!(snapshot.tables[0].record_count, 0);
+    assert_eq!(snapshot.tables[0].emoji, "📋");
+}
+
+#[test]
+fn table_emoji_persists_across_snapshot_reload_and_failed_update_rolls_back() {
+    let (mut connection, manifest) = database();
+    let table_id = load_snapshot(&connection, &manifest)
+        .expect("snapshot")
+        .tables[0]
+        .id
+        .clone();
+
+    lifecycle::update_table_emoji(&mut connection, &table_id, "🚀").expect("update emoji");
+    let reloaded = load_snapshot(&connection, &manifest).expect("reload");
+    assert_eq!(reloaded.tables[0].emoji, "🚀");
+
+    let failed = lifecycle::update_table_emoji_for_test(&mut connection, &table_id, "🎯", true);
+    assert!(failed.is_err());
+    let after_failure = load_snapshot(&connection, &manifest).expect("after failure");
+    assert_eq!(after_failure.tables[0].emoji, "🚀");
+    assert!(lifecycle::update_table_emoji(&mut connection, &table_id, " ").is_err());
+    assert!(
+        lifecycle::update_table_emoji(&mut connection, &table_id, "12345678901234567").is_err()
+    );
 }
 
 #[test]
@@ -374,6 +398,7 @@ fn table_and_view_lifecycle_preserves_minimal_structure_and_order() {
 fn deleting_and_restoring_table_restores_fields_views_and_config() {
     let (mut connection, manifest) = database();
     let created = create_table(&mut connection, "可恢复表").expect("table");
+    lifecycle::update_table_emoji(&mut connection, &created.id, "🚀").expect("emoji");
     lifecycle::create_view(&mut connection, &created.id, "看板", "board").expect("view");
 
     let deleted = table_backup::delete_table(&mut connection, &created.id).expect("delete");
@@ -392,6 +417,7 @@ fn deleting_and_restoring_table_restores_fields_views_and_config() {
         .iter()
         .find(|item| item.name == "可恢复表")
         .expect("restored table");
+    assert_eq!(table.emoji, "🚀");
     assert_eq!(table.views.len(), 2);
     let config_count: i64 = connection.query_row("SELECT COUNT(*) FROM view_configs WHERE view_id IN (SELECT id FROM views WHERE table_id = ?1)", [&table.id], |row| row.get(0)).expect("configs");
     assert_eq!(config_count, 2);

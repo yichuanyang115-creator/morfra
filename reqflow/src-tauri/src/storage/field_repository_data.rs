@@ -104,7 +104,6 @@ pub fn create_field(
     if count >= 200 {
         return Err(StorageError::validation("每张表最多建立 200 个字段"));
     }
-    ensure_unique_name(&transaction, "fields", "table_id", table_id, &name, "字段")?;
     validate_group_tx(&transaction, table_id, group_id)?;
     let position: i64 = transaction.query_row(
         "SELECT COALESCE(MAX(position), -1) + 1 FROM fields WHERE table_id = ?1",
@@ -139,15 +138,6 @@ pub fn update_field(
         return Err(StorageError::validation("主标题字段不能加入字段组"));
     }
     validate_group_tx(&transaction, &current.table_id, group_id)?;
-    ensure_unique_name_excluding(
-        &transaction,
-        "fields",
-        "table_id",
-        &current.table_id,
-        &name,
-        "字段",
-        field_id,
-    )?;
     if current.field_type != field_type {
         convert_field_values(&transaction, &current, field_type)?;
         if current.field_type == "select" && field_type != "select" {

@@ -50,4 +50,12 @@ describe("ViewTools", () => {
     await user.click(screen.getAllByLabelText("启用条件填色")[0]);
     expect(screen.getAllByLabelText("启用条件填色")[0]).not.toBeChecked();
   });
+
+  it("表格工具栏把新建记录保留在最右侧主操作", async () => {
+    const onCreateRecord = vi.fn();
+    const user = userEvent.setup();
+    render(<ViewTools fields={fields} visibleFieldCount={fields.length} config={EMPTY_VIEW_PIPELINE} search="" rowHeight={40} onSearchChange={vi.fn()} onRowHeightChange={vi.fn()} onChange={vi.fn()} onOpenFieldDisplay={vi.fn()} onCreateRecord={onCreateRecord} />);
+    await user.click(screen.getByRole("button", { name: "新建记录" }));
+    expect(onCreateRecord).toHaveBeenCalledOnce();
+  });
 });

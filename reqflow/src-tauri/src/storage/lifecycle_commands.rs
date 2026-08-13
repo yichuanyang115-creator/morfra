@@ -75,6 +75,18 @@ pub fn storage_rename_table(
 }
 
 #[tauri::command]
+pub fn storage_update_table_emoji(
+    table_id: String,
+    emoji: String,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<ProjectSnapshot, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let mut opened = connection::open_project(&path)?;
+    lifecycle::update_table_emoji(&mut opened.connection, &table_id, &emoji)?;
+    repository::load_snapshot(&opened.connection, &opened.manifest)
+}
+
+#[tauri::command]
 pub fn storage_delete_table(
     table_id: String,
     state: State<'_, Mutex<StorageState>>,

@@ -163,13 +163,10 @@ html[data-reduced-motion="true"] *::after {
   color: var(--morfra-accent-primary);
 }
 
-.morfra-wordmark {
-  display: flex;
-  min-width: 0;
+.morfra-titlebar-drag-region {
+  min-width: 40px;
   flex: 1;
-  align-items: baseline;
-  gap: 10px;
-  overflow: hidden;
+  align-self: stretch;
 }
 
 .morfra-file-menu {

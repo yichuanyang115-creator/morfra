@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { FieldGroupSummary, FieldOptionSummary, FieldSummary, FieldType, JsonValue } from "../../types/domain";
 import { OptionEditor } from "./OptionEditor";
 
@@ -21,14 +21,18 @@ interface FieldEditorProps {
   onDrop: (fieldId: string) => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  autoEdit?: boolean;
 }
 
-export function FieldEditor({ field, groups, onSave, onDelete, onCreateOption, onUpdateOption, onDeleteOption, onReorderOption, onReorder, onDragStart, onDragOver, onDrop, canMoveUp, canMoveDown }: FieldEditorProps) {
-  const [editing, setEditing] = useState(false);
+export function FieldEditor({ field, groups, onSave, onDelete, onCreateOption, onUpdateOption, onDeleteOption, onReorderOption, onReorder, onDragStart, onDragOver, onDrop, canMoveUp, canMoveDown, autoEdit = false }: FieldEditorProps) {
+  const [editing, setEditing] = useState(autoEdit);
   const [name, setName] = useState(field.name);
   const [groupId, setGroupId] = useState(field.groupId);
   const [type, setType] = useState(field.fieldType);
   const [config, setConfig] = useState<JsonValue>(field.config);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { if (autoEdit) { setEditing(true); setName(field.name); requestAnimationFrame(() => nameInputRef.current?.select()); } }, [autoEdit, field.name]);
 
   function reset() { setName(field.name); setGroupId(field.groupId); setType(field.fieldType); setConfig(field.config); setEditing(false); }
   function updateConfig(key: string, value: JsonValue) { const current = config && typeof config === "object" && !Array.isArray(config) ? config : {}; setConfig({ ...current, [key]: value }); }
@@ -43,7 +47,7 @@ export function FieldEditor({ field, groups, onSave, onDelete, onCreateOption, o
       {!field.isTitle && <button type="button" className="rounded-(--r-sm) border border-transparent px-2 py-1 text-[11px] text-(--module-scope-feedback-danger)" onClick={() => onDelete(field)}>删除</button>}
     </div>
     {editing && <div className="mt-3 space-y-3 rounded-(--r-sm) bg-(--module-scope-background-elevated) p-3">
-      <label className="flex items-center gap-2 text-[11px] text-(--module-scope-text-secondary)">字段名<input className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1 text-(--module-scope-text-primary)" value={name} onChange={(event) => setName(event.target.value)} /></label>
+      <label className="flex items-center gap-2 text-[11px] text-(--module-scope-text-secondary)">字段名<input ref={nameInputRef} className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1 text-(--module-scope-text-primary)" value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void save(); if (event.key === "Escape") reset(); }} onBlur={() => { if (name.trim()) void save(); }} /></label>
       <label className="flex items-center gap-2 text-[11px] text-(--module-scope-text-secondary)">类型<select disabled={field.isTitle} className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1 text-(--module-scope-text-primary)" value={type} onChange={(event) => setType(event.target.value as FieldType)}>{(Object.keys(FIELD_TYPE_LABELS) as FieldType[]).map((key) => <option key={key} value={key}>{FIELD_TYPE_LABELS[key]}</option>)}</select></label>
       <label className="flex items-center gap-2 text-[11px] text-(--module-scope-text-secondary)">字段组<select disabled={field.isTitle} className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1 text-(--module-scope-text-primary)" value={groupId ?? ""} onChange={(event) => setGroupId(event.target.value || null)}><option value="">未分组</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
       {type === "text" && <label className="flex items-center gap-2 text-[11px] text-(--module-scope-text-secondary)"><input type="checkbox" checked={configValue(config, "multiline") === true} onChange={(event) => updateConfig("multiline", event.target.checked)} />支持多行显示</label>}

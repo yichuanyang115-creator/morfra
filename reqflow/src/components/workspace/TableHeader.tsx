@@ -20,7 +20,6 @@ export function TableHeader({ table, onRename, onOpenFieldManager, onOpenBackupS
 
   return <header className="morfra-table-header">
     <div className="morfra-table-header-main">
-      <span className="morfra-table-header-kicker">表</span>
       {editing ? <input autoFocus aria-label="表名称" value={name} onChange={(event) => setName(event.target.value)} onBlur={() => void commit()} onKeyDown={(event) => { if (event.key === "Enter") void commit(); if (event.key === "Escape") { setName(table.name); setEditing(false); } }} className="morfra-table-title-input" /> : <button type="button" className="morfra-table-title-button" onClick={() => { setName(table.name); setEditing(true); }}>{table.name}</button>}
     </div>
     <div className="flex items-center gap-2"><span className="morfra-table-record-count">{table.recordCount} 条记录</span>{onOpenBackupSettings && <button type="button" className="rounded-(--r-sm) border border-(--module-scope-border-subtle) px-2 py-1 text-[11px] text-(--module-scope-text-secondary)" onClick={onOpenBackupSettings}>备份</button>}{onOpenFieldManager && <button type="button" className="rounded-(--r-sm) border border-(--module-scope-border-subtle) px-2 py-1 text-[11px] text-(--module-scope-text-secondary)" onClick={onOpenFieldManager}>字段管理</button>}</div>

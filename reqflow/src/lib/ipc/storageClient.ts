@@ -43,6 +43,10 @@ export async function renameStorageTable(tableId: string, name: string): Promise
   return invoke<ProjectSnapshot>("storage_rename_table", { tableId, name });
 }
 
+export async function updateStorageTableEmoji(tableId: string, emoji: string): Promise<ProjectSnapshot> {
+  return invoke<ProjectSnapshot>("storage_update_table_emoji", { tableId, emoji });
+}
+
 export async function deleteStorageTable(tableId: string): Promise<ProjectSnapshot> {
   return invoke<ProjectSnapshot>("storage_delete_table", { tableId });
 }

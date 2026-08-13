@@ -60,6 +60,14 @@ describe("GridBody 真实滚动虚拟化", () => {
     expect(container.querySelectorAll(".morfra-grid-cell").length).toBeLessThan(400);
   });
 
+  it("记录行使用与表头一致的显式单行列轨道", async () => {
+    const { container } = render(<GridHarness />);
+    await waitFor(() => expect(renderedIndexes(container, "data-row-index").length).toBeGreaterThan(0));
+    const row = container.querySelector(".morfra-grid-record-row") as HTMLElement;
+    expect(row.style.gridTemplateColumns).toMatch(/^48px(?: 120px){200}$/);
+    expect(row.querySelector(".morfra-grid-row-number")?.parentElement).toBe(row);
+  });
+
   it("在虚拟表格行流中渲染组头、组内投影和组尾新增入口", async () => {
     const { getByText, getAllByText, getByRole } = render(<GroupedGridHarness />);
     await waitFor(() => expect(getByText("待办")).toBeTruthy());

@@ -38,7 +38,7 @@ describe("calculateWindowLayout", () => {
 
     expect(layout.mode).toBe("narrow");
     expect(layout.sidebarMode).toBe("collapsed");
-    expect(layout.sidebarWidth).toBe(52);
+    expect(layout.sidebarWidth).toBe(48);
     expect(layout.rightPanelMode).toBe("drawer");
     expect(layout.rightPanelWidth).toBe(440);
   });
@@ -48,7 +48,7 @@ describe("calculateWindowLayout", () => {
 
     expect(layout.contentHeight).toBe(MIN_WINDOW_HEIGHT - 40);
     expect(layout.rightPanelWidth).toBeGreaterThanOrEqual(320);
-    expect(layout.sidebarWidth).toBe(52);
+    expect(layout.sidebarWidth).toBe(48);
   });
 
   it("侧栏偏好过宽时临时收缩，仍保留常规主区域 560px 底线", () => {

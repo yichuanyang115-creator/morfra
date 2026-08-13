@@ -22,7 +22,7 @@ function createStore<State>(initial: State): StorageStore<State> & { set: (state
 const project: Project = {
   id: "project-storage", name: "真实本地项目", sources: [], storageSnapshot: {
     manifest: { id: "project-storage", name: "真实本地项目", formatVersion: 3, createdAt: "2026-08-10T00:00:00.000Z", updatedAt: "2026-08-10T00:00:00.000Z" },
-    tables: [{ id: "table-delivery", name: "交付表", position: 0, titleFieldId: "name", recordCount: 1, views: [] }],
+    tables: [{ id: "table-delivery", name: "交付表", emoji: "📋", position: 0, titleFieldId: "name", recordCount: 1, views: [] }],
   },
 };
 

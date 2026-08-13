@@ -27,7 +27,7 @@ const provider = { id: "provider-1", name: "本地兼容服务", baseUrl: "https
 describe("StorageAIHost 生产宿主", () => {
   beforeEach(() => {
     files.clear();
-    useProjectStore.setState({ projects: [{ id: "project-a", name: "生产项目", sources: [], storageSnapshot: { manifest: { id: "project-a", name: "生产项目", formatVersion: 3, createdAt: "2026-08-10T00:00:00.000Z", updatedAt: "2026-08-10T00:00:00.000Z" }, tables: [{ id: "table-a", name: "真实表", position: 0, titleFieldId: "name", recordCount: 1, views: [] }] } }], currentProjectId: "project-a" });
+    useProjectStore.setState({ projects: [{ id: "project-a", name: "生产项目", sources: [], storageSnapshot: { manifest: { id: "project-a", name: "生产项目", formatVersion: 3, createdAt: "2026-08-10T00:00:00.000Z", updatedAt: "2026-08-10T00:00:00.000Z" }, tables: [{ id: "table-a", name: "真实表", emoji: "📋", position: 0, titleFieldId: "name", recordCount: 1, views: [] }] } }], currentProjectId: "project-a" });
     useWorkspaceStore.setState({ activeTableByProject: { "project-a": "table-a" } });
     useTableDataStore.setState({ dataByTable: { "table-a": { tableId: "table-a", groups: [], fields: [{ id: "name", tableId: "table-a", groupId: null, name: "Name", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] }], records: [{ id: "record-a", tableId: "table-a", position: 0, autoNumber: 1, createdAt: "2026-08-10T00:00:00.000Z", updatedAt: "2026-08-10T00:00:00.000Z", values: { name: "生产记录" }, multiSelectValues: {} }] } } });
     useStorageSelectionStore.setState({ selectedRecordByTable: { "table-a": "record-a" }, selectedRecordIdsByTable: { "table-a": ["record-a"] } });

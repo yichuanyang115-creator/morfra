@@ -1,18 +1,4 @@
 
-.morfra-sidebar-undo {
-  width: 100%;
-  margin-top: 8px;
-  border: 0;
-  border-radius: var(--morfra-radius-control);
-  background: var(--morfra-accent-subtle);
-  color: var(--morfra-accent-primary);
-  cursor: pointer;
-  font: inherit;
-  font-size: 11px;
-  padding: 6px 8px;
-  text-align: left;
-}
-
 .morfra-sidebar-heading {
   justify-content: space-between;
   padding: 0 8px 8px;
@@ -62,9 +48,14 @@
 
 .morfra-project-item:hover,
 .morfra-project-item.is-active,
+.morfra-table-item:hover,
 .morfra-table-item.is-active {
   background: var(--morfra-accent-subtle);
   color: var(--morfra-accent-primary);
+}
+
+.morfra-table-item.is-active {
+  box-shadow: inset 3px 0 0 currentColor;
 }
 
 .morfra-project-dot {
@@ -94,6 +85,12 @@
   padding-top: 14px;
 }
 
+.morfra-sidebar-section.morfra-table-list {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 4px;
+}
+
 .morfra-sidebar-label,
 .morfra-sidebar-empty {
   padding: 0 8px 6px;
@@ -104,9 +101,21 @@
 .morfra-table-icon,
 .morfra-view-icon {
   width: 16px;
+  height: 16px;
   flex: none;
   color: var(--morfra-accent-primary);
   text-align: center;
+}
+
+.morfra-table-icon {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: 16px;
+  line-height: 16px;
+}
+
+.morfra-table-item:focus-visible {
+  outline: 2px solid var(--morfra-focus-ring);
+  outline-offset: -2px;
 }
 
 .morfra-view-item {

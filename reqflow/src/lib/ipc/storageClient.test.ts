@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { createStorageProject, getStorageDetailTabs, loadStorageRecordDetailContent, openStorageProject, saveStorageRecordDetailContent } from "./storageClient";
+import { createStorageProject, getStorageDetailTabs, loadStorageRecordDetailContent, openStorageProject, saveStorageRecordDetailContent, updateStorageTableEmoji } from "./storageClient";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
@@ -20,6 +20,7 @@ describe("storageClient", () => {
         {
           id: "table-1",
           name: "未命名表",
+          emoji: "📋",
           position: 0,
           titleFieldId: "field-1",
           recordCount: 0,
@@ -40,6 +41,17 @@ describe("storageClient", () => {
     });
     await createStorageProject({ path: "/tmp/requirements", name: "需求项目", template: "requirements" });
     expect(vi.mocked(invoke)).toHaveBeenNthCalledWith(3, "storage_create_project", { path: "/tmp/requirements", name: "需求项目", template: "requirements" });
+  });
+
+  it("updates a table Emoji through the typed lifecycle command", async () => {
+    vi.mocked(invoke).mockResolvedValue({ manifest: {}, tables: [] });
+
+    await updateStorageTableEmoji("table-1", "🚀");
+
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith("storage_update_table_emoji", {
+      tableId: "table-1",
+      emoji: "🚀",
+    });
   });
 
   it("uses typed record-detail commands for the fixed requirement tabs", async () => {

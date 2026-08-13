@@ -24,6 +24,7 @@ pub struct ProjectSnapshot {
 pub struct TableSummary {
     pub id: String,
     pub name: String,
+    pub emoji: String,
     pub position: i64,
     pub title_field_id: String,
     pub record_count: i64,
@@ -128,18 +129,19 @@ pub fn load_snapshot(
     manifest: &ProjectManifest,
 ) -> Result<ProjectSnapshot, StorageError> {
     validate_project_identity(connection, manifest)?;
-    let mut table_statement =
-        connection.prepare("SELECT id, name, position FROM data_tables ORDER BY position ASC")?;
+    let mut table_statement = connection
+        .prepare("SELECT id, name, emoji, position FROM data_tables ORDER BY position ASC")?;
     let table_rows = table_statement.query_map([], |row| {
         Ok((
             row.get::<_, String>(0)?,
             row.get::<_, String>(1)?,
-            row.get::<_, i64>(2)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, i64>(3)?,
         ))
     })?;
     let mut tables = Vec::new();
     for table_row in table_rows {
-        let (id, name, position) = table_row?;
+        let (id, name, emoji, position) = table_row?;
         let title_field_id: String = connection.query_row(
             "SELECT id FROM fields WHERE table_id = ?1 AND is_title = 1",
             [&id],
@@ -165,6 +167,7 @@ pub fn load_snapshot(
         tables.push(TableSummary {
             id,
             name,
+            emoji,
             position,
             title_field_id,
             record_count,

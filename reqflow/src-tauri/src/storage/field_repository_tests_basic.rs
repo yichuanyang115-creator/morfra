@@ -39,4 +39,14 @@ fn creates_groups_options_records_and_reads_typed_values() {
     );
 }
 
+#[test]
+fn field_names_can_repeat_and_are_distinguished_by_id() {
+    let (mut connection, table_id) = setup();
+    let first = field_repository::create_field(&mut connection, &table_id, "文本", "text", json!({}), None).expect("first field");
+    let second = field_repository::create_field(&mut connection, &table_id, "文本", "number", json!({}), None).expect("second field");
+    assert_ne!(first, second);
+    field_repository::update_field(&mut connection, &second, "文本", "number", json!({}), None).expect("keep duplicate name");
+    let duplicate_count = data(&connection, &table_id).fields.iter().filter(|field| field.name == "文本").count();
+    assert_eq!(duplicate_count, 2);
+}
 

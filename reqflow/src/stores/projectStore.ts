@@ -5,7 +5,7 @@ import type { ProjectSnapshot } from "../types/domain";
 import type { SchemaTemplate } from "../types/templates";
 import { ensureDir, listDirNames, removeDir } from "../lib/fs";
 import { projectDir, projectsRootDir } from "../lib/paths";
-import { closeStorageProject, createStorageTable, createStorageView, deleteStorageTable, deleteStorageView, duplicateStorageView, isTauriRuntime, renameStorageProject, renameStorageTable, renameStorageView, reorderStorageTables, reorderStorageViews, restoreDeletedStorageTable, undoStorageChange, } from "../lib/ipc/storageClient";
+import { closeStorageProject, createStorageTable, createStorageView, deleteStorageTable, deleteStorageView, duplicateStorageView, isTauriRuntime, renameStorageProject, renameStorageTable, renameStorageView, reorderStorageTables, reorderStorageViews, restoreDeletedStorageTable, undoStorageChange, updateStorageTableEmoji, } from "../lib/ipc/storageClient";
 import { loadRecentProjects, removeRecentProject as removeRecentRecord, touchRecentProject } from "../lib/recentProjects";
 import { deleteTableWithLifecycle } from "../lib/tableLifecycleEvents";
 import { createDefaultLegacyProject, createStorageProjectFromName, initLegacySchema, legacySchemaForTemplate, loadLegacyProject, loadStorageProjects, openStorageProjectAt, reorderRecentProjects, saveLegacyProject, updateProjectSnapshot } from "./projectStoreHelpers";
@@ -27,6 +27,7 @@ export interface ProjectState {
   closeProject: () => Promise<void>;
   createTable: (name: string) => Promise<void>;
   renameTable: (tableId: string, name: string) => Promise<void>;
+  updateTableEmoji: (tableId: string, emoji: string) => Promise<void>;
   deleteTable: (tableId: string) => Promise<void>;
   reorderTables: (tableIds: string[]) => Promise<void>;
   createView: (tableId: string, name: string, viewType: "table" | "board") => Promise<void>;
@@ -166,6 +167,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   renameTable: async (tableId, name) => {
     if (!isTauriRuntime()) return;
     replaceCurrentSnapshot(set, get, await renameStorageTable(tableId, name));
+  },
+
+  updateTableEmoji: async (tableId, emoji) => {
+    if (!isTauriRuntime()) return;
+    replaceCurrentSnapshot(set, get, await updateStorageTableEmoji(tableId, emoji));
   },
 
   deleteTable: async (tableId) => {

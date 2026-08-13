@@ -40,6 +40,8 @@ struct TableRow {
     id: String,
     project_id: String,
     name: String,
+    icon: String,
+    emoji: String,
     position: i64,
     created_at: String,
     updated_at: String,

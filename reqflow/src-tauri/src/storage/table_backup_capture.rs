@@ -5,9 +5,9 @@ fn capture(transaction: &Transaction<'_>, table_id: &str) -> Result<DeletedTable
         |row| row.get(0),
     )?;
     let table = transaction.query_row(
-        "SELECT id, project_id, name, position, created_at, updated_at FROM data_tables WHERE id = ?1",
+        "SELECT id, project_id, name, icon, emoji, position, created_at, updated_at FROM data_tables WHERE id = ?1",
         [table_id],
-        |row| Ok(TableRow { id: row.get(0)?, project_id: row.get(1)?, name: row.get(2)?, position: row.get(3)?, created_at: row.get(4)?, updated_at: row.get(5)? }),
+        |row| Ok(TableRow { id: row.get(0)?, project_id: row.get(1)?, name: row.get(2)?, icon: row.get(3)?, emoji: row.get(4)?, position: row.get(5)?, created_at: row.get(6)?, updated_at: row.get(7)? }),
     ).optional()?.ok_or_else(|| StorageError::new(StorageErrorCode::ValidationError, "要删除的表不存在", false))?;
     let table_config: (String, String) = transaction
         .query_row(

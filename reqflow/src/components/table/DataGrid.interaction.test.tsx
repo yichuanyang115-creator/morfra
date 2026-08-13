@@ -159,7 +159,7 @@ describe("DataGrid Phase 37 交互", () => {
     const { rerender } = render(<DataGridLoadingSkeleton config={skeletonConfig} />);
     const header = screen.getByTestId("grid-skeleton-header");
     expect(header.children).toHaveLength(3);
-    expect(header).toHaveStyle({ gridTemplateColumns: "68px 280px 120px" });
+    expect(header).toHaveStyle({ gridTemplateColumns: "48px 280px 120px" });
     expect(header.nextElementSibling?.firstElementChild).toHaveStyle({ minHeight: "56px" });
 
     rerender(<DataGridLoadingSkeleton config={{ ...skeletonConfig, fieldIds: ["title"] }} />);

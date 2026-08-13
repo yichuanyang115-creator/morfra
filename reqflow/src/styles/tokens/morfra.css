@@ -3,6 +3,11 @@
   --morfra-surface-canvas: #f5f7fa;
   --morfra-surface-content: #ffffff;
   --morfra-surface-sidebar: #eef1f5;
+  --morfra-sidebar-aurora-base: #e8edf8;
+  --morfra-sidebar-aurora-ice: rgba(173, 210, 255, 0.64);
+  --morfra-sidebar-aurora-periwinkle: rgba(179, 188, 255, 0.5);
+  --morfra-sidebar-aurora-lavender: rgba(209, 191, 246, 0.42);
+  --morfra-sidebar-aurora-mist: rgba(255, 255, 255, 0.72);
   --morfra-surface-overlay: rgba(255, 255, 255, 0.94);
   --morfra-scrim: rgba(15, 23, 42, 0.24);
   --morfra-text-primary: #1f2937;
@@ -38,6 +43,11 @@ html[data-appearance="dark"] {
   --morfra-surface-canvas: #1c1c1e;
   --morfra-surface-content: #242426;
   --morfra-surface-sidebar: #202023;
+  --morfra-sidebar-aurora-base: #242538;
+  --morfra-sidebar-aurora-ice: rgba(74, 112, 166, 0.38);
+  --morfra-sidebar-aurora-periwinkle: rgba(102, 92, 164, 0.34);
+  --morfra-sidebar-aurora-lavender: rgba(132, 105, 168, 0.28);
+  --morfra-sidebar-aurora-mist: rgba(216, 226, 255, 0.14);
   --morfra-surface-overlay: rgba(43, 43, 48, 0.97);
   --morfra-scrim: rgba(0, 0, 0, 0.48);
   --morfra-text-primary: #f5f5f7;
@@ -69,6 +79,11 @@ html[data-appearance="dark"] {
     --morfra-surface-canvas: #1c1c1e;
     --morfra-surface-content: #242426;
     --morfra-surface-sidebar: #202023;
+    --morfra-sidebar-aurora-base: #242538;
+    --morfra-sidebar-aurora-ice: rgba(74, 112, 166, 0.38);
+    --morfra-sidebar-aurora-periwinkle: rgba(102, 92, 164, 0.34);
+    --morfra-sidebar-aurora-lavender: rgba(132, 105, 168, 0.28);
+    --morfra-sidebar-aurora-mist: rgba(216, 226, 255, 0.14);
     --morfra-surface-overlay: rgba(43, 43, 48, 0.97);
     --morfra-scrim: rgba(0, 0, 0, 0.48);
     --morfra-text-primary: #f5f5f7;

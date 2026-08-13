@@ -17,13 +17,14 @@ interface ViewToolsProps {
   onRowHeightChange: (value: 32 | 40 | 56) => void;
   onChange: (config: ViewPipelineConfig) => void;
   onOpenFieldDisplay: () => void;
+  onCreateRecord?: () => void;
   boardMode?: boolean;
 }
 
 type OpenTool = "filter" | "sort" | "group" | "color" | "more" | null;
 
 export function ViewTools(props: ViewToolsProps) {
-  const { fields, visibleFieldCount, config, search, rowHeight, onSearchChange, onRowHeightChange, onChange, onOpenFieldDisplay, boardMode = false } = props;
+  const { fields, visibleFieldCount, config, search, rowHeight, onSearchChange, onRowHeightChange, onChange, onOpenFieldDisplay, onCreateRecord, boardMode = false } = props;
   const [open, setOpen] = useState<OpenTool>(null);
   const close = () => setOpen(null);
   const hiddenFieldCount = Math.max(0, fields.length - visibleFieldCount);
@@ -41,6 +42,7 @@ export function ViewTools(props: ViewToolsProps) {
     {!boardMode && <RowHeightSelect label="行高" value={rowHeight} onChange={onRowHeightChange} />}
     {!boardMode && <ToolButton className="morfra-view-secondary-tool" label="字段显示" active={hiddenFieldCount > 0} count={hiddenFieldCount} onClick={onOpenFieldDisplay} />}
     <button type="button" className="morfra-view-more-trigger" aria-label="更多视图工具" onClick={() => toggle("more")}>更多</button>
+    {!boardMode && onCreateRecord && <button type="button" className="morfra-view-create-record" onClick={onCreateRecord}>新建记录</button>}
     {open === "filter" && <FilterPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
     {open === "sort" && <SortPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
     {!boardMode && open === "group" && <GroupPanel fields={fields} config={config} onChange={onChange} onClose={close} />}

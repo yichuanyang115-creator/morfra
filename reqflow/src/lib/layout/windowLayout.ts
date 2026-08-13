@@ -2,10 +2,13 @@ export const MIN_WINDOW_WIDTH = 960;
 export const MIN_WINDOW_HEIGHT = 640;
 export const REGULAR_WINDOW_BREAKPOINT = 1200;
 export const TITLEBAR_HEIGHT = 40;
-export const SIDEBAR_COLLAPSED_WIDTH = 52;
-export const SIDEBAR_MIN_WIDTH = 200;
+export const SIDEBAR_COLLAPSED_WIDTH = 48;
+export const SIDEBAR_COMPACT_MIN_WIDTH = 96;
+export const SIDEBAR_FULL_MIN_WIDTH = 200;
 export const SIDEBAR_DEFAULT_WIDTH = 240;
 export const SIDEBAR_MAX_WIDTH = 360;
+export const SIDEBAR_COLLAPSE_THRESHOLD = 56;
+export const SIDEBAR_EXPAND_THRESHOLD = 72;
 export const MAIN_MIN_WIDTH = 560;
 export const DETAIL_MIN_WIDTH = 360;
 export const DETAIL_DEFAULT_WIDTH = 440;
@@ -32,7 +35,7 @@ export interface WindowLayoutInput {
 
 export interface WindowLayout {
   mode: WindowMode;
-  sidebarMode: "expanded" | "collapsed";
+  sidebarMode: "expanded" | "compact" | "collapsed";
   sidebarWidth: number;
   rightPanelMode: RightPanelMode;
   rightPanelWidth: number;
@@ -72,14 +75,14 @@ export function calculateWindowLayout(input: WindowLayoutInput): WindowLayout {
   }
 
   const configuredSidebarWidth = input.sidebarOpen
-    ? clamp(safeWidth(input.sidebarWidth, SIDEBAR_DEFAULT_WIDTH), SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
+    ? clamp(safeWidth(input.sidebarWidth, SIDEBAR_DEFAULT_WIDTH), SIDEBAR_COMPACT_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
     : SIDEBAR_COLLAPSED_WIDTH;
   const sidebarResizerWidth = input.sidebarOpen ? PANEL_RESIZER_WIDTH : 0;
   const bothOpen = input.detailOpen && input.aiOpen;
   const hasPanel = input.detailOpen || input.aiOpen;
   const minimumActivePanelWidth = input.detailOpen && (!input.aiOpen || activePanel === "detail") ? DETAIL_MIN_WIDTH : AI_MIN_WIDTH;
   const sidebarWidth = hasPanel && configuredSidebarWidth !== SIDEBAR_COLLAPSED_WIDTH
-    ? Math.min(configuredSidebarWidth, Math.max(SIDEBAR_MIN_WIDTH, viewportWidth - MAIN_MIN_WIDTH - minimumActivePanelWidth - PANEL_RESIZER_WIDTH - sidebarResizerWidth))
+    ? Math.min(configuredSidebarWidth, Math.max(SIDEBAR_COMPACT_MIN_WIDTH, viewportWidth - MAIN_MIN_WIDTH - minimumActivePanelWidth - PANEL_RESIZER_WIDTH - sidebarResizerWidth))
     : configuredSidebarWidth;
   const availableDualPanelWidth = viewportWidth - sidebarWidth - MAIN_MIN_WIDTH - PANEL_RESIZER_WIDTH * 2 - sidebarResizerWidth;
 
@@ -88,7 +91,7 @@ export function calculateWindowLayout(input: WindowLayoutInput): WindowLayout {
     const renderedAiWidth = Math.min(aiWidth, availableDualPanelWidth - renderedDetailWidth);
     return {
       mode,
-      sidebarMode: input.sidebarOpen ? "expanded" : "collapsed",
+      sidebarMode: input.sidebarOpen ? sidebarWidth < SIDEBAR_FULL_MIN_WIDTH ? "compact" : "expanded" : "collapsed",
       sidebarWidth,
       rightPanelMode: "dual",
       rightPanelWidth: renderedDetailWidth + renderedAiWidth,
@@ -104,7 +107,7 @@ export function calculateWindowLayout(input: WindowLayoutInput): WindowLayout {
 
   return {
     mode,
-    sidebarMode: input.sidebarOpen ? "expanded" : "collapsed",
+    sidebarMode: input.sidebarOpen ? sidebarWidth < SIDEBAR_FULL_MIN_WIDTH ? "compact" : "expanded" : "collapsed",
     sidebarWidth,
     rightPanelMode: !hasPanel ? "none" : bothOpen ? "merged" : "single",
     rightPanelWidth: hasPanel ? fittedSinglePanelWidth : 0,

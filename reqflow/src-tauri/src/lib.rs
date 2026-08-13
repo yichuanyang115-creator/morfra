@@ -58,6 +58,7 @@ pub fn run() {
             storage::commands::storage_attachment_path,
             storage::lifecycle_commands::storage_rename_project,
             storage::lifecycle_commands::storage_rename_table,
+            storage::lifecycle_commands::storage_update_table_emoji,
             storage::lifecycle_commands::storage_delete_table,
             storage::lifecycle_commands::storage_restore_deleted_table,
             storage::lifecycle_commands::storage_reorder_tables,

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { FieldSummary, RecordData } from "../../types/domain";
 import { GridCell } from "./GridCell";
@@ -19,5 +19,14 @@ describe("GridCell user-readable formatting", () => {
   it("renders system timestamps with the shared date-time formatter", () => {
     renderCell(field("created_time"));
     expect(screen.getByRole("gridcell").textContent).not.toContain("2026-08-11T09:30:00Z");
+  });
+
+  it("标题详情入口独立于标题单元格的编辑操作", () => {
+    const onOpenDetail = vi.fn();
+    const onDoubleClick = vi.fn();
+    render(<GridCell id="cell" field={{ ...field("text"), id: "title", isTitle: true }} record={{ ...record, values: { title: "计划" } }} point={{ row: 0, column: 0 }} selected={false} active={false} editing={false} readOnly={false} onPointerDown={vi.fn()} onPointerEnter={vi.fn()} onDoubleClick={onDoubleClick} onContextMenu={vi.fn()} onToggleCheckbox={vi.fn()} onOpenDetail={onOpenDetail} detailLabel="打开第 1 条记录详情" />);
+    fireEvent.click(screen.getByRole("button", { name: "打开第 1 条记录详情" }));
+    expect(onOpenDetail).toHaveBeenCalledOnce();
+    expect(onDoubleClick).not.toHaveBeenCalled();
   });
 });

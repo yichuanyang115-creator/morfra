@@ -22,23 +22,26 @@ interface GridCellProps {
   onDoubleClick: () => void;
   onContextMenu: (event: React.MouseEvent<HTMLDivElement>) => void;
   onToggleCheckbox: () => void;
+  onOpenDetail?: () => void;
+  detailLabel?: string;
 }
 
-export function GridCell({ id, field, record, point, selected, active, editing, conditionalColor, readOnly, onPointerDown, onPointerEnter, onDoubleClick, onContextMenu, onToggleCheckbox }: GridCellProps) {
+export function GridCell({ id, field, record, point, selected, active, editing, conditionalColor, readOnly, onPointerDown, onPointerEnter, onDoubleClick, onContextMenu, onToggleCheckbox, onOpenDetail, detailLabel = "打开记录详情" }: GridCellProps) {
   const value = valueForCell(field, record);
   const state = `${selected ? "is-selected" : ""} ${active ? "is-active" : ""} ${editing ? "is-editing" : ""}`;
   const label = `第 ${point.row + 1} 行，${field.name}，${formatCellValue(field, value)}${readOnly ? "，只读" : ""}`;
   return <div id={id} className={`morfra-grid-cell-content ${conditionalColor ? `has-conditional-color color-${conditionalColor}` : ""} ${state}`} role="gridcell" aria-colindex={point.column + 1} aria-label={label} aria-selected={selected} aria-readonly={readOnly || undefined} tabIndex={-1} onPointerDown={onPointerDown} onPointerEnter={onPointerEnter} onDoubleClick={onDoubleClick} onContextMenu={onContextMenu}>
-    <CellDisplay field={field} record={record} value={value} onToggleCheckbox={onToggleCheckbox} onOpenEditor={onDoubleClick} />
+    <CellDisplay field={field} record={record} value={value} onToggleCheckbox={onToggleCheckbox} onOpenEditor={onDoubleClick} onOpenDetail={onOpenDetail} detailLabel={detailLabel} />
   </div>;
 }
 
-function CellDisplay({ field, record, value, onToggleCheckbox, onOpenEditor }: { field: FieldSummary; record: RecordData; value: import("../../types/domain").JsonValue; onToggleCheckbox: () => void; onOpenEditor: () => void }) {
+function CellDisplay({ field, record, value, onToggleCheckbox, onOpenEditor, onOpenDetail, detailLabel }: { field: FieldSummary; record: RecordData; value: import("../../types/domain").JsonValue; onToggleCheckbox: () => void; onOpenEditor: () => void; onOpenDetail?: () => void; detailLabel: string }) {
   const attachments = Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : typeof value === "string" && value ? [value] : [];
   if ((field.fieldType === "image" || field.fieldType === "file") && attachments.length) return <GridAttachments recordId={record.id} fieldId={field.id} image={field.fieldType === "image"} fallbackCount={attachments.length} />;
   if (field.fieldType === "checkbox") return <button type="button" className="morfra-grid-checkbox" aria-label={`切换${field.name}`} aria-pressed={value === true} onClick={(event) => { event.stopPropagation(); onToggleCheckbox(); }}>{value === true ? "✓" : ""}</button>;
   if (["select", "multi_select", "date"].includes(field.fieldType)) return <><span>{formatCellValue(field, value)}</span><button type="button" className="morfra-grid-editor-trigger" aria-label={`编辑${field.name}`} onClick={(event) => { event.stopPropagation(); onOpenEditor(); }}>⌄</button></>;
   if (Array.isArray(value)) return <span>{value.length ? `${value.length} 项` : ""}</span>;
+  if (field.isTitle) return <><span className={value === null || value === undefined || value === "" ? "morfra-grid-empty" : "morfra-grid-text"}>{value === null || value === undefined || value === "" ? "—" : formatCellValue(field, value)}</span>{onOpenDetail && <button type="button" className="morfra-grid-detail-trigger" aria-label={detailLabel} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onOpenDetail(); }}>↗</button>}</>;
   if (value === null || value === undefined || value === "") return <span className="morfra-grid-empty">—</span>;
   if (typeof value === "boolean") return <span>{value ? "已勾选" : "未勾选"}</span>;
   if (typeof value === "number" || ["created_time", "updated_time"].includes(field.fieldType)) return <span className={typeof value === "number" ? "morfra-grid-number" : "morfra-grid-text"}>{formatCellValue(field, value)}</span>;

@@ -4,7 +4,7 @@ import {
   DETAIL_DEFAULT_WIDTH,
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_MAX_WIDTH,
-  SIDEBAR_MIN_WIDTH,
+  SIDEBAR_COMPACT_MIN_WIDTH,
   AI_MAX_WIDTH,
   AI_MIN_WIDTH,
   DETAIL_MAX_WIDTH,
@@ -29,6 +29,7 @@ interface LayoutState extends LayoutPreferences {
   hydrated: boolean;
   hydrate: () => void;
   toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
   setSidebarWidth: (width: number) => void;
   toggleDetail: () => void;
   setDetailWidth: (width: number) => void;
@@ -81,7 +82,7 @@ function persist(state: LayoutPreferences): void {
 function normalizePreferences(value: Partial<LayoutPreferences>): LayoutPreferences {
   return {
     sidebarOpen: value.sidebarOpen !== false,
-    sidebarWidth: Number.isFinite(value.sidebarWidth) ? Math.min(Math.max(value.sidebarWidth as number, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH) : SIDEBAR_DEFAULT_WIDTH,
+    sidebarWidth: Number.isFinite(value.sidebarWidth) ? Math.min(Math.max(value.sidebarWidth as number, SIDEBAR_COMPACT_MIN_WIDTH), SIDEBAR_MAX_WIDTH) : SIDEBAR_DEFAULT_WIDTH,
     detailOpen: false,
     detailWidth: Number.isFinite(value.detailWidth) ? Math.min(Math.max(value.detailWidth as number, DETAIL_MIN_WIDTH), DETAIL_MAX_WIDTH) : DETAIL_DEFAULT_WIDTH,
     aiOpen: value.aiOpen === true,
@@ -120,7 +121,8 @@ export const useLayoutStore = create<LayoutState>((set, get) => ({
   },
 
   toggleSidebar: () => updateAndPersist(set, get, { sidebarOpen: !get().sidebarOpen }),
-  setSidebarWidth: (width) => updateAndPersist(set, get, { sidebarWidth: Math.min(Math.max(width, SIDEBAR_MIN_WIDTH), SIDEBAR_MAX_WIDTH) }),
+  setSidebarOpen: (open) => updateAndPersist(set, get, { sidebarOpen: open }),
+  setSidebarWidth: (width) => updateAndPersist(set, get, { sidebarWidth: Math.min(Math.max(width, SIDEBAR_COMPACT_MIN_WIDTH), SIDEBAR_MAX_WIDTH) }),
   toggleDetail: () => updateAndPersist(set, get, { detailOpen: !get().detailOpen }),
   setDetailWidth: (width) => updateAndPersist(set, get, { detailWidth: Math.min(Math.max(width, DETAIL_MIN_WIDTH), DETAIL_MAX_WIDTH) }),
   setAiOpen: (open) => updateAndPersist(set, get, { aiOpen: open }),

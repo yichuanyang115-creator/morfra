@@ -52,6 +52,61 @@ pub fn rename_table(
     Ok(())
 }
 
+fn update_table_emoji_internal(
+    connection: &mut Connection,
+    table_id: &str,
+    emoji: &str,
+    fail_before_commit: bool,
+) -> Result<(), StorageError> {
+    let emoji = emoji.trim();
+    if emoji.is_empty() || emoji.chars().count() > 16 {
+        return Err(StorageError::validation("表 Emoji 不能为空且不能超过 16 个字符"));
+    }
+    let transaction = connection.transaction()?;
+    let changed = transaction.execute(
+        "UPDATE data_tables SET emoji = ?1, updated_at = ?2 WHERE id = ?3",
+        (emoji, timestamp(), table_id),
+    )?;
+    if changed != 1 {
+        return Err(StorageError::new(
+            StorageErrorCode::ValidationError,
+            "要更新 Emoji 的表不存在",
+            false,
+        ));
+    }
+    transaction.execute(
+        "UPDATE project_meta SET updated_at = ?1 WHERE id = 'project'",
+        [timestamp()],
+    )?;
+    if fail_before_commit {
+        return Err(StorageError::new(
+            StorageErrorCode::DatabaseError,
+            "测试事务失败",
+            false,
+        ));
+    }
+    transaction.commit()?;
+    Ok(())
+}
+
+pub fn update_table_emoji(
+    connection: &mut Connection,
+    table_id: &str,
+    emoji: &str,
+) -> Result<(), StorageError> {
+    update_table_emoji_internal(connection, table_id, emoji, false)
+}
+
+#[cfg(test)]
+pub fn update_table_emoji_for_test(
+    connection: &mut Connection,
+    table_id: &str,
+    emoji: &str,
+    fail_before_commit: bool,
+) -> Result<(), StorageError> {
+    update_table_emoji_internal(connection, table_id, emoji, fail_before_commit)
+}
+
 pub fn reorder_tables(connection: &mut Connection, ids: &[String]) -> Result<(), StorageError> {
     reorder(
         connection,
@@ -214,5 +269,3 @@ pub fn reorder_field_groups(
         "字段组",
     )
 }
-
-

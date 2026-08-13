@@ -21,6 +21,18 @@ const MIGRATIONS: &[(i64, &str)] = &[
         5,
         include_str!("../../migrations/005_phase42_attachments.sql"),
     ),
+    (
+        6,
+        include_str!("../../migrations/006_phase45_table_icons.sql"),
+    ),
+    (
+        7,
+        include_str!("../../migrations/007_phase45_table_emoji.sql"),
+    ),
+    (
+        8,
+        include_str!("../../migrations/008_allow_duplicate_field_names.sql"),
+    ),
 ];
 
 pub fn configure_connection(connection: &Connection) -> Result<(), StorageError> {
@@ -72,10 +84,10 @@ pub fn apply_pending_migrations(
         // v2 rebuilds the two v1 tables whose CHECK/FK definitions cannot be
         // altered in place by SQLite. The migration itself is still atomic;
         // foreign-key checks are restored before returning, including errors.
-        let foreign_keys_were_disabled = *version == 2;
+        let foreign_keys_were_disabled = *version == 2 || *version == 8;
         if foreign_keys_were_disabled {
             connection
-                .execute_batch("PRAGMA foreign_keys = OFF;")
+                .execute_batch(if *version == 8 { "PRAGMA foreign_keys = OFF; PRAGMA legacy_alter_table = ON;" } else { "PRAGMA foreign_keys = OFF;" })
                 .map_err(|_| {
                     StorageError::new(
                         StorageErrorCode::MigrationFailed,
@@ -84,9 +96,16 @@ pub fn apply_pending_migrations(
                     )
                 })?;
         }
+        let migration_sql = if (*version == 6 && has_table_icon_column(connection)?)
+            || (*version == 7 && has_table_emoji_column(connection)?)
+        {
+            ""
+        } else {
+            sql
+        };
         let migration_result = match connection.transaction() {
             Ok(transaction) => transaction
-                .execute_batch(sql)
+                .execute_batch(migration_sql)
                 .map_err(|_| {
                     StorageError::new(
                         StorageErrorCode::MigrationFailed,
@@ -124,12 +143,30 @@ pub fn apply_pending_migrations(
             )),
         };
         if foreign_keys_were_disabled {
-            let _ = connection.execute_batch("PRAGMA foreign_keys = ON;");
+            let _ = connection.execute_batch(if *version == 8 { "PRAGMA legacy_alter_table = OFF; PRAGMA foreign_keys = ON;" } else { "PRAGMA foreign_keys = ON;" });
         }
         migration_result?;
         current_version = *version;
     }
     Ok(())
+}
+
+fn has_table_icon_column(connection: &Connection) -> Result<bool, StorageError> {
+    let count: i64 = connection.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('data_tables') WHERE name = 'icon'",
+        [],
+        |row| row.get(0),
+    )?;
+    Ok(count == 1)
+}
+
+fn has_table_emoji_column(connection: &Connection) -> Result<bool, StorageError> {
+    let count: i64 = connection.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('data_tables') WHERE name = 'emoji'",
+        [],
+        |row| row.get(0),
+    )?;
+    Ok(count == 1)
 }
 
 fn create_online_backup(
@@ -215,7 +252,7 @@ mod tests {
                 row.get(0)
             })
             .expect("version");
-        assert_eq!(version, 5);
+        assert_eq!(version, 8);
         let has_group_column: i64 = connection
             .query_row(
                 "SELECT COUNT(*) FROM pragma_table_info('fields') WHERE name = 'group_id'",
@@ -224,6 +261,30 @@ mod tests {
             )
             .expect("fields schema");
         assert_eq!(has_group_column, 1);
+        let default_icon: String = connection
+            .query_row(
+                "SELECT dflt_value FROM pragma_table_info('data_tables') WHERE name = 'icon'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("table icon schema");
+        assert_eq!(default_icon, "'grid'");
+        let default_emoji: String = connection
+            .query_row(
+                "SELECT dflt_value FROM pragma_table_info('data_tables') WHERE name = 'emoji'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("table emoji schema");
+        assert_eq!(default_emoji, "'📋'");
+        let duplicate_name_constraint: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_index_list('fields') WHERE [unique] = 1 AND name NOT LIKE 'sqlite_autoindex_fields_%'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("fields indexes");
+        assert_eq!(duplicate_name_constraint, 1);
     }
 
     #[test]
@@ -250,5 +311,71 @@ mod tests {
         assert_eq!(row.1, None);
         assert_eq!(row.2, 0);
         assert_eq!(row.3, "[]");
+        let icon: String = connection
+            .query_row(
+                "SELECT icon FROM data_tables WHERE id = 'existing-table'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("existing table icon");
+        assert_eq!(icon, "grid");
+        let emoji: String = connection
+            .query_row(
+                "SELECT emoji FROM data_tables WHERE id = 'existing-table'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("existing table emoji");
+        assert_eq!(emoji, "📋");
+    }
+
+    #[test]
+    fn failed_table_icon_upgrade_rolls_back_schema_change() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        configure_connection(&connection).expect("configure");
+        connection
+            .execute_batch(include_str!("../../migrations/001_v3_init.sql"))
+            .expect("base schema");
+
+        let transaction = connection.transaction().expect("transaction");
+        let result = transaction.execute_batch(
+            "ALTER TABLE data_tables ADD COLUMN icon TEXT NOT NULL DEFAULT 'grid';
+             INSERT INTO missing_migration_ledger(version) VALUES (6);",
+        );
+        assert!(result.is_err());
+        drop(transaction);
+
+        let icon_columns: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('data_tables') WHERE name = 'icon'",
+                [],
+                |row| row.get(0),
+            )
+            .expect("schema state");
+        assert_eq!(icon_columns, 0);
+    }
+
+    #[test]
+    fn upgrades_legacy_icons_to_default_emoji_without_rewriting_table_content() {
+        let mut connection = Connection::open_in_memory().expect("in-memory database");
+        configure_connection(&connection).expect("configure");
+        connection.execute_batch("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);").expect("migration ledger");
+        for (version, sql) in MIGRATIONS.iter().take(6) {
+            connection.execute_batch(sql).expect("legacy icon schema");
+            connection.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (?1, 'before-emoji')", [version]).expect("migration version");
+        }
+        connection.execute_batch("INSERT INTO project_meta (id, project_id, name, format_version, created_at, updated_at) VALUES ('project', 'existing-project', 'Existing', 1, 'before-emoji', 'before-emoji');
+            INSERT INTO data_tables (id, project_id, name, icon, position, created_at, updated_at) VALUES ('existing-table', 'project', 'Existing table', 'board', 0, 'before-emoji', 'before-emoji');").expect("legacy table");
+
+        apply_pending_migrations(&mut connection, None).expect("emoji upgrade");
+
+        let row: (String, String, String) = connection
+            .query_row(
+                "SELECT name, icon, emoji FROM data_tables WHERE id = 'existing-table'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("upgraded table");
+        assert_eq!(row, ("Existing table".into(), "board".into(), "📋".into()));
     }
 }

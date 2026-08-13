@@ -85,6 +85,7 @@ describe("App 主题启动门", () => {
               {
                 id: "table-1",
                 name: "未命名表",
+                emoji: "📋",
                 position: 0,
                 titleFieldId: "field-1",
                 recordCount: 0,
@@ -103,8 +104,9 @@ describe("App 主题启动门", () => {
     render(<App />);
 
     expect(screen.getByTestId("storage-workspace")).toBeInTheDocument();
-    expect(screen.getAllByText("本地 Morfra")).toHaveLength(2);
-    expect(screen.getByText("Morfra 本地项目包")).toBeInTheDocument();
+    expect(screen.getByText("本地 Morfra")).toBeInTheDocument();
+    expect(screen.getByTestId("morfra-sidebar")).toHaveClass("is-collapsed");
+    expect(screen.getByTestId("morfra-sidebar").querySelector("button[title='未命名表']")).toBeInTheDocument();
     expect(screen.queryByText("需求看板")).not.toBeInTheDocument();
   });
 });
