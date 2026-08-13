@@ -59,8 +59,11 @@
 .morfra-view-toolbar-actions .is-active { background: var(--morfra-accent-subtle); color: var(--morfra-accent-primary); }
 .morfra-view-create-record { margin-left: auto; border: 0; background: var(--morfra-accent-primary); color: var(--morfra-surface-content); }
 .morfra-view-create-record:hover:not(:disabled) { background: var(--morfra-accent-primary) !important; color: var(--morfra-surface-content) !important; filter: brightness(.95); }
-.morfra-view-row-height { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
-.morfra-view-row-height select { border: 0; background: transparent; color: inherit; font: inherit; }
+.morfra-view-row-height { position: relative; display: inline-flex; align-items: center; white-space: nowrap; }
+.morfra-row-height-menu { position: absolute; z-index: 31; top: calc(100% + 6px); left: 0; display: grid; min-width: 104px; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); padding: 3px; }
+.morfra-row-height-menu button { display: grid; grid-template-columns: 14px 1fr; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 11px; padding: 5px 7px; text-align: left; }
+.morfra-row-height-menu button:hover, .morfra-row-height-menu button:focus-visible { background: var(--morfra-accent-subtle); color: var(--morfra-accent-primary); outline: none; }
+.morfra-row-height-check { display: inline-block; width: 14px; text-align: center; }
 .morfra-view-more-trigger { display: none; }
 .morfra-view-tool-panel { position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; display: grid; min-width: 300px; gap: 8px; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-panel); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); padding: 10px; color: var(--morfra-text-primary); }
 .morfra-view-tool-panel header, .morfra-view-tool-row { display: flex; align-items: center; gap: 6px; }
@@ -105,7 +108,7 @@
 .morfra-kanban-add { margin: 0 7px 7px; text-align: left; }
 
 @media (max-width: 1120px) {
-  .morfra-view-secondary-tool, .morfra-view-row-height { display: none; }
+  .morfra-view-secondary-tool, .morfra-view-toolbar-actions > .morfra-view-row-height { display: none; }
   .morfra-view-more-trigger { display: inline-flex; }
 }
 

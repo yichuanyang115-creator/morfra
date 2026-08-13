@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FieldSummary } from "../../../types/domain";
 import type { ViewPipelineConfig } from "../../../lib/table/viewPipeline";
 import { ConditionalColorPanel } from "./ConditionalColorPanel";
@@ -39,7 +39,7 @@ export function ViewTools(props: ViewToolsProps) {
     <ToolButton label="排序" active={config.sorts.length > 0} count={config.sorts.length} onClick={() => toggle("sort")} />
     {!boardMode && <ToolButton label="分组" active={Boolean(config.group.fieldId)} onClick={() => toggle("group")} />}
     {!boardMode && <ToolButton className="morfra-view-secondary-tool" label="条件填色" active={config.conditionalColors.some((rule) => rule.enabled)} count={config.conditionalColors.length} onClick={() => toggle("color")} />}
-    {!boardMode && <RowHeightSelect label="行高" value={rowHeight} onChange={onRowHeightChange} />}
+    {!boardMode && <RowHeightMenu value={rowHeight} onChange={onRowHeightChange} />}
     {!boardMode && <ToolButton className="morfra-view-secondary-tool" label="字段显示" active={hiddenFieldCount > 0} count={hiddenFieldCount} onClick={onOpenFieldDisplay} />}
     <button type="button" className="morfra-view-more-trigger" aria-label="更多视图工具" onClick={() => toggle("more")}>更多</button>
     {!boardMode && onCreateRecord && <button type="button" className="morfra-view-create-record" onClick={onCreateRecord}>新建记录</button>}
@@ -48,7 +48,7 @@ export function ViewTools(props: ViewToolsProps) {
     {!boardMode && open === "group" && <GroupPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
     {!boardMode && open === "color" && <ConditionalColorPanel fields={fields} config={config} onChange={onChange} onClose={close} />}
     {open === "more" && <Panel title="更多视图工具" onClose={close}>
-      {!boardMode && <><button type="button" onClick={() => setOpen("color")}>条件填色{config.conditionalColors.length ? ` (${config.conditionalColors.length})` : ""}</button><RowHeightSelect label="更多菜单行高" value={rowHeight} onChange={onRowHeightChange} /><button type="button" onClick={() => { onOpenFieldDisplay(); close(); }}>字段显示{hiddenFieldCount ? ` (${hiddenFieldCount})` : ""}</button></>}
+      {!boardMode && <><button type="button" onClick={() => setOpen("color")}>条件填色{config.conditionalColors.length ? ` (${config.conditionalColors.length})` : ""}</button><RowHeightMenu value={rowHeight} onChange={onRowHeightChange} /><button type="button" onClick={() => { onOpenFieldDisplay(); close(); }}>字段显示{hiddenFieldCount ? ` (${hiddenFieldCount})` : ""}</button></>}
     </Panel>}
   </div>;
 }
@@ -59,8 +59,32 @@ function ToolButton({ label, active, count, onClick, className }: { label: strin
   </button>;
 }
 
-function RowHeightSelect({ label, value, onChange }: { label: string; value: 32 | 40 | 56; onChange: (value: 32 | 40 | 56) => void }) {
-  return <label className="morfra-view-row-height">{label}<select aria-label={label} value={value} onChange={(event) => onChange(Number(event.target.value) as 32 | 40 | 56)}>
-    <option value="32">紧凑</option><option value="40">标准</option><option value="56">宽松</option>
-  </select></label>;
+const ROW_HEIGHT_OPTIONS = [{ value: 32, label: "紧凑" }, { value: 40, label: "标准" }, { value: 56, label: "宽松" }] as const;
+
+function RowHeightMenu({ value, onChange }: { value: 32 | 40 | 56; onChange: (value: 32 | 40 | 56) => void }) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const close = (restoreFocus = false) => {
+    setOpen(false);
+    if (restoreFocus) triggerRef.current?.focus();
+  };
+  useEffect(() => {
+    if (open) menuRef.current?.querySelector<HTMLButtonElement>(`[data-row-height="${value}"]`)?.focus();
+  }, [open, value]);
+  const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = [...(menuRef.current?.querySelectorAll<HTMLButtonElement>("[role='menuitemradio']") ?? [])];
+    const current = items.indexOf(document.activeElement as HTMLButtonElement);
+    if (event.key === "Escape") { event.preventDefault(); close(true); return; }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (current + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    items[next]?.focus();
+  };
+  return <div className="morfra-view-row-height">
+    <button ref={triggerRef} type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((current) => !current)}>行高</button>
+    {open && <div ref={menuRef} className="morfra-row-height-menu" role="menu" aria-label="行高选项" onKeyDown={handleMenuKeyDown}>
+      {ROW_HEIGHT_OPTIONS.map((option) => <button key={option.value} type="button" role="menuitemradio" data-row-height={option.value} aria-checked={value === option.value} onClick={() => { onChange(option.value); close(true); }}><span aria-hidden="true" className="morfra-row-height-check">{value === option.value ? "✓" : ""}</span>{option.label}</button>)}
+    </div>}
+  </div>;
 }

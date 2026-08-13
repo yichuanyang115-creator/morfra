@@ -14,7 +14,8 @@ const fields: FieldSummary[] = [
 
 function Harness() {
   const [config, setConfig] = useState<ViewPipelineConfig>(EMPTY_VIEW_PIPELINE);
-  return <ViewTools fields={fields} visibleFieldCount={fields.length} config={config} search="" rowHeight={40} onSearchChange={vi.fn()} onRowHeightChange={vi.fn()} onChange={setConfig} onOpenFieldDisplay={vi.fn()} />;
+  const [rowHeight, setRowHeight] = useState<32 | 40 | 56>(40);
+  return <ViewTools fields={fields} visibleFieldCount={fields.length} config={config} search="" rowHeight={rowHeight} onSearchChange={vi.fn()} onRowHeightChange={setRowHeight} onChange={setConfig} onOpenFieldDisplay={vi.fn()} />;
 }
 
 describe("ViewTools", () => {
@@ -57,5 +58,33 @@ describe("ViewTools", () => {
     render(<ViewTools fields={fields} visibleFieldCount={fields.length} config={EMPTY_VIEW_PIPELINE} search="" rowHeight={40} onSearchChange={vi.fn()} onRowHeightChange={vi.fn()} onChange={vi.fn()} onOpenFieldDisplay={vi.fn()} onCreateRecord={onCreateRecord} />);
     await user.click(screen.getByRole("button", { name: "新建记录" }));
     expect(onCreateRecord).toHaveBeenCalledOnce();
+  });
+
+  it("行高只保留单一文字入口，并以菜单对号同步当前视图状态", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    const trigger = screen.getByRole("button", { name: "行高" });
+    expect(screen.queryByRole("combobox", { name: "行高" })).toBeNull();
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("menuitemradio", { name: "标准" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemradio", { name: "紧凑" })).toHaveAttribute("aria-checked", "false");
+    await user.click(screen.getByRole("menuitemradio", { name: "宽松" }));
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
+    await user.click(trigger);
+    expect(screen.getByRole("menuitemradio", { name: "宽松" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("行高菜单支持键盘选择、Esc 关闭和焦点恢复", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    const trigger = screen.getByRole("button", { name: "行高" });
+    trigger.focus();
+    await user.keyboard("{Enter}{ArrowDown}{Enter}");
+    expect(trigger).toHaveFocus();
+    await user.keyboard(" {Escape}");
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });
