@@ -99,15 +99,28 @@ describe("ViewTools", () => {
     expect(screen.getByRole("button", { name: "＋ 添加分组字段" })).toHaveFocus();
   });
 
-  it("条件填色规则支持复制和启停", async () => {
+  it("条件填色先选字段，再以单行规则编辑颜色与删除", async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.click(screen.getByRole("button", { name: "条件填色" }));
-    await user.click(screen.getByRole("button", { name: "添加规则" }));
-    await user.click(screen.getByRole("button", { name: "复制填色规则" }));
-    expect(screen.getAllByLabelText("启用条件填色")).toHaveLength(2);
-    await user.click(screen.getAllByLabelText("启用条件填色")[0]);
-    expect(screen.getAllByLabelText("启用条件填色")[0]).not.toBeChecked();
+    expect(screen.getByRole("dialog", { name: "条件填色" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "条件填色" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "＋ 添加规则" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "＋ 添加规则" }));
+    screen.getByRole("listbox", { name: "选择填色字段" });
+    expect(screen.queryByRole("option", { name: /附件/ })).toBeNull();
+    expect(screen.getByRole("option", { name: /分数.*已隐藏/ })).toBeTruthy();
+    await user.click(screen.getByRole("option", { name: /标题/ }));
+    expect(screen.getByLabelText("标题 填色运算符")).toHaveValue("contains");
+    await user.type(screen.getByLabelText("标题 填色值"), "a");
+    expect(screen.getByLabelText("标题 填色值")).toHaveValue("a");
+    await user.click(screen.getByRole("button", { name: "填色：蓝色" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "条件填色，1 项" })).toBeTruthy());
+    expect(screen.getByRole("listbox", { name: "选择填色颜色" }).querySelectorAll('[role="option"]')).toHaveLength(27);
+    expect(screen.queryByRole("button", { name: "复制 标题 填色规则" })).toBeNull();
+    await user.click(screen.getByRole("option", { name: "红色" }));
+    expect(screen.getByRole("button", { name: "填色：红色" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "删除 标题 填色规则" })).toBeTruthy();
   });
 
   it("复杂浮层锚定在触发按钮内，Esc 关闭后回到触发按钮", async () => {

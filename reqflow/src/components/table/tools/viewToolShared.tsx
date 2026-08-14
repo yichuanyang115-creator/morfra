@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { FieldSummary, JsonValue } from "../../../types/domain";
 import { filterOperatorsFor, type FilterOperator, type ViewFilter, type ViewPipelineConfig } from "../../../lib/table/viewPipeline";
 
@@ -16,13 +17,25 @@ const OPERATOR_LABELS: Record<FilterOperator, string> = {
   hasFiles: "有附件", fileNameContains: "文件名包含", fileCountEquals: "附件数等于", fileCountGreaterThan: "附件数大于", fileCountLessThan: "附件数小于",
 };
 
-export function Panel({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+export function Panel({ title, onClose, children, wide = false, anchor }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; anchor?: HTMLElement | null }) {
   const panelRef = useRef<HTMLElement>(null);
+  const [position, setPosition] = useState<CSSProperties | undefined>();
   useEffect(() => { panelRef.current?.querySelector<HTMLElement>("input, select, button:not([disabled])")?.focus(); }, []);
-  return <section ref={panelRef} className={`morfra-view-tool-panel${wide ? " is-wide" : ""}`} role="dialog" aria-label={title} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}>
-    <header><strong>{title}</strong></header>
+  useLayoutEffect(() => {
+    if (!anchor) return;
+    const place = () => {
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(wide ? 460 : 340, window.innerWidth - 24);
+      setPosition({ position: "fixed", zIndex: 1000, top: rect.bottom + 6, left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)), width });
+    };
+    place(); window.addEventListener("resize", place); window.addEventListener("scroll", place, true);
+    return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
+  }, [anchor, wide]);
+  const panel = <section ref={panelRef} style={position} className={`morfra-view-tool-panel${wide ? " is-wide" : ""}${anchor ? " is-portal" : ""}`} role="dialog" aria-label={title} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}>
+    <header><h2>{title}</h2></header>
     {children}
   </section>;
+  return anchor && typeof document !== "undefined" ? createPortal(panel, document.body) : panel;
 }
 
 export function ConditionRow({ fields, condition, onChange, onRemove }: { fields: FieldSummary[]; condition: ViewFilter; onChange: (value: ViewFilter) => void; onRemove: () => void }) {

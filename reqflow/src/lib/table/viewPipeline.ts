@@ -3,10 +3,12 @@ import { buildGroupProjection, type ProjectedGroup } from "./groupProjection";
 import { formatUserValue } from "./fieldFormatting";
 
 export type FilterOperator = "contains" | "notContains" | "equals" | "notEquals" | "isEmpty" | "isNotEmpty" | "greaterThan" | "greaterOrEqual" | "lessThan" | "lessOrEqual" | "between" | "before" | "after" | "on" | "dateBetween" | "isChecked" | "isUnchecked" | "hasFiles" | "fileNameContains" | "fileCountEquals" | "fileCountGreaterThan" | "fileCountLessThan";
+export const CONDITIONAL_COLOR_VALUES = ["gray-light", "gray", "gray-strong", "blue-light", "blue", "blue-strong", "cyan-light", "cyan", "cyan-strong", "green-light", "green", "green-strong", "yellow-light", "yellow", "yellow-strong", "orange-light", "orange", "orange-strong", "red-light", "red", "red-strong", "pink-light", "pink", "pink-strong", "purple-light", "purple", "purple-strong"] as const;
+export type ConditionalColor = typeof CONDITIONAL_COLOR_VALUES[number];
 export interface ViewFilter { id: string; fieldId: string; operator: FilterOperator; value?: JsonValue; }
 export interface ViewSort { id: string; fieldId: string; direction: "asc" | "desc"; }
 export interface ViewGroup { fieldId: string | null; direction: "asc" | "desc"; collapsedKeys: string[]; }
-export interface ConditionalColorRule { id: string; fieldId: string; operator: FilterOperator; value?: JsonValue; color: "gray" | "blue" | "green" | "yellow" | "red" | "purple"; enabled: boolean; }
+export interface ConditionalColorRule { id: string; fieldId: string; operator: FilterOperator; value?: JsonValue; color: ConditionalColor; enabled: boolean; }
 export interface ViewPipelineConfig { filters: ViewFilter[]; filterMode: "all"; sorts: ViewSort[]; group: ViewGroup; conditionalColors: ConditionalColorRule[]; }
 export interface RecordGroupMeta { key: string; label: string; count: number; first: boolean; last: boolean; collapsed?: boolean; }
 export interface ViewPipelineResult { records: RecordData[]; recordGroups: RecordGroupMeta[]; groups: ProjectedGroup[]; total: number; matched: number; }
@@ -104,6 +106,10 @@ export function validSorts(sorts: ViewSort[], fields: FieldSummary[]): ViewSort[
   return sorts.filter((sort, index) => isSortableField(fieldsById(fields, sort.fieldId)) && sorts.findIndex((item) => item.fieldId === sort.fieldId) === index);
 }
 
+export function validConditionalColors(rules: ConditionalColorRule[], fields: FieldSummary[]): ConditionalColorRule[] {
+  return rules.filter((rule) => isCompleteFilter(rule, fields));
+}
+
 export function matchesCondition(value: JsonValue, operator: FilterOperator, expected?: JsonValue): boolean {
   const empty = value === null || value === "" || (Array.isArray(value) && value.length === 0);
   if (operator === "isEmpty") return empty;
@@ -180,4 +186,4 @@ function isOperator(value: JsonValue): value is FilterOperator { return typeof v
 function attachmentValues(value: JsonValue): string[] { return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && Boolean(item)) : typeof value === "string" && value ? [value] : []; }
 function attachmentCount(value: JsonValue): number { return attachmentValues(value).length; }
 function decodeLinkText(value: string): string { const markdown = value.match(/^\[([^\]]+)]\(([^)]+)\)$/); if (markdown) return `${markdown[1]} ${markdown[2]}`; try { return decodeURIComponent(new URL(value).href); } catch { return value; } }
-function isColor(value: JsonValue): value is ConditionalColorRule["color"] { return typeof value === "string" && ["gray", "blue", "green", "yellow", "red", "purple"].includes(value); }
+function isColor(value: JsonValue): value is ConditionalColorRule["color"] { return typeof value === "string" && (CONDITIONAL_COLOR_VALUES as readonly string[]).includes(value); }

@@ -6,6 +6,7 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { listStorageAttachments, storageAttachmentPath } from "../../lib/ipc/storageClient";
 import { formatCellValue, valueForCell } from "./cellValue";
 import type { GridPoint } from "../../lib/table/selectionModel";
+import type { ConditionalColor } from "../../lib/table/viewPipeline";
 
 interface GridCellProps {
   id: string;
@@ -15,7 +16,7 @@ interface GridCellProps {
   selected: boolean;
   active: boolean;
   editing: boolean;
-  conditionalColor?: "gray" | "blue" | "green" | "yellow" | "red" | "purple";
+  conditionalColor?: ConditionalColor;
   readOnly: boolean;
   onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
   onPointerEnter: (event: React.PointerEvent<HTMLDivElement>) => void;

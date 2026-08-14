@@ -68,11 +68,14 @@
 .morfra-view-tool-anchor { position: relative; display: inline-flex; flex: none; }
 .morfra-view-tool-panel { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; display: grid; width: min(340px, calc(100vw - 24px)); max-height: min(520px, calc(100vh - 100px)); overflow: auto; gap: 8px; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-panel); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); padding: 12px; color: var(--morfra-text-primary); }
 .morfra-view-tool-panel.is-wide { width: min(460px, calc(100vw - 24px)); }
+.morfra-view-tool-panel.is-portal { max-width: calc(100vw - 24px); font-size: 11px; }
 .morfra-view-tool-anchor.morfra-view-secondary-tool .morfra-view-tool-panel, .morfra-view-tool-anchor.morfra-view-more-trigger .morfra-view-tool-panel { right: 0; left: auto; }
 .morfra-view-tool-panel header, .morfra-view-tool-row { display: flex; align-items: center; gap: 6px; }
+.morfra-view-tool-panel header h2 { margin: 0; color: var(--morfra-text-primary); font: inherit; font-weight: 600; }
 .morfra-view-tool-panel select, .morfra-view-tool-panel input:not([type="checkbox"]) { min-width: 0; flex: 1; border: 1px solid var(--morfra-border-subtle); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-canvas); color: var(--morfra-text-primary); font: inherit; padding: 4px 6px; }
 .morfra-filter-and-note { margin: -2px 0 0; color: var(--morfra-text-secondary); font-size: 11px; }
 .morfra-filter-add { justify-self: start; border: 0; border-radius: var(--morfra-radius-control); background: transparent; color: var(--morfra-accent-primary); cursor: pointer; font: inherit; font-size: 12px; padding: 5px 6px; }
+.morfra-color-add { font-size: 11px; }
 .morfra-filter-add:hover, .morfra-filter-add:focus-visible { background: var(--morfra-accent-subtle); outline: none; }
 .morfra-filter-field-picker { display: grid; max-height: 260px; overflow-y: auto; border: 1px solid var(--morfra-border-subtle); border-radius: var(--morfra-radius-control); padding: 3px; }
 .morfra-filter-field-picker button { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; min-height: 30px; align-items: center; gap: 6px; border: 0; border-radius: 4px; background: transparent; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 12px; padding: 4px 6px; text-align: left; }
@@ -100,6 +103,36 @@
 .morfra-group-rule > div:first-child button, .morfra-group-clear { border: 0; border-radius: 4px; background: transparent; color: var(--morfra-accent-primary); cursor: pointer; font: inherit; font-size: 12px; padding: 3px 5px; }
 .morfra-group-rule > label { display: grid; grid-template-columns: 32px 1fr; align-items: center; gap: 6px; color: var(--morfra-text-secondary); font-size: 12px; }
 .morfra-group-clear { margin-left: auto; }
+.morfra-color-rule { position: relative; display: grid; grid-template-columns: 24px minmax(74px, .9fr) minmax(74px, .8fr) minmax(82px, 1fr) 14px 28px 24px; min-height: 36px; align-items: center; gap: 5px; border: 1px solid var(--morfra-border-subtle); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-canvas); padding: 4px; }
+.morfra-color-priority { color: var(--morfra-text-tertiary); font-size: 10px; text-align: center; }
+.morfra-color-field { display: flex; min-width: 0; align-items: center; gap: 5px; border: 0; border-radius: 4px; background: transparent; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 11px; padding: 4px; text-align: left; }
+.morfra-color-field > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.morfra-color-field:hover, .morfra-color-field:focus-visible, .morfra-color-remove:hover, .morfra-color-remove:focus-visible { background: var(--morfra-accent-subtle); outline: none; }
+.morfra-color-value { min-width: 0; }
+.morfra-color-value > input, .morfra-color-value > select { width: 100%; box-sizing: border-box; }
+.morfra-color-arrow { color: var(--morfra-text-tertiary); text-align: center; }
+.morfra-color-picker { position: relative; display: inline-flex; }
+.morfra-color-swatch { width: 26px; height: 26px; border: 1px solid var(--morfra-border-default); border-radius: 5px; cursor: pointer; }
+.color-gray, .color-gray-light, .color-gray-strong { --morfra-conditional-base: var(--morfra-text-secondary); }
+.color-blue, .color-blue-light, .color-blue-strong { --morfra-conditional-base: var(--morfra-business-blue); }
+.color-cyan, .color-cyan-light, .color-cyan-strong { --morfra-conditional-base: #15818f; }
+.color-green, .color-green-light, .color-green-strong { --morfra-conditional-base: var(--morfra-status-success); }
+.color-yellow, .color-yellow-light, .color-yellow-strong { --morfra-conditional-base: var(--morfra-status-warning); }
+.color-orange, .color-orange-light, .color-orange-strong { --morfra-conditional-base: var(--morfra-business-orange); }
+.color-red, .color-red-light, .color-red-strong { --morfra-conditional-base: var(--morfra-status-danger); }
+.color-pink, .color-pink-light, .color-pink-strong { --morfra-conditional-base: #bd4b84; }
+.color-purple, .color-purple-light, .color-purple-strong { --morfra-conditional-base: var(--morfra-business-purple); }
+.color-gray-light, .color-blue-light, .color-cyan-light, .color-green-light, .color-yellow-light, .color-orange-light, .color-red-light, .color-pink-light, .color-purple-light { --morfra-conditional-swatch-mix: 14%; --morfra-conditional-cell-mix: 8%; }
+.color-gray, .color-blue, .color-cyan, .color-green, .color-yellow, .color-orange, .color-red, .color-pink, .color-purple { --morfra-conditional-swatch-mix: 28%; --morfra-conditional-cell-mix: 16%; }
+.color-gray-strong, .color-blue-strong, .color-cyan-strong, .color-green-strong, .color-yellow-strong, .color-orange-strong, .color-red-strong, .color-pink-strong, .color-purple-strong { --morfra-conditional-swatch-mix: 44%; --morfra-conditional-cell-mix: 28%; }
+.morfra-color-swatch[class*="color-"], .morfra-color-palette button[class*="color-"] { background: color-mix(in srgb, var(--morfra-conditional-base) var(--morfra-conditional-swatch-mix), var(--morfra-surface-content)); }
+.morfra-color-swatch:focus-visible { outline: 2px solid var(--morfra-focus-ring); outline-offset: 1px; }
+.morfra-color-palette { display: grid; grid-template-columns: repeat(9, 16px); grid-template-rows: repeat(3, 16px); grid-auto-flow: column; gap: 4px; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); padding: 7px; }
+.morfra-color-palette button { display: grid; width: 16px; height: 16px; place-items: center; border: 0; border-radius: 3px; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 9px; line-height: 1; padding: 0; }
+.morfra-color-palette button[aria-selected="true"] { box-shadow: inset 0 0 0 2px var(--morfra-accent-primary); }
+.morfra-color-palette button:hover, .morfra-color-palette button:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--morfra-focus-ring); }
+.morfra-color-remove { border: 0; border-radius: 4px; background: transparent; color: var(--morfra-text-secondary); cursor: pointer; font: inherit; font-size: 11px; padding: 3px; }
+.morfra-color-remove { font-size: 16px; }
 .morfra-grid-group-bar { display: flex; align-items: center; gap: 6px; overflow-x: auto; border: 1px solid var(--morfra-border-subtle); border-bottom: 0; background: var(--morfra-surface-content); color: var(--morfra-text-secondary); font-size: 11px; padding: 6px 8px; }
 .morfra-grid-group-bar > div { display: flex; gap: 4px; }
 .morfra-grid-group-bar button { flex: none; border: 0; border-radius: var(--morfra-radius-control); background: var(--morfra-surface-canvas); color: inherit; cursor: pointer; font: inherit; padding: 4px 6px; }
@@ -216,12 +249,7 @@
 .morfra-grid-cell { position: absolute; top: 0; display: flex; min-width: 0; height: 100%; align-items: center; overflow: hidden; border-right: 1px solid var(--morfra-border-subtle); background: var(--morfra-surface-content); color: var(--morfra-text-primary); font-size: 12px; padding: 0 8px; white-space: nowrap; }
 .morfra-grid-cell-content { display: flex; width: calc(100% + 16px); height: 100%; min-width: 0; align-items: center; margin: 0 -8px; padding: 0 8px; outline: 0; }
 .morfra-grid-cell-content.is-selected { background: var(--morfra-selection-fill); }
-.morfra-grid-cell-content.has-conditional-color { background: color-mix(in srgb, var(--morfra-business-blue) 16%, var(--morfra-surface-content)); color: var(--morfra-text-primary); }
-.morfra-grid-cell-content.color-gray { background: color-mix(in srgb, var(--morfra-text-secondary) 12%, var(--morfra-surface-content)); }
-.morfra-grid-cell-content.color-green { background: color-mix(in srgb, var(--morfra-status-success) 16%, var(--morfra-surface-content)); color: var(--morfra-text-primary); }
-.morfra-grid-cell-content.color-yellow { background: color-mix(in srgb, var(--morfra-status-warning) 16%, var(--morfra-surface-content)); color: var(--morfra-text-primary); }
-.morfra-grid-cell-content.color-red { background: color-mix(in srgb, var(--morfra-status-danger) 16%, var(--morfra-surface-content)); color: var(--morfra-text-primary); }
-.morfra-grid-cell-content.color-purple { background: color-mix(in srgb, var(--morfra-business-purple) 16%, var(--morfra-surface-content)); color: var(--morfra-text-primary); }
+.morfra-grid-cell-content.has-conditional-color { background: color-mix(in srgb, var(--morfra-conditional-base) var(--morfra-conditional-cell-mix), var(--morfra-surface-content)); color: var(--morfra-text-primary); }
 .morfra-grid-cell-content.has-conditional-color.is-selected { background: var(--morfra-selection-fill); color: var(--morfra-text-primary); }
 .morfra-grid-row:hover .morfra-grid-cell-content.has-conditional-color:not(.is-selected):not(.is-active):not(.is-editing) { background: color-mix(in srgb, var(--morfra-accent-subtle) 48%, var(--morfra-surface-content)); }
 .morfra-grid-cell-content.is-active { position: relative; z-index: 4; box-shadow: inset 0 0 0 2px var(--morfra-focus-ring); }

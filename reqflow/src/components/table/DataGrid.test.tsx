@@ -46,6 +46,11 @@ describe("parseGridLayout", () => {
     expect(layout.pipeline?.group).toEqual({ fieldId: null, direction: "asc", collapsedKeys: [] });
   });
 
+  it("恢复旧视图时清理不存在字段和未完成的条件填色规则", () => {
+    const layout = parseGridLayout({ conditionalColors: [{ id: "missing", fieldId: "missing", operator: "contains", value: "x", color: "red" }, { id: "empty", fieldId: "title", operator: "contains", value: "", color: "blue" }, { id: "valid", fieldId: "title", operator: "contains", value: "x", color: "green" }] }, fields);
+    expect(layout.pipeline?.conditionalColors).toEqual([{ id: "valid", fieldId: "title", operator: "contains", value: "x", color: "green", enabled: true }]);
+  });
+
   it("将图片和文件编辑草稿规范化为多附件 URL 列表", () => {
     const file: FieldSummary = { ...fields[1], id: "files", fieldType: "file" };
     expect(normalizeGridValue(file, "https://a.test/one.pdf, https://a.test/two.pdf")).toEqual(["https://a.test/one.pdf", "https://a.test/two.pdf"]);
