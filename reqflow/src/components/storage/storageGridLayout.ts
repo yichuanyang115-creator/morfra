@@ -16,8 +16,10 @@ export function parseLoadingGridLayout(raw: string | null, titleFieldId: string)
     const requestedIds = Array.isArray(source.fieldIds) ? source.fieldIds.filter((id): id is string => typeof id === "string") : [];
     const fieldIds = [...new Set([titleFieldId, ...requestedIds.filter((id) => id !== titleFieldId)])];
     const columnWidths = isJsonRecord(source.columnWidths) ? Object.fromEntries(Object.entries(source.columnWidths).filter((entry): entry is [string, number] => typeof entry[1] === "number")) : {};
-    return { fieldIds, columnWidths, frozenFieldId: typeof source.frozenFieldId === "string" ? source.frozenFieldId : null, rowHeight: source.rowHeight === 32 || source.rowHeight === 56 ? source.rowHeight : 40 };
-  } catch { return { fieldIds: [titleFieldId], columnWidths: {}, frozenFieldId: null, rowHeight: 40 }; }
+    const requestedOrder = Array.isArray(source.fieldOrder) ? source.fieldOrder.filter((id): id is string => typeof id === "string") : requestedIds;
+    const fieldOrder = [...new Set([titleFieldId, ...requestedOrder.filter((id) => id !== titleFieldId)])];
+    return { fieldIds, fieldOrder, columnWidths, frozenFieldId: typeof source.frozenFieldId === "string" ? source.frozenFieldId : null, rowHeight: source.rowHeight === 32 || source.rowHeight === 56 ? source.rowHeight : 40 };
+  } catch { return { fieldIds: [titleFieldId], fieldOrder: [titleFieldId], columnWidths: {}, frozenFieldId: null, rowHeight: 40 }; }
 }
 
 export function gridLayoutSaveRollback(confirmed: GridLayoutConfig | undefined, fallback: GridLayoutConfig | null): GridLayoutConfig | null { return confirmed ?? fallback; }
@@ -25,5 +27,5 @@ export interface GridLayoutSaveCoordinator { confirm(viewId: string, layout: Gri
 export function createGridLayoutSaveCoordinator(): GridLayoutSaveCoordinator { let queue = Promise.resolve(); const confirmedLayouts = new Map<string, GridLayoutConfig>(); return { confirm(viewId, layout) { confirmedLayouts.set(viewId, layout); }, getConfirmed(viewId) { return confirmedLayouts.get(viewId); }, enqueue(persist) { queue = queue.then(persist, persist); return queue; } }; }
 export function shouldRollbackGridLayoutSave(currentVersion: number, saveVersion: number, currentViewId: string | null, saveViewId: string): boolean { return currentVersion === saveVersion && currentViewId === saveViewId; }
 export function shouldShowGridSkeleton(hasTableData: boolean, tableDataLoading: boolean, gridLayoutReady: boolean, hasLoadError: boolean): boolean { return (!hasTableData && !hasLoadError) || (hasTableData && !gridLayoutReady) || (!hasTableData && tableDataLoading); }
-export function resetGridFieldLayout(current: GridLayoutConfig, fieldIds: string[]): GridLayoutConfig { return { fieldIds, columnWidths: {}, frozenFieldId: null, rowHeight: current.rowHeight, pipeline: current.pipeline }; }
+export function resetGridFieldLayout(current: GridLayoutConfig, fieldIds: string[]): GridLayoutConfig { return { fieldIds, fieldOrder: fieldIds, columnWidths: {}, frozenFieldId: null, rowHeight: current.rowHeight, pipeline: current.pipeline }; }
 function isJsonRecord(value: unknown): value is Record<string, JsonValue> { return typeof value === "object" && value !== null && !Array.isArray(value); }

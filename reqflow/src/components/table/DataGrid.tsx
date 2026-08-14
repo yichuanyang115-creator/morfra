@@ -17,7 +17,7 @@ import { EMPTY_VIEW_PIPELINE, type RecordGroupMeta } from "../../lib/table/viewP
 import type { ProjectedGroup } from "../../lib/table/groupProjection";
 import { buildGroupedRowTops, nextGridScrollTop, normalizeGridValue, orderedFields, type GridLayoutConfig } from "./gridConfig";
 import { useStableRowSelection } from "./useStableRowSelection";
-export { nextGridScrollTop, normalizeGridFieldIds, normalizeGridValue, parseGridLayout, type GridLayoutConfig } from "./gridConfig";
+export { nextGridScrollTop, normalizeGridFieldIds, normalizeGridFieldOrder, normalizeGridValue, parseGridLayout, type GridLayoutConfig } from "./gridConfig";
 export { GridLoadingSkeleton as DataGridLoadingSkeleton } from "./GridLoadingSkeleton";
 
 interface DataGridProps { viewId: string; data: TableDataSnapshot; config: GridLayoutConfig; recordGroups?: RecordGroupMeta[]; groups?: ProjectedGroup[]; groupField?: FieldSummary; onConfigChange: (config: GridLayoutConfig) => void; onOpenDetail: (recordId: string) => void; onSelectionChange?: (recordIds: string[]) => void; onCreate?: () => void; onCreateField?: (fieldType: FieldSummary["fieldType"], name: string) => Promise<string>; onRenameField?: (fieldId: string, name: string) => Promise<void>; onCreateInGroup?: (key: string) => void; onUpdateCell: (recordId: string, fieldId: string, value: JsonValue) => Promise<unknown>; onApplyTableMutation?: (tableId: string, plan: PastePlan, deleteRecordIds?: string[]) => Promise<unknown>; onUndo?: () => Promise<unknown>; }
@@ -36,7 +36,7 @@ export function DataGrid({ viewId, data, config, recordGroups, groups = [], grou
   const [operationFailure, setOperationFailure] = useState<{ message: string; retry: () => void } | null>(null);
   const interaction = useGridInteractionStore();
   const currentEditing = interaction.editing?.viewId === viewId && !interaction.editing.direct ? interaction.editing : null;
-  const visibleFields = useMemo(() => orderedFields(data.fields, config.fieldIds), [config.fieldIds, data.fields]);
+  const visibleFields = useMemo(() => { const visibleIds = new Set(config.fieldIds); return orderedFields(data.fields, config.fieldOrder).filter((field) => visibleIds.has(field.id)); }, [config.fieldIds, config.fieldOrder, data.fields]);
   const layouts = useMemo(() => buildColumnLayouts(visibleFields, config.columnWidths, config.frozenFieldId, width), [config.columnWidths, config.frozenFieldId, visibleFields, width]);
   const table = useReactTable<RecordData>({ data: data.records, columns: layouts.map((layout) => ({ id: layout.field.id, accessorFn: (row) => row.values[layout.field.id] })), getCoreRowModel: getCoreRowModel() });
   const rowTops = useMemo(() => buildGroupedRowTops(data.records.length, recordGroups, config.rowHeight, Boolean(groupField && !isReadOnlyField(groupField))), [config.rowHeight, data.records.length, groupField, recordGroups]);

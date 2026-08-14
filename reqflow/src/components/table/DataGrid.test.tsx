@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FieldSummary } from "../../types/domain";
-import { nextGridScrollTop, normalizeGridFieldIds, normalizeGridValue, parseGridLayout } from "./DataGrid";
+import { nextGridScrollTop, normalizeGridFieldIds, normalizeGridFieldOrder, normalizeGridValue, parseGridLayout } from "./DataGrid";
 
 const fields: FieldSummary[] = [
   { id: "title", tableId: "table-1", groupId: null, name: "名称", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] },
@@ -15,7 +15,7 @@ describe("parseGridLayout", () => {
   });
 
   it("为空视图配置补齐 v3 表格布局默认值", () => {
-    expect(parseGridLayout({}, fields)).toEqual({ fieldIds: ["title", "status"], columnWidths: {}, frozenFieldId: null, rowHeight: 40 });
+    expect(parseGridLayout({}, fields)).toEqual({ fieldIds: ["title", "status"], fieldOrder: ["title", "status"], columnWidths: {}, frozenFieldId: null, rowHeight: 40 });
   });
 
   it("空 fieldIds 与缺失配置同义，显式仅主标题不触发默认回退", () => {
@@ -29,10 +29,17 @@ describe("parseGridLayout", () => {
   });
 
   it("仅接受可辨识的行高和数值列宽，防止旧配置损坏画布", () => {
-    expect(parseGridLayout({ fieldIds: ["title"], rowHeight: 999, columnWidths: { title: 280, bad: "x" }, frozenFieldId: "title" }, fields)).toEqual({ fieldIds: ["title"], columnWidths: { title: 280 }, frozenFieldId: "title", rowHeight: 40 });
+    expect(parseGridLayout({ fieldIds: ["title"], rowHeight: 999, columnWidths: { title: 280, bad: "x" }, frozenFieldId: "title" }, fields)).toEqual({ fieldIds: ["title"], fieldOrder: ["title", "status"], columnWidths: { title: 280 }, frozenFieldId: "title", rowHeight: 40 });
   });
 
   it("保留当前视图的普通字段横向顺序", () => expect(parseGridLayout({ fieldIds: ["title", "status"] }, fields).fieldIds).toEqual(["title", "status"]));
+
+  it("将可见性与包含隐藏字段的列顺序分开读取并保留", () => {
+    const layout = parseGridLayout({ fieldIds: ["title"], fieldOrder: ["title", "status"] }, fields);
+    expect(layout.fieldIds).toEqual(["title"]);
+    expect(layout.fieldOrder).toEqual(["title", "status"]);
+    expect(normalizeGridFieldOrder(["status", "title"], fields)).toEqual(["title", "status"]);
+  });
 
   it("恢复旧视图时清理图片、文件和链接等无效排序引用", () => {
     const file = { ...fields[1], id: "files", fieldType: "file" as const };

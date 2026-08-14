@@ -13,7 +13,7 @@ import { useTableDataStore } from "../../stores/tableDataStore";
 import { useStorageSelectionStore } from "../../stores/storageSelectionStore";
 import { useLayoutStore } from "../../stores/layoutStore";
 import { getStorageViewConfig, updateStorageViewConfig } from "../../lib/ipc/storageClient";
-import { DataGrid, DataGridLoadingSkeleton, normalizeGridFieldIds, parseGridLayout, type GridLayoutConfig } from "../table/DataGrid";
+import { DataGrid, DataGridLoadingSkeleton, normalizeGridFieldIds, normalizeGridFieldOrder, parseGridLayout, type GridLayoutConfig } from "../table/DataGrid";
 import type { JsonValue, ProjectSnapshot } from "../../types/domain";
 import { EMPTY_VIEW_PIPELINE, runViewPipeline, type ViewPipelineConfig } from "../../lib/table/viewPipeline";
 import { KanbanView } from "../board/KanbanView";
@@ -155,7 +155,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
 
   function setGridLayoutConfig(next: GridLayoutConfig) {
     if (!activeView || !tableData || gridLayoutViewId !== activeView.id) return;
-    const normalizedNext = { ...next, fieldIds: normalizeGridFieldIds(next.fieldIds, tableData.fields) };
+    const normalizedNext = { ...next, fieldIds: normalizeGridFieldIds(next.fieldIds, tableData.fields), fieldOrder: normalizeGridFieldOrder(next.fieldOrder, tableData.fields) };
     const previous = gridLayout;
     const previousFieldDisplayIds = fieldDisplayIds;
     const viewId = activeView.id;
@@ -167,7 +167,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
     const persist = async () => {
       try {
         const pipeline = normalizedNext.pipeline ?? EMPTY_VIEW_PIPELINE;
-        await updateStorageViewConfig(viewId, { fieldIds: normalizedNext.fieldIds, columnWidths: normalizedNext.columnWidths, frozenFieldId: normalizedNext.frozenFieldId, rowHeight: normalizedNext.rowHeight, filters: pipeline.filters, filterMode: pipeline.filterMode, sorts: pipeline.sorts, group: pipeline.group, conditionalColors: pipeline.conditionalColors, ...(normalizedNext.board ? { board: normalizedNext.board } : {}) } as unknown as JsonValue);
+        await updateStorageViewConfig(viewId, { fieldIds: normalizedNext.fieldIds, fieldOrder: normalizedNext.fieldOrder, columnWidths: normalizedNext.columnWidths, frozenFieldId: normalizedNext.frozenFieldId, rowHeight: normalizedNext.rowHeight, filters: pipeline.filters, filterMode: pipeline.filterMode, sorts: pipeline.sorts, group: pipeline.group, conditionalColors: pipeline.conditionalColors, ...(normalizedNext.board ? { board: normalizedNext.board } : {}) } as unknown as JsonValue);
         gridLayoutSaveCoordinator.current.confirm(viewId, normalizedNext);
         if (pendingGridLayouts.current.get(viewId) === normalizedNext) pendingGridLayouts.current.delete(viewId);
         nextGridLayoutReadVersion(viewId);
@@ -247,7 +247,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
       </div>
     </section> : <div className="morfra-storage-empty morfra-storage-empty-project"><span aria-hidden="true">□</span><p>没有打开的项目</p><small>从文件菜单打开本地项目，或从项目切换器创建空白项目。</small></div>}
     {error && <p role="alert" className="morfra-storage-error">{error}{activeTable && <button type="button" className="ml-2 underline" onClick={() => { setError(null); void loadTableData(activeTable.id).catch(() => setError("字段和记录读取失败，请重试")); }}>重试</button>}</p>}
-    {fieldManagerOpen && tableData && <FieldManager tableId={activeTable.id} data={tableData} viewLayout={gridLayout && gridLayoutViewId === activeView?.id ? { fieldIds: gridLayout.fieldIds, onChange: (fieldIds) => setGridLayoutConfig({ ...gridLayout, fieldIds }), onReset: () => setGridLayoutConfig(resetGridFieldLayout(gridLayout, tableData.fields.map((field) => field.id))) } : undefined} onClose={() => setFieldManagerOpen(false)} onError={setError} />}
+    {fieldManagerOpen && tableData && <FieldManager tableId={activeTable.id} data={tableData} viewLayout={gridLayout && gridLayoutViewId === activeView?.id ? { visibleFieldIds: gridLayout.fieldIds, fieldOrder: gridLayout.fieldOrder, onChange: (fieldOrder, fieldIds) => setGridLayoutConfig({ ...gridLayout, fieldOrder, fieldIds }), onReset: () => setGridLayoutConfig(resetGridFieldLayout(gridLayout, tableData.fields.map((field) => field.id))) } : undefined} onClose={() => setFieldManagerOpen(false)} onError={setError} />}
     {backupSettingsOpen && <BackupSettings onClose={() => setBackupSettingsOpen(false)} onRestored={async (snapshot: ProjectSnapshot) => { useProjectStore.setState((state) => ({ projects: state.projects.map((item) => item.id === snapshot.manifest.id ? { ...item, name: snapshot.manifest.name, storageSnapshot: snapshot } : item) })); const firstTable = snapshot.tables[0]; if (firstTable) { setActiveTable(snapshot.manifest.id, firstTable.id); await loadTableData(firstTable.id); } }} />}
     {detailFieldsOpen && tableData && detailFields && <FieldDisplayManager fields={tableData.fields.filter((field) => !field.isTitle)} selectedIds={detailFields} title="详情显示字段" description="只影响记录详情字段，不联动表格字段显示。" onChange={(fieldIds) => { void setDetailFields(activeTable.id, fieldIds).catch(() => setError("详情字段保存失败，已恢复")); }} onClose={() => setDetailFieldsOpen(false)} />}
   </main>;

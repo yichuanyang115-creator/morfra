@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FieldOptionSummary, FieldSummary, FieldType, JsonValue, TableDataSnapshot } from "../../types/domain";
 import { previewFieldConversion, type ConversionPreview } from "../../lib/fields/valueConversion";
 import { useTableDataStore } from "../../stores/tableDataStore";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { FieldEditor } from "./FieldEditor";
+import { FieldEditPage } from "./FieldEditPage";
 import { FieldTypeConversionDialog } from "./FieldTypeConversionDialog";
 import { FieldTypePicker } from "./FieldTypePicker";
 import { getStorageActivityBinding } from "../../lib/ipc/storageClient";
@@ -13,7 +14,7 @@ interface FieldManagerProps {
   data: TableDataSnapshot;
   onClose: () => void;
   onError: (message: string) => void;
-  viewLayout?: { fieldIds: string[]; onChange: (fieldIds: string[]) => void; onReset: () => void };
+  viewLayout?: { visibleFieldIds: string[]; fieldOrder: string[]; onChange: (fieldOrder: string[], visibleFieldIds: string[]) => void; onReset: () => void };
 }
 
 interface PendingConversion {
@@ -22,6 +23,11 @@ interface PendingConversion {
   nextType: FieldType;
   config: JsonValue;
   preview: ConversionPreview;
+}
+
+interface PendingFieldDelete {
+  field: FieldSummary;
+  restoreFocus: () => void;
 }
 
 interface PendingOptionDelete {
@@ -40,32 +46,42 @@ export function FieldManager({ tableId, data, onClose, onError, viewLayout }: Fi
   const optionUsage = useTableDataStore((state) => state.optionUsage);
   const deleteOption = useTableDataStore((state) => state.deleteOption);
   const [fieldTypePickerOpen, setFieldTypePickerOpen] = useState(false);
-  const [createdFieldId, setCreatedFieldId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<FieldSummary | null>(null);
+  const [selectedField, setSelectedField] = useState<FieldSummary | null>(null);
+  const [draftDirty, setDraftDirty] = useState(false);
+  const [pendingExit, setPendingExit] = useState<"back" | "close" | null>(null);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const [listScrollTop, setListScrollTop] = useState(0);
+  const dialogRef = useRef<HTMLElement>(null);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingFieldDelete | null>(null);
   const [pendingOptionDelete, setPendingOptionDelete] = useState<PendingOptionDelete | null>(null);
   const [pendingConversion, setPendingConversion] = useState<PendingConversion | null>(null);
   const [draggedFieldId, setDraggedFieldId] = useState<string | null>(null);
   const [activityFieldId, setActivityFieldId] = useState<string | null>(null);
 
-  useEffect(() => { void getStorageActivityBinding(tableId).then((binding) => setActivityFieldId(binding.fieldId)).catch(() => setActivityFieldId(null)); }, [tableId]);
+  useEffect(() => { openerRef.current = document.activeElement as HTMLElement | null; void getStorageActivityBinding(tableId).then((binding) => setActivityFieldId(binding.fieldId)).catch(() => setActivityFieldId(null)); requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLButtonElement>("[data-field-edit-id]")?.focus()); }, [tableId]);
 
   async function run(action: () => Promise<unknown>, message: string) { try { await action(); } catch (error) { onError(error instanceof Error ? error.message : message); } }
-  async function addField(fieldType: FieldType, name: string) { const knownIds = new Set(data.fields.map((field) => field.id)); const snapshot = await createField(tableId, name, fieldType, {}); const created = snapshot.fields.find((field) => !knownIds.has(field.id)); if (!created) throw new Error("字段创建结果缺失"); setCreatedFieldId(created.id); }
-  async function saveField(field: FieldSummary, name: string, nextType: FieldType, config: JsonValue) { if (nextType !== field.fieldType) { setPendingConversion({ field, name, nextType, config, preview: previewFieldConversion(data, field.id, nextType) }); return; } await run(() => updateField(field.id, name, nextType, config), "字段保存失败"); }
-  async function confirmConversion() { if (!pendingConversion) return; const pending = pendingConversion; setPendingConversion(null); await run(() => updateField(pending.field.id, pending.name, pending.nextType, pending.config), "字段转换失败"); if (pending.field.id === activityFieldId && pending.nextType !== "select") setActivityFieldId(null); }
-  async function confirmFieldDelete() { if (!pendingDelete) return; const field = pendingDelete; setPendingDelete(null); await run(() => deleteField(field.id), "字段删除失败"); if (field.id === activityFieldId) setActivityFieldId(null); }
+  async function addField(fieldType: FieldType, name: string) { const knownIds = new Set(data.fields.map((field) => field.id)); const snapshot = await createField(tableId, name, fieldType, {}); const created = snapshot.fields.find((field) => !knownIds.has(field.id)); if (!created) throw new Error("字段创建结果缺失"); setSelectedField(created); setEditorError(null); }
+  async function saveField(field: FieldSummary, name: string, nextType: FieldType, config: JsonValue) { if (nextType !== field.fieldType) { setPendingConversion({ field, name, nextType, config, preview: previewFieldConversion(data, field.id, nextType) }); return; } try { await updateField(field.id, name, nextType, config); setSelectedField(null); } catch (error) { setEditorError(error instanceof Error ? error.message : "字段保存失败，请重试"); } }
+  async function confirmConversion() { if (!pendingConversion) return; const pending = pendingConversion; try { await updateField(pending.field.id, pending.name, pending.nextType, pending.config); setPendingConversion(null); setSelectedField(null); if (pending.field.id === activityFieldId && pending.nextType !== "select") setActivityFieldId(null); } catch (error) { setPendingConversion(null); setEditorError(error instanceof Error ? error.message : "字段转换失败，请重试"); } }
+  async function confirmFieldDelete() { if (!pendingDelete) return; const pending = pendingDelete; setPendingDelete(null); await run(() => deleteField(pending.field.id), "字段删除失败"); if (pending.field.id === activityFieldId) setActivityFieldId(null); }
   async function confirmOptionDelete(mode: "delete" | "replace" | "clear", replacementId: string | null) { if (!pendingOptionDelete) return; const option = pendingOptionDelete.option; setPendingOptionDelete(null); await run(() => deleteOption(option.id, mode, replacementId), "选项删除失败"); }
-  const orderedFields = viewLayout ? [...data.fields].sort((left, right) => { const leftIndex = viewLayout.fieldIds.indexOf(left.id); const rightIndex = viewLayout.fieldIds.indexOf(right.id); return (leftIndex < 0 ? Number.MAX_SAFE_INTEGER : leftIndex) - (rightIndex < 0 ? Number.MAX_SAFE_INTEGER : rightIndex); }) : data.fields;
-  function moveViewField(fieldId: string, delta: -1 | 1) { if (!viewLayout) return; const ids = viewLayout.fieldIds; const index = ids.indexOf(fieldId); const nextIndex = index + delta; if (index <= 0 || nextIndex <= 0 || nextIndex >= ids.length) return; const next = [...ids]; [next[index], next[nextIndex]] = [next[nextIndex], next[index]]; viewLayout.onChange(next); }
-  function dropField(fieldId: string) { if (!viewLayout || !draggedFieldId || draggedFieldId === fieldId || !viewLayout.fieldIds.includes(draggedFieldId) || !viewLayout.fieldIds.includes(fieldId)) return; const next = [...viewLayout.fieldIds]; const from = next.indexOf(draggedFieldId); const to = next.indexOf(fieldId); next.splice(from, 1); next.splice(to, 0, draggedFieldId); setDraggedFieldId(null); viewLayout.onChange(next); }
+  const orderedFields = viewLayout ? [...data.fields].sort((left, right) => viewLayout.fieldOrder.indexOf(left.id) - viewLayout.fieldOrder.indexOf(right.id)) : data.fields;
+  function moveViewField(fieldId: string, delta: -1 | 1) { if (!viewLayout) return; const index = viewLayout.fieldOrder.indexOf(fieldId); const nextIndex = index + delta; if (index <= 0 || nextIndex <= 0 || nextIndex >= viewLayout.fieldOrder.length) return; const next = [...viewLayout.fieldOrder]; [next[index], next[nextIndex]] = [next[nextIndex], next[index]]; viewLayout.onChange(next, viewLayout.visibleFieldIds); }
+  function dropField(fieldId: string) { if (!viewLayout || !draggedFieldId || draggedFieldId === fieldId || !viewLayout.fieldOrder.includes(draggedFieldId) || !viewLayout.fieldOrder.includes(fieldId)) return; const next = [...viewLayout.fieldOrder]; const from = next.indexOf(draggedFieldId); const to = next.indexOf(fieldId); next.splice(from, 1); next.splice(to, 0, draggedFieldId); setDraggedFieldId(null); viewLayout.onChange(next, viewLayout.visibleFieldIds); }
+  function toggleVisibility(fieldId: string) { if (!viewLayout) return; const visible = new Set(viewLayout.visibleFieldIds); if (visible.has(fieldId)) visible.delete(fieldId); else visible.add(fieldId); viewLayout.onChange(viewLayout.fieldOrder, viewLayout.fieldOrder.filter((id) => visible.has(id))); }
 
-  return <div className="fixed inset-0 z-60 flex items-stretch justify-end bg-(--overlay-scrim)" role="dialog" aria-modal="true" aria-labelledby="field-manager-title"><section className="flex h-full w-[min(94vw,620px)] min-w-0 flex-col bg-(--module-scope-background-surface) shadow-(--shadow-panel)">
-    <header className="flex items-center justify-between border-b border-(--module-scope-border-subtle) px-5 py-4"><div><h2 id="field-manager-title" className="m-0 text-[16px] font-semibold text-(--module-scope-text-primary)">字段管理</h2><p className="m-0 mt-1 text-[11px] text-(--module-scope-text-tertiary)">表级结构会同步影响当前表的所有视图</p></div><button type="button" className="rounded-(--r-sm) border border-(--module-scope-border-subtle) px-2 py-1 text-[12px]" onClick={onClose}>关闭</button></header>
-    <div className="min-h-0 flex-1 overflow-y-auto p-4"><section className="overflow-hidden rounded-(--r-sm) border border-(--module-scope-border-subtle)">{orderedFields.map((field) => <FieldEditor key={field.id} field={field} autoEdit={field.id === createdFieldId} visible={viewLayout?.fieldIds.includes(field.id) ?? true} onViewMove={moveViewField} onVisibilityChange={() => viewLayout && viewLayout.onChange(viewLayout.fieldIds.includes(field.id) ? viewLayout.fieldIds.filter((id) => id !== field.id) : [...viewLayout.fieldIds, field.id])} onDragStart={setDraggedFieldId} onDragOver={(event) => event.preventDefault()} onDrop={dropField} onSave={async (...args) => { await saveField(...args); if (field.id === createdFieldId) setCreatedFieldId(null); }} onDelete={setPendingDelete} onCreateOption={(fieldId, name, color) => run(() => createOption(fieldId, name, color), "新增选项失败")} onUpdateOption={(option, name, color) => run(() => updateOption(option.id, name, color), "选项保存失败")} onReorderOption={(fieldId, optionIds) => run(() => reorderOptions(fieldId, optionIds), "选项排序失败")} onDeleteOption={async (option) => { const usage = await optionUsage(option.id); setPendingOptionDelete({ option, ...usage }); }} />)}</section></div>
-    <footer className="sticky bottom-0 border-t border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) p-4">{fieldTypePickerOpen ? <FieldTypePicker inline onCreate={async (fieldType, name) => { await addField(fieldType, name); setFieldTypePickerOpen(false); }} onClose={() => setFieldTypePickerOpen(false)} /> : <button type="button" className="rounded-(--r-sm) bg-(--module-scope-action-base) px-3 py-1.5 text-[12px] text-(--module-scope-background-surface)" onClick={() => setFieldTypePickerOpen(true)}>＋ 新增字段</button>}</footer>
-    {pendingDelete && <ConfirmDialog title={`删除“${pendingDelete.name}”？`} body={`字段值会被删除，所有视图中对它的显示、筛选、排序和分组引用会被清理；操作可撤销。${pendingDelete.id === activityFieldId ? "该字段是活动关联字段，确认后活动跟踪将停止；已有历史会保留。" : ""}`} confirmLabel="删除字段" onCancel={() => setPendingDelete(null)} onConfirm={() => void confirmFieldDelete()} />}
+  function leaveEditor() { if (draftDirty) { setPendingExit("back"); return; } setSelectedField(null); }
+  function closeManager() { if (selectedField && draftDirty) { setPendingExit("close"); return; } onClose(); requestAnimationFrame(() => openerRef.current?.focus()); }
+  function confirmExit() { const exit = pendingExit; setPendingExit(null); setDraftDirty(false); if (exit === "back") { setSelectedField(null); return; } onClose(); requestAnimationFrame(() => openerRef.current?.focus()); }
+
+  return <div className="fixed inset-0 z-60 flex items-center justify-center p-6 bg-(--overlay-scrim)"><section ref={dialogRef} className="flex h-[min(85vh,720px)] w-[min(92vw,580px)] flex-col overflow-hidden rounded-(--r-lg) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) shadow-(--shadow-panel)" role="dialog" aria-modal="true" aria-labelledby="field-manager-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); selectedField ? leaveEditor() : closeManager(); } if (event.key === "Tab") { const items = [...event.currentTarget.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])")]; const current = items.indexOf(document.activeElement as HTMLElement); const next = event.shiftKey ? current - 1 : current + 1; if (next < 0 || next >= items.length) { event.preventDefault(); items[event.shiftKey ? items.length - 1 : 0]?.focus(); } } }}>
+    {selectedField ? <FieldEditPage field={data.fields.find((field) => field.id === selectedField.id) ?? selectedField} error={editorError} onDirtyChange={setDraftDirty} onBack={leaveEditor} onSave={saveField} onCreateOption={(fieldId, name, color) => run(() => createOption(fieldId, name, color), "新增选项失败")} onUpdateOption={(option, name, color) => run(() => updateOption(option.id, name, color), "选项保存失败")} onReorderOption={(fieldId, optionIds) => run(() => reorderOptions(fieldId, optionIds), "选项排序失败")} onDeleteOption={async (option) => { const usage = await optionUsage(option.id); setPendingOptionDelete({ option, ...usage }); }} /> : <><header className="flex items-center justify-between border-b border-(--module-scope-border-subtle) px-5 py-4"><div><h2 id="field-manager-title" className="m-0 text-[16px] font-semibold">字段管理</h2><p className="m-0 mt-1 text-[11px] text-(--module-scope-text-tertiary)">字段显示和列顺序只影响当前视图</p></div><button type="button" onClick={closeManager}>关闭</button></header><div className="min-h-0 flex-1 overflow-y-auto p-4" onScroll={(event) => setListScrollTop(event.currentTarget.scrollTop)} ref={(node) => { if (node) node.scrollTop = listScrollTop; }}><section className="overflow-hidden rounded-(--r-sm) border border-(--module-scope-border-subtle)">{orderedFields.map((field) => <FieldEditor key={field.id} field={field} visible={viewLayout?.visibleFieldIds.includes(field.id) ?? true} onEdit={(next) => { setSelectedField(next); setEditorError(null); }} onViewMove={moveViewField} onVisibilityChange={() => toggleVisibility(field.id)} onDragStart={setDraggedFieldId} onDragOver={(event) => event.preventDefault()} onDrop={dropField} onDelete={(field, restoreFocus) => setPendingDelete({ field, restoreFocus })} />)}</section></div><footer className="border-t border-(--module-scope-border-subtle) p-4">{fieldTypePickerOpen ? <FieldTypePicker inline onCreate={async (fieldType, name) => { await addField(fieldType, name); setFieldTypePickerOpen(false); }} onClose={() => setFieldTypePickerOpen(false)} /> : <button type="button" className="rounded-(--r-sm) bg-(--module-scope-action-base) px-3 py-1.5 text-[12px] text-(--module-scope-background-surface)" onClick={() => setFieldTypePickerOpen(true)}>＋ 新增字段</button>}</footer></>}
+    {pendingDelete && <ConfirmDialog title={`删除“${pendingDelete.field.name}”？`} body={`字段值会被删除，所有视图中对它的显示、筛选、排序和分组引用会被清理；操作可撤销。${pendingDelete.field.id === activityFieldId ? "该字段是活动关联字段，确认后活动跟踪将停止；已有历史会保留。" : ""}`} confirmLabel="删除字段" onCancel={() => { const restoreFocus = pendingDelete.restoreFocus; setPendingDelete(null); requestAnimationFrame(restoreFocus); }} onConfirm={() => void confirmFieldDelete()} />}
     {pendingConversion && <FieldTypeConversionDialog preview={pendingConversion.preview} activityTrackingStops={pendingConversion.field.id === activityFieldId && pendingConversion.nextType !== "select"} onCancel={() => setPendingConversion(null)} onConfirm={() => void confirmConversion()} />}
-    {pendingOptionDelete && <OptionDeleteDialog pending={pendingOptionDelete} options={pendingOptionDelete.option ? data.fields.find((field) => field.id === pendingOptionDelete.option.fieldId)?.options ?? [] : []} onCancel={() => setPendingOptionDelete(null)} onConfirm={confirmOptionDelete} />}
+    {pendingOptionDelete && <OptionDeleteDialog pending={pendingOptionDelete} options={data.fields.find((field) => field.id === pendingOptionDelete.option.fieldId)?.options ?? []} onCancel={() => setPendingOptionDelete(null)} onConfirm={confirmOptionDelete} />}
+    {pendingExit && <ConfirmDialog title="放弃未保存的修改？" body="返回或关闭后，本次字段编辑草稿不会保存。" confirmLabel="放弃修改" onCancel={() => setPendingExit(null)} onConfirm={confirmExit} />}
   </section></div>;
 }
 
