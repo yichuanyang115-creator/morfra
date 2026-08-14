@@ -3,7 +3,7 @@ import { isGroupable } from "../../../lib/table/groupProjection";
 import type { FieldSummary } from "../../../types/domain";
 import { fieldTypeIcon, Panel, type PanelProps } from "./viewToolShared";
 
-export function GroupPanel({ fields, config, onChange, onClose, visibleFieldIds }: PanelProps & { visibleFieldIds?: string[] }) {
+export function GroupPanel({ fields, config, onChange, onClose, visibleFieldIds, anchor }: PanelProps & { visibleFieldIds?: string[] }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const addRef = useRef<HTMLButtonElement>(null);
   const directionRef = useRef<HTMLSelectElement>(null);
@@ -14,7 +14,7 @@ export function GroupPanel({ fields, config, onChange, onClose, visibleFieldIds 
   const update = (fieldId: string | null, direction = config.group.direction) => onChange({ ...config, group: { fieldId, direction, collapsedKeys: [] } });
   const choose = (field: FieldSummary) => { setPickerOpen(false); update(field.id); requestAnimationFrame(() => directionRef.current?.focus()); };
   const clear = () => { update(null, "asc"); requestAnimationFrame(() => addRef.current?.focus()); };
-  return <Panel title="分组" onClose={onClose}>
+  return <Panel title="分组" onClose={onClose} anchor={anchor}>
     {!current && (pickerOpen
       ? <GroupFieldPicker fields={groupable} visible={visible} onChoose={choose} onBack={() => { setPickerOpen(false); requestAnimationFrame(() => addRef.current?.focus()); }} />
       : <button ref={addRef} type="button" className="morfra-filter-add" onClick={() => setPickerOpen(true)}>＋ 添加分组字段</button>)}

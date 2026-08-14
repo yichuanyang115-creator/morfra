@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent } from "react";
 import type { FieldSummary, JsonValue, RecordData, TableDataSnapshot } from "../../types/domain";
-import { FIELD_TYPE_LABELS } from "./FieldEditor";
+import { FIELD_TYPE_LABELS } from "./FieldTypeIcon";
 
 interface RecordTableProps {
   data: TableDataSnapshot;

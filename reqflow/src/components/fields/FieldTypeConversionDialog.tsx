@@ -1,5 +1,5 @@
 import type { ConversionPreview } from "../../lib/fields/valueConversion";
-import { FIELD_TYPE_LABELS } from "./FieldEditor";
+import { FIELD_TYPE_LABELS } from "./FieldTypeIcon";
 
 interface FieldTypeConversionDialogProps {
   preview: ConversionPreview;

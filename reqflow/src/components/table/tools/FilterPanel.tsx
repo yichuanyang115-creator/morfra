@@ -5,7 +5,7 @@ import { ConditionValue, fieldTypeIcon, newId, operatorLabel, Panel, type PanelP
 
 type DraftFilter = ViewFilter & { expanded: boolean };
 
-export function FilterPanel({ fields, config, onChange, onClose, visibleFieldIds }: PanelProps & { visibleFieldIds?: string[] }) {
+export function FilterPanel({ fields, config, onChange, onClose, visibleFieldIds, anchor }: PanelProps & { visibleFieldIds?: string[] }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [drafts, setDrafts] = useState<DraftFilter[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(config.filters.filter((filter) => !isCompleteFilter(filter, fields)).map((filter) => filter.id)));
@@ -40,7 +40,7 @@ export function FilterPanel({ fields, config, onChange, onClose, visibleFieldIds
     if (config.filters.some((filter) => filter.id === rule.id)) setExpanded((current) => { const next = new Set(current); if (next.has(rule.id)) next.delete(rule.id); else next.add(rule.id); return next; });
     else setDrafts((current) => replace(current, current.findIndex((draft) => draft.id === rule.id), { ...rule, expanded: !rule.expanded }));
   };
-  return <Panel title="筛选" onClose={onClose} wide>
+  return <Panel title="筛选" onClose={onClose} wide anchor={anchor}>
     <p className="morfra-filter-and-note">满足以下全部条件</p>
     {rules.map((rule) => {
       const field = fields.find((item) => item.id === rule.fieldId);

@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import type { FieldOptionSummary, FieldSummary, FieldType, JsonValue } from "../../types/domain";
 import { OptionEditor } from "./OptionEditor";
+import { FIELD_TYPE_LABELS, FieldTypeIcon } from "./FieldTypeIcon";
 
-export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
-  text: "文本", select: "单选", multi_select: "多选", number: "数字", progress: "进度", date: "日期", image: "图片", file: "文件", link: "链接", checkbox: "复选框", auto_number: "自动编号", created_time: "创建时间", updated_time: "最后编辑时间",
-};
+export { FIELD_TYPE_LABELS } from "./FieldTypeIcon";
 
 interface FieldEditorProps {
   field: FieldSummary;
@@ -14,35 +13,45 @@ interface FieldEditorProps {
   onUpdateOption: (option: FieldOptionSummary, name: string, color: string) => Promise<void>;
   onDeleteOption: (option: FieldOptionSummary) => Promise<void>;
   onReorderOption: (fieldId: string, optionIds: string[]) => Promise<void>;
-  onReorder: (fieldId: string, delta: -1 | 1) => Promise<void>;
+  onViewMove: (fieldId: string, delta: -1 | 1) => void;
+  onVisibilityChange: () => void;
+  visible: boolean;
   onDragStart: (fieldId: string) => void;
   onDragOver: (event: DragEvent<HTMLElement>) => void;
   onDrop: (fieldId: string) => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
   autoEdit?: boolean;
 }
 
-export function FieldEditor({ field, onSave, onDelete, onCreateOption, onUpdateOption, onDeleteOption, onReorderOption, onReorder, onDragStart, onDragOver, onDrop, canMoveUp, canMoveDown, autoEdit = false }: FieldEditorProps) {
+export function FieldEditor({ field, onSave, onDelete, onCreateOption, onUpdateOption, onDeleteOption, onReorderOption, onViewMove, onVisibilityChange, visible, onDragStart, onDragOver, onDrop, autoEdit = false }: FieldEditorProps) {
   const [editing, setEditing] = useState(autoEdit);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [name, setName] = useState(field.name);
   const [type, setType] = useState(field.fieldType);
   const [config, setConfig] = useState<JsonValue>(field.config);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => { if (autoEdit) { setEditing(true); setName(field.name); requestAnimationFrame(() => nameInputRef.current?.select()); } }, [autoEdit, field.name]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnOutsidePress = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePress);
+    return () => document.removeEventListener("pointerdown", closeOnOutsidePress);
+  }, [menuOpen]);
 
   function reset() { setName(field.name); setType(field.fieldType); setConfig(field.config); setEditing(false); }
   function updateConfig(key: string, value: JsonValue) { const current = config && typeof config === "object" && !Array.isArray(config) ? config : {}; setConfig({ ...current, [key]: value }); }
   async function save() { await onSave(field, name, type, config); setEditing(false); }
 
-  return <article draggable onDragStart={() => onDragStart(field.id)} onDragOver={onDragOver} onDrop={() => onDrop(field.id)} className="border-b border-(--module-scope-border-subtle) px-4 py-3 last:border-b-0">
+  return <article draggable={!field.isTitle} tabIndex={0} onKeyDown={(event) => { if (!field.isTitle && event.altKey && event.key === "ArrowUp") { event.preventDefault(); onViewMove(field.id, -1); } if (!field.isTitle && event.altKey && event.key === "ArrowDown") { event.preventDefault(); onViewMove(field.id, 1); } }} onDragStart={() => onDragStart(field.id)} onDragOver={onDragOver} onDrop={() => onDrop(field.id)} className="border-b border-(--module-scope-border-subtle) px-4 py-3 last:border-b-0">
     <div className="flex items-center gap-3">
-      <span className="w-5 text-center text-[11px] text-(--module-scope-text-tertiary)" aria-hidden="true">{field.isTitle ? "★" : "⋮⋮"}</span>
-      <button type="button" aria-label={`上移${field.name}`} disabled={!canMoveUp} className="text-(--module-scope-text-tertiary) disabled:opacity-40" onClick={() => void onReorder(field.id, -1)}>↑</button><button type="button" aria-label={`下移${field.name}`} disabled={!canMoveDown} className="text-(--module-scope-text-tertiary) disabled:opacity-40" onClick={() => void onReorder(field.id, 1)}>↓</button>
-      <div className="min-w-0 flex-1"><div className="truncate text-[13px] text-(--module-scope-text-primary)">{field.name}</div><div className="text-[11px] text-(--module-scope-text-tertiary)">{FIELD_TYPE_LABELS[field.fieldType]}{field.isTitle ? " · 主标题" : ""}</div></div>
-      <button type="button" className="rounded-(--r-sm) border border-(--module-scope-border-subtle) px-2 py-1 text-[11px]" onClick={() => { setEditing((value) => !value); setName(field.name); setType(field.fieldType); setConfig(field.config); }}>{editing ? "收起" : "编辑"}</button>
-      {!field.isTitle && <button type="button" className="rounded-(--r-sm) border border-transparent px-2 py-1 text-[11px] text-(--module-scope-feedback-danger)" onClick={() => onDelete(field)}>删除</button>}
+      <span className="grid size-6 shrink-0 place-items-center text-(--module-scope-text-secondary)" title={FIELD_TYPE_LABELS[field.fieldType]} aria-hidden="true"><FieldTypeIcon type={field.fieldType} /></span>
+      <div className="min-w-0 flex-1"><div className="truncate text-[13px] text-(--module-scope-text-primary)">{field.name}</div></div>
+      <button type="button" aria-label={field.isTitle ? "主标题始终显示" : visible ? `隐藏 ${field.name}` : `显示 ${field.name}`} disabled={field.isTitle} className="rounded-(--r-sm) px-2 py-1 text-[12px] disabled:opacity-50" onClick={onVisibilityChange}><EyeIcon hidden={!visible && !field.isTitle} /></button>
+      <div ref={menuRef} className="relative morfra-field-menu"><button ref={menuTriggerRef} type="button" aria-label={`${field.name} 更多操作`} aria-haspopup="menu" aria-expanded={menuOpen} className="rounded-(--r-sm) px-2 py-1 text-[12px]" onClick={() => setMenuOpen((value) => !value)}>•••</button>{menuOpen && <div className="absolute right-0 z-10 mt-1 grid min-w-28 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) p-1 shadow-(--shadow-dialog)" role="menu" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setMenuOpen(false); requestAnimationFrame(() => menuTriggerRef.current?.focus()); } }}><button type="button" role="menuitem" autoFocus onClick={() => { setEditing(true); setMenuOpen(false); setName(field.name); setType(field.fieldType); setConfig(field.config); }}>字段设置</button>{!field.isTitle && <><button type="button" role="menuitem" onClick={() => { setEditing(true); setMenuOpen(false); }}>转换类型</button><button type="button" role="menuitem" className="text-(--module-scope-feedback-danger)" onClick={() => { setMenuOpen(false); onDelete(field); }}>删除字段</button></>}</div>}</div>
     </div>
     {editing && <div className="mt-3 space-y-3 rounded-(--r-sm) bg-(--module-scope-background-elevated) p-3">
       <label className="flex items-center gap-2 text-[11px] text-(--module-scope-text-secondary)">字段名<input ref={nameInputRef} className="min-w-0 flex-1 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-surface) px-2 py-1 text-(--module-scope-text-primary)" value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void save(); if (event.key === "Escape") reset(); }} onBlur={() => { if (name.trim()) void save(); }} /></label>
@@ -55,6 +64,10 @@ export function FieldEditor({ field, onSave, onDelete, onCreateOption, onUpdateO
       {(field.fieldType === "select" || field.fieldType === "multi_select") && <OptionEditor options={field.options} onCreate={(optionName, color) => onCreateOption(field.id, optionName, color)} onUpdate={onUpdateOption} onDelete={onDeleteOption} onReorder={(optionIds) => onReorderOption(field.id, optionIds)} />}
     </div>}
   </article>;
+}
+
+function EyeIcon({ hidden }: { hidden: boolean }) {
+  return hidden ? <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m3 3 18 18" /><path d="M10.6 6.2A10.8 10.8 0 0 1 12 6c5.4 0 9.2 4.3 10 6- .4.9-1.4 2.4-3 3.7M6.2 6.2C3.9 7.7 2.5 10 2 12c.8 1.7 4.6 6 10 6 1 0 2-.2 2.9-.6" /><circle cx="12" cy="12" r="3" /></svg> : <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>;
 }
 
 function configValue(config: JsonValue, key: string): JsonValue | undefined {

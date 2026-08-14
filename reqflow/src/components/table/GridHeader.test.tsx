@@ -25,7 +25,7 @@ describe("GridHeader 冻结菜单", () => {
     const onCreateField = vi.fn().mockResolvedValue("new-field");
     render(<GridHeader layouts={layouts} rowHeight={40} onCreateField={onCreateField} onResize={vi.fn()} onAutoFit={vi.fn()} onFreezeTo={vi.fn()} onClearExtraFreeze={vi.fn()} />);
     expect(screen.queryByText("文本")).toBeNull();
-    expect(screen.getAllByText("T")[0]).toHaveAttribute("aria-hidden", "true");
+    expect(document.querySelector('[data-field-type-icon="text"]')).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "打开 状态 字段菜单" }));
     expect(screen.getByText("类型：单选")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "＋ 添加字段" }));

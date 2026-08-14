@@ -12,7 +12,7 @@ const COLORS: Array<{ value: ConditionalColorRule["color"]; label: string }> = [
   { value: `${family}-strong` as ConditionalColorRule["color"], label: `${name} · 重色` },
 ]);
 
-export function ConditionalColorPanel({ fields, config, onChange, onClose, visibleFieldIds, anchor }: PanelProps & { visibleFieldIds?: string[]; anchor?: HTMLElement | null }) {
+export function ConditionalColorPanel({ fields, config, onChange, onClose, visibleFieldIds, anchor }: PanelProps & { visibleFieldIds?: string[] }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<ConditionalColorRule[]>([]);

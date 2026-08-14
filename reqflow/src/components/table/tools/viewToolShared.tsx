@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { FieldSummary, JsonValue } from "../../../types/domain";
+import { FieldTypeIcon } from "../../fields/FieldTypeIcon";
 import { filterOperatorsFor, type FilterOperator, type ViewFilter, type ViewPipelineConfig } from "../../../lib/table/viewPipeline";
 
 export interface PanelProps {
@@ -8,6 +9,7 @@ export interface PanelProps {
   config: ViewPipelineConfig;
   onChange: (config: ViewPipelineConfig) => void;
   onClose: () => void;
+  anchor?: HTMLElement | null;
 }
 
 const OPERATOR_LABELS: Record<FilterOperator, string> = {
@@ -17,7 +19,7 @@ const OPERATOR_LABELS: Record<FilterOperator, string> = {
   hasFiles: "有附件", fileNameContains: "文件名包含", fileCountEquals: "附件数等于", fileCountGreaterThan: "附件数大于", fileCountLessThan: "附件数小于",
 };
 
-export function Panel({ title, onClose, children, wide = false, anchor }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; anchor?: HTMLElement | null }) {
+export function Panel({ title, onClose, children, wide = false, compact = false, titleHidden = false, anchor }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean; compact?: boolean; titleHidden?: boolean; anchor?: HTMLElement | null }) {
   const panelRef = useRef<HTMLElement>(null);
   const [position, setPosition] = useState<CSSProperties | undefined>();
   useEffect(() => { panelRef.current?.querySelector<HTMLElement>("input, select, button:not([disabled])")?.focus(); }, []);
@@ -25,14 +27,19 @@ export function Panel({ title, onClose, children, wide = false, anchor }: { titl
     if (!anchor) return;
     const place = () => {
       const rect = anchor.getBoundingClientRect();
-      const width = Math.min(wide ? 460 : 340, window.innerWidth - 24);
-      setPosition({ position: "fixed", zIndex: 1000, top: rect.bottom + 6, left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)), width });
+      const width = Math.min(wide ? 460 : compact ? 128 : 340, window.innerWidth - 24);
+      const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+      const maxHeight = Math.max(120, window.innerHeight - 24);
+      const opensUpward = rect.bottom + 6 + Math.min(maxHeight, 360) > window.innerHeight && rect.top > window.innerHeight - rect.bottom;
+      setPosition(opensUpward
+        ? { position: "fixed", zIndex: 1000, bottom: window.innerHeight - rect.top + 6, left, width, maxHeight }
+        : { position: "fixed", zIndex: 1000, top: rect.bottom + 6, left, width, maxHeight });
     };
     place(); window.addEventListener("resize", place); window.addEventListener("scroll", place, true);
     return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
-  }, [anchor, wide]);
-  const panel = <section ref={panelRef} style={position} className={`morfra-view-tool-panel${wide ? " is-wide" : ""}${anchor ? " is-portal" : ""}`} role="dialog" aria-label={title} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}>
-    <header><h2>{title}</h2></header>
+  }, [anchor, compact, wide]);
+  const panel = <section ref={panelRef} style={position} className={`morfra-view-tool-panel${wide ? " is-wide" : ""}${compact ? " is-compact" : ""}${anchor ? " is-portal" : ""}`} role="dialog" aria-label={title} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }}>
+    {!titleHidden && <header><h2>{title}</h2></header>}
     {children}
   </section>;
   return anchor && typeof document !== "undefined" ? createPortal(panel, document.body) : panel;
@@ -74,4 +81,4 @@ export function newId() { return `view-rule-${Date.now()}-${Math.random().toStri
 export const operatorsFor = filterOperatorsFor;
 export function operatorLabel(operator: FilterOperator, field?: FieldSummary) { return operator === "equals" && ["select", "date", "created_time", "updated_time"].includes(field?.fieldType ?? "") ? "是" : operator === "notEquals" && ["select", "date", "created_time", "updated_time"].includes(field?.fieldType ?? "") ? "不是" : OPERATOR_LABELS[operator]; }
 export function operatorOptions(operators: FilterOperator[], field?: FieldSummary) { return operators.map((operator) => <option key={operator} value={operator}>{operatorLabel(operator, field)}</option>); }
-export function fieldTypeIcon(field: FieldSummary) { return ({ text: "T", number: "#", progress: "%", select: "⌄", multi_select: "≡", date: "◷", checkbox: "☑", link: "↗", image: "▧", file: "▤", auto_number: "#", created_time: "◷", updated_time: "◷" } as const)[field.fieldType]; }
+export function fieldTypeIcon(field: FieldSummary) { return <FieldTypeIcon type={field.fieldType} />; }

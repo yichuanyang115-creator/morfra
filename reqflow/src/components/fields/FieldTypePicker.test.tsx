@@ -6,6 +6,7 @@ describe("FieldTypePicker", () => {
   it("选择类型后立即使用中文默认名称创建一次", async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     render(<FieldTypePicker onCreate={onCreate} onClose={vi.fn()} />);
+    expect(document.querySelector('[data-field-type-icon="date"]')).toBeTruthy();
     fireEvent.click(screen.getByRole("option", { name: "日期" }));
     await waitFor(() => expect(onCreate).toHaveBeenCalledWith("date", "日期"));
     expect(onCreate).toHaveBeenCalledTimes(1);

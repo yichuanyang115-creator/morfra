@@ -3,7 +3,7 @@ import type { FieldSummary } from "../../../types/domain";
 import { isSortableField } from "../../../lib/table/viewPipeline";
 import { fieldTypeIcon, move, newId, Panel, type PanelProps, replace } from "./viewToolShared";
 
-export function SortPanel({ fields, config, onChange, onClose, visibleFieldIds }: PanelProps & { visibleFieldIds?: string[] }) {
+export function SortPanel({ fields, config, onChange, onClose, visibleFieldIds, anchor }: PanelProps & { visibleFieldIds?: string[] }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dragged, setDragged] = useState<number | null>(null);
   const directionRefs = useRef<Record<string, HTMLSelectElement | null>>({});
@@ -13,7 +13,7 @@ export function SortPanel({ fields, config, onChange, onClose, visibleFieldIds }
   const available = fields.filter((field) => isSortableField(field) && !selected.has(field.id));
   const add = (field: FieldSummary) => { const rule = { id: newId(), fieldId: field.id, direction: "asc" as const }; onChange({ ...config, sorts: [...config.sorts, rule] }); setPickerOpen(false); requestAnimationFrame(() => directionRefs.current[rule.id]?.focus()); };
   const remove = (index: number) => { const next = config.sorts.filter((_, item) => item !== index); onChange({ ...config, sorts: next }); requestAnimationFrame(() => { const adjacent = next[Math.min(index, next.length - 1)]; if (adjacent) directionRefs.current[adjacent.id]?.focus(); else addRef.current?.focus(); }); };
-  return <Panel title="排序" onClose={onClose}>
+  return <Panel title="排序" onClose={onClose} anchor={anchor}>
     {config.sorts.map((sort, index) => { const field = fields.find((item) => item.id === sort.fieldId); if (!field) return null; return <section draggable className="morfra-sort-rule" key={sort.id} onDragStart={() => setDragged(index)} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragged !== null) onChange({ ...config, sorts: move(config.sorts, dragged, index) }); setDragged(null); }}>
       <span className="morfra-sort-grip" aria-hidden="true">⠿</span><span aria-hidden="true">{fieldTypeIcon(field)}</span><strong>{field.name}</strong>
       <select ref={(node) => { directionRefs.current[sort.id] = node; }} aria-label={`${field.name} 排序方向`} value={sort.direction} onChange={(event) => onChange({ ...config, sorts: replace(config.sorts, index, { ...sort, direction: event.target.value === "desc" ? "desc" : "asc" }) })}>{directionOptions(field)}</select>

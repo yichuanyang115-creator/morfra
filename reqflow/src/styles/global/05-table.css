@@ -59,17 +59,16 @@
 .morfra-view-toolbar-actions .is-active { background: var(--morfra-accent-subtle); color: var(--morfra-accent-primary); }
 .morfra-view-create-record { margin-left: auto; border: 0; background: var(--morfra-accent-primary); color: var(--morfra-surface-content); }
 .morfra-view-create-record:hover:not(:disabled) { background: var(--morfra-accent-primary) !important; color: var(--morfra-surface-content) !important; filter: brightness(.95); }
-.morfra-view-row-height { position: relative; display: inline-flex; align-items: center; white-space: nowrap; }
 .morfra-row-height-menu { position: absolute; z-index: 31; top: calc(100% + 6px); left: 0; display: grid; min-width: 104px; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); padding: 3px; }
+.morfra-view-tool-panel .morfra-row-height-menu { position: static; border: 0; box-shadow: none; padding: 0; }
 .morfra-row-height-menu button { display: grid; grid-template-columns: 14px 1fr; align-items: center; gap: 4px; border: 0; background: transparent; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 11px; padding: 5px 7px; text-align: left; }
 .morfra-row-height-menu button:hover, .morfra-row-height-menu button:focus-visible { background: var(--morfra-accent-subtle); color: var(--morfra-accent-primary); outline: none; }
 .morfra-row-height-check { display: inline-block; width: 14px; text-align: center; }
-.morfra-view-more-trigger { display: none; }
 .morfra-view-tool-anchor { position: relative; display: inline-flex; flex: none; }
 .morfra-view-tool-panel { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; display: grid; width: min(340px, calc(100vw - 24px)); max-height: min(520px, calc(100vh - 100px)); overflow: auto; gap: 8px; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-panel); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); padding: 12px; color: var(--morfra-text-primary); }
 .morfra-view-tool-panel.is-wide { width: min(460px, calc(100vw - 24px)); }
+.morfra-view-tool-panel.is-compact { width: min(128px, calc(100vw - 24px)); overflow-x: hidden; overflow-y: auto; }
 .morfra-view-tool-panel.is-portal { max-width: calc(100vw - 24px); font-size: 11px; }
-.morfra-view-tool-anchor.morfra-view-secondary-tool .morfra-view-tool-panel, .morfra-view-tool-anchor.morfra-view-more-trigger .morfra-view-tool-panel { right: 0; left: auto; }
 .morfra-view-tool-panel header, .morfra-view-tool-row { display: flex; align-items: center; gap: 6px; }
 .morfra-view-tool-panel header h2 { margin: 0; color: var(--morfra-text-primary); font: inherit; font-weight: 600; }
 .morfra-view-tool-panel select, .morfra-view-tool-panel input:not([type="checkbox"]) { min-width: 0; flex: 1; border: 1px solid var(--morfra-border-subtle); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-canvas); color: var(--morfra-text-primary); font: inherit; padding: 4px 6px; }
@@ -171,10 +170,6 @@
 .morfra-kanban-card-actions button:last-child { color: var(--morfra-status-danger); }
 .morfra-kanban-add { margin: 0 7px 7px; text-align: left; }
 
-@media (max-width: 1120px) {
-  .morfra-view-secondary-tool, .morfra-view-toolbar-actions > .morfra-view-row-height { display: none; }
-  .morfra-view-more-trigger { display: inline-flex; }
-}
 
 .morfra-toolbar-hint {
   color: var(--morfra-text-tertiary);
@@ -210,7 +205,8 @@
 .morfra-grid-header { position: sticky; z-index: 6; top: 0; display: grid; width: max-content; min-width: 100%; grid-auto-flow: column; grid-template-rows: 40px; border-bottom: 1px solid var(--morfra-border-default); background: var(--morfra-surface-canvas); }
 .morfra-grid-column-header { position: relative; display: flex; min-width: 0; align-items: center; gap: 5px; border-right: 1px solid var(--morfra-border-subtle); background: var(--morfra-surface-canvas); color: var(--morfra-text-secondary); font-size: 11px; font-weight: 500; padding: 0 18px 0 8px; }
 .morfra-grid-column-header > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.morfra-grid-field-type-icon { display: inline-grid; width: 14px; flex: none; place-items: center; color: var(--morfra-text-tertiary); font-size: 10px; font-weight: 600; }
+.morfra-grid-field-type-icon { display: inline-grid; width: 16px; flex: none; place-items: center; color: var(--morfra-text-tertiary); }
+.morfra-grid-field-type-icon svg { width: 14px; height: 14px; }
 .morfra-grid-freeze { margin-left: auto; border: 0; background: transparent; color: var(--morfra-text-tertiary); cursor: pointer; }
 .morfra-grid-header-menu { position: absolute; z-index: 10; top: calc(100% - 2px); right: 4px; display: grid; min-width: 108px; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); padding: 3px; }
 .morfra-grid-header-menu button { border: 0; border-radius: calc(var(--morfra-radius-control) - 2px); background: transparent; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 11px; padding: 5px 7px; text-align: left; white-space: nowrap; }
@@ -224,7 +220,8 @@
 .morfra-field-type-picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--morfra-text-secondary); font-size: 11px; font-weight: 600; padding: 1px 2px 6px; }
 .morfra-field-type-picker-heading button { border: 0; background: transparent; color: var(--morfra-text-tertiary); cursor: pointer; font: inherit; font-size: 15px; line-height: 1; }
 .morfra-field-type-picker-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
-.morfra-field-type-picker-options button { min-width: 0; border: 0; border-radius: var(--morfra-radius-control); background: transparent; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 11px; padding: 6px; text-align: left; }
+.morfra-field-type-picker-options button { display: flex; min-width: 0; align-items: center; gap: 7px; border: 0; border-radius: var(--morfra-radius-control); background: transparent; color: var(--morfra-text-primary); cursor: pointer; font: inherit; font-size: 11px; padding: 6px; text-align: left; }
+.morfra-field-type-picker-options button svg { width: 16px; height: 16px; flex: none; color: var(--morfra-text-secondary); }
 .morfra-field-type-picker-options button:hover:not(:disabled), .morfra-field-type-picker-options button:focus-visible { background: var(--morfra-accent-subtle); outline: none; }
 .morfra-field-type-picker-options button:disabled { cursor: wait; opacity: .62; }
 .morfra-field-type-picker > p { margin: 6px 2px 0; color: var(--morfra-status-danger); font-size: 10px; }

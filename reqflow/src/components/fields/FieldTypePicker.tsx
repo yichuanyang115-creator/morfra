@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FieldType } from "../../types/domain";
-import { FIELD_TYPE_LABELS } from "./FieldEditor";
+import { FIELD_TYPE_LABELS, FieldTypeIcon } from "./FieldTypeIcon";
 import { CREATABLE_FIELD_TYPES, defaultFieldName } from "./fieldCreation";
 
 interface FieldTypePickerProps {
@@ -20,7 +20,7 @@ export function FieldTypePicker({ onCreate, onClose, inline = false }: FieldType
   return <div className={`morfra-field-type-picker${inline ? " is-inline" : ""}`} role="dialog" aria-label="选择字段类型" aria-describedby={error ? "field-type-picker-error" : undefined} onKeyDown={(event) => { if (event.key === "Escape" && !creating) onClose(); }}>
     <div className="morfra-field-type-picker-heading"><span>选择字段类型</span><button type="button" aria-label="关闭字段类型选择器" onClick={onClose} disabled={Boolean(creating)}>×</button></div>
     <div className="morfra-field-type-picker-options" role="listbox" aria-label="字段类型">
-      {CREATABLE_FIELD_TYPES.map((fieldType) => <button key={fieldType} type="button" role="option" aria-selected={creating === fieldType} disabled={Boolean(creating)} onClick={() => void choose(fieldType)}>{FIELD_TYPE_LABELS[fieldType]}{creating === fieldType && <span aria-label="正在创建">…</span>}</button>)}
+      {CREATABLE_FIELD_TYPES.map((fieldType) => <button key={fieldType} type="button" role="option" aria-selected={creating === fieldType} disabled={Boolean(creating)} onClick={() => void choose(fieldType)}><FieldTypeIcon type={fieldType} /><span>{FIELD_TYPE_LABELS[fieldType]}</span>{creating === fieldType && <span aria-label="正在创建">…</span>}</button>)}
     </div>
     {error && <p id="field-type-picker-error" role="alert">{error}</p>}
   </div>;

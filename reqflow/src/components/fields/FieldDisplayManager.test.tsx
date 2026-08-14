@@ -26,4 +26,14 @@ describe("FieldDisplayManager", () => {
     expect(onChange.mock.calls[onChange.mock.calls.length - 1]?.[0]).toEqual(["title", "status"]);
 
   });
+
+  it("提供当前视图列顺序的键盘等价操作，并保留隐藏字段标识", async () => {
+    const onChange = vi.fn(); const user = userEvent.setup();
+    const { rerender } = render(<FieldDisplayManager fields={fields} selectedIds={["title", "status", "owner"]} onChange={onChange} onClose={vi.fn()} onReset={vi.fn()} />);
+    await user.click(screen.getByRole("button", { name: "上移 负责人 字段" }));
+    expect(onChange.mock.calls[onChange.mock.calls.length - 1]?.[0]).toEqual(["title", "owner", "status"]);
+    await user.click(screen.getByRole("button", { name: "隐藏其他字段" }));
+    rerender(<FieldDisplayManager fields={fields} selectedIds={["title"]} onChange={onChange} onClose={vi.fn()} onReset={vi.fn()} />);
+    expect(screen.getAllByText("已隐藏")).toHaveLength(2);
+  });
 });

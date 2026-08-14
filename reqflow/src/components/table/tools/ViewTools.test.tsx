@@ -16,7 +16,7 @@ const fields: FieldSummary[] = [
 function Harness() {
   const [config, setConfig] = useState<ViewPipelineConfig>(EMPTY_VIEW_PIPELINE);
   const [rowHeight, setRowHeight] = useState<32 | 40 | 56>(40);
-  return <ViewTools fields={fields} visibleFieldCount={fields.length - 1} visibleFieldIds={["title", "score"]} config={config} search="" rowHeight={rowHeight} onSearchChange={vi.fn()} onRowHeightChange={setRowHeight} onChange={setConfig} onOpenFieldDisplay={vi.fn()} />;
+  return <ViewTools fields={fields} visibleFieldIds={["title", "score"]} config={config} search="" rowHeight={rowHeight} onSearchChange={vi.fn()} onRowHeightChange={setRowHeight} onChange={setConfig} />;
 }
 
 describe("ViewTools", () => {
@@ -28,6 +28,8 @@ describe("ViewTools", () => {
     await user.click(screen.getByRole("button", { name: "＋ 添加筛选条件" }));
     const picker = screen.getByRole("listbox", { name: "选择筛选字段" });
     expect(picker.querySelectorAll('[role="option"]')).toHaveLength(4);
+    expect(picker.querySelector('[data-field-type-icon="text"]')).toBeTruthy();
+    expect(picker.querySelector('[data-field-type-icon="number"]')).toBeTruthy();
     expect(screen.getByRole("option", { name: /标题/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /分数.*已隐藏/ })).toBeTruthy();
     await user.click(screen.getAllByRole("option", { name: /分数/ })[0]);
@@ -123,12 +125,12 @@ describe("ViewTools", () => {
     expect(screen.getByRole("button", { name: "删除 标题 填色规则" })).toBeTruthy();
   });
 
-  it("复杂浮层锚定在触发按钮内，Esc 关闭后回到触发按钮", async () => {
+  it("复杂浮层锚定在触发按钮，Esc 关闭后回到触发按钮", async () => {
     const user = userEvent.setup();
     render(<Harness />);
     const trigger = screen.getByRole("button", { name: "筛选" });
     await user.click(trigger);
-    expect(trigger.parentElement?.querySelector('[role="dialog"]')).toHaveAccessibleName("筛选");
+    expect(screen.getByRole("dialog", { name: "筛选" })).toBeVisible();
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog", { name: "筛选" })).toBeNull();
     expect(trigger).toHaveFocus();
@@ -137,7 +139,7 @@ describe("ViewTools", () => {
   it("表格工具栏把新建记录保留在最右侧主操作", async () => {
     const onCreateRecord = vi.fn();
     const user = userEvent.setup();
-    render(<ViewTools fields={fields} visibleFieldCount={fields.length} config={EMPTY_VIEW_PIPELINE} search="" rowHeight={40} onSearchChange={vi.fn()} onRowHeightChange={vi.fn()} onChange={vi.fn()} onOpenFieldDisplay={vi.fn()} onCreateRecord={onCreateRecord} />);
+    render(<ViewTools fields={fields} config={EMPTY_VIEW_PIPELINE} search="" rowHeight={40} onSearchChange={vi.fn()} onRowHeightChange={vi.fn()} onChange={vi.fn()} onCreateRecord={onCreateRecord} />);
     await user.click(screen.getByRole("button", { name: "新建记录" }));
     expect(onCreateRecord).toHaveBeenCalledOnce();
   });
@@ -149,6 +151,8 @@ describe("ViewTools", () => {
     expect(screen.queryByRole("combobox", { name: "行高" })).toBeNull();
     await user.click(trigger);
     expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("dialog", { name: "行高" })).toHaveClass("is-compact");
+    expect(screen.getByRole("dialog", { name: "行高" }).querySelector("header")).toBeNull();
     expect(screen.getByRole("menuitemradio", { name: "标准" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("menuitemradio", { name: "紧凑" })).toHaveAttribute("aria-checked", "false");
     await user.click(screen.getByRole("menuitemradio", { name: "宽松" }));
@@ -168,5 +172,26 @@ describe("ViewTools", () => {
     await user.keyboard(" {Escape}");
     expect(trigger).toHaveFocus();
     expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("五个工具浮层互斥，按钮在打开时有明确状态，并支持外部点击关闭", async () => {
+    const user = userEvent.setup();
+    render(<><Harness /><button type="button">外部控件</button></>);
+    const filter = screen.getByRole("button", { name: "筛选" });
+    await user.click(filter);
+    expect(filter).toHaveClass("is-active");
+    expect(filter).toHaveAttribute("aria-expanded", "true");
+    await user.click(screen.getByRole("button", { name: "排序" }));
+    expect(screen.queryByRole("dialog", { name: "筛选" })).toBeNull();
+    expect(screen.getByRole("dialog", { name: "排序" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "外部控件" }));
+    expect(screen.queryByRole("dialog", { name: "排序" })).toBeNull();
+    expect(screen.getByRole("button", { name: "外部控件" })).toHaveFocus();
+  });
+
+  it("工具栏不再渲染更多或字段显示入口", () => {
+    render(<Harness />);
+    expect(screen.queryByRole("button", { name: "更多" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "字段显示" })).toBeNull();
   });
 });

@@ -218,12 +218,6 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   const groupField = tableData?.fields.find((field) => field.id === gridLayout?.pipeline?.group.fieldId);
   const boardConfig = useMemo(() => parseBoardConfig(gridLayout?.board, tableData?.fields ?? []), [gridLayout?.board, tableData?.fields]);
   const changePipeline = (pipeline: ViewPipelineConfig) => { if (gridLayout) setGridLayoutConfig({ ...gridLayout, pipeline }); };
-  const fieldDisplayActive = Boolean(tableData && gridLayout && (
-    gridLayout.fieldIds.length !== tableData.fields.length
-    || gridLayout.fieldIds.some((fieldId, index) => fieldId !== tableData.fields[index]?.id)
-    || Object.keys(gridLayout.columnWidths).length > 0
-    || gridLayout.frozenFieldId !== null
-  ));
   const createGroupedRecord = async (key: string) => {
     if (!groupField || !activeTable || !tableData) return;
     const title = window.prompt("新记录标题");
@@ -240,7 +234,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
     {project && activeTable && activeView ? <section className="morfra-storage-surface">
       <TableHeader table={{ ...activeTable, recordCount: tableData?.records.length ?? activeTable.recordCount }} onRename={(name) => run(() => actions.renameTable(activeTable.id, name), "表重命名失败，请重试")} onOpenFieldManager={() => setFieldManagerOpen(true)} onOpenBackupSettings={() => setBackupSettingsOpen(true)} />
       <ViewTabBar tableId={activeTable.id} views={activeTable.views} activeViewId={activeView.id} onSelect={(id) => setActiveView(activeTable.id, id)} onCreate={(name, type) => run(() => actions.createView(activeTable.id, name, type), "新建视图失败，请重试")} onRename={(id, name) => run(() => actions.renameView(id, name), "视图重命名失败，请重试")} onDuplicate={(id, name) => run(() => actions.duplicateView(id, name), "复制视图失败，请重试")} onDelete={(id) => run(() => actions.deleteView(id), "删除视图失败，请重试")} onReorder={(ids) => run(() => actions.reorderViews(activeTable.id, ids), "视图顺序保存失败，请重试")} />
-      <ViewToolbar view={activeView} fields={tableData?.fields} visibleFieldCount={gridLayout?.fieldIds.length} visibleFieldIds={gridLayout?.fieldIds} pipeline={gridLayout?.pipeline ?? EMPTY_VIEW_PIPELINE} search={gridSearch} rowHeight={gridLayout?.rowHeight} onSearchChange={setGridSearch} onRowHeightChange={(rowHeight) => { if (gridLayout) setGridLayoutConfig({ ...gridLayout, rowHeight }); }} onPipelineChange={changePipeline} onOpenFieldDisplay={() => undefined} fieldDisplayActive={fieldDisplayActive} renderFieldDisplayPanel={tableData && fieldDisplayIds && gridLayout && gridLayoutViewId === activeView.id ? (onClose) => <FieldDisplayManager fields={tableData.fields} selectedIds={fieldDisplayIds} onChange={(fieldIds) => setGridLayoutConfig({ ...gridLayout, fieldIds })} onReset={() => setGridLayoutConfig(resetGridFieldLayout(gridLayout, tableData.fields.map((field) => field.id)))} onClose={onClose} /> : undefined} onCreateRecord={() => void run(() => createRecord(activeTable.id, { [activeTable.titleFieldId]: "未命名记录" }).then(() => undefined), "新建记录失败，请重试")} boardMode={activeView.viewType === "board"} />
+      <ViewToolbar view={activeView} fields={tableData?.fields} visibleFieldIds={gridLayout?.fieldIds} pipeline={gridLayout?.pipeline ?? EMPTY_VIEW_PIPELINE} search={gridSearch} rowHeight={gridLayout?.rowHeight} onSearchChange={setGridSearch} onRowHeightChange={(rowHeight) => { if (gridLayout) setGridLayoutConfig({ ...gridLayout, rowHeight }); }} onPipelineChange={changePipeline} onCreateRecord={() => void run(() => createRecord(activeTable.id, { [activeTable.titleFieldId]: "未命名记录" }).then(() => undefined), "新建记录失败，请重试")} boardMode={activeView.viewType === "board"} />
       <div className="morfra-storage-data-area">
         {showGridSkeleton && loadingGridLayout && <DataGridLoadingSkeleton config={loadingGridLayout} />}
         {tableDataLoading && gridLayoutReady && <div className="morfra-grid-refresh-indicator" role="status">正在刷新表格数据…</div>}
@@ -253,7 +247,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
       </div>
     </section> : <div className="morfra-storage-empty morfra-storage-empty-project"><span aria-hidden="true">□</span><p>没有打开的项目</p><small>从文件菜单打开本地项目，或从项目切换器创建空白项目。</small></div>}
     {error && <p role="alert" className="morfra-storage-error">{error}{activeTable && <button type="button" className="ml-2 underline" onClick={() => { setError(null); void loadTableData(activeTable.id).catch(() => setError("字段和记录读取失败，请重试")); }}>重试</button>}</p>}
-    {fieldManagerOpen && tableData && <FieldManager tableId={activeTable.id} data={tableData} onClose={() => setFieldManagerOpen(false)} onError={setError} />}
+    {fieldManagerOpen && tableData && <FieldManager tableId={activeTable.id} data={tableData} viewLayout={gridLayout && gridLayoutViewId === activeView?.id ? { fieldIds: gridLayout.fieldIds, onChange: (fieldIds) => setGridLayoutConfig({ ...gridLayout, fieldIds }), onReset: () => setGridLayoutConfig(resetGridFieldLayout(gridLayout, tableData.fields.map((field) => field.id))) } : undefined} onClose={() => setFieldManagerOpen(false)} onError={setError} />}
     {backupSettingsOpen && <BackupSettings onClose={() => setBackupSettingsOpen(false)} onRestored={async (snapshot: ProjectSnapshot) => { useProjectStore.setState((state) => ({ projects: state.projects.map((item) => item.id === snapshot.manifest.id ? { ...item, name: snapshot.manifest.name, storageSnapshot: snapshot } : item) })); const firstTable = snapshot.tables[0]; if (firstTable) { setActiveTable(snapshot.manifest.id, firstTable.id); await loadTableData(firstTable.id); } }} />}
     {detailFieldsOpen && tableData && detailFields && <FieldDisplayManager fields={tableData.fields.filter((field) => !field.isTitle)} selectedIds={detailFields} title="详情显示字段" description="只影响记录详情字段，不联动表格字段显示。" onChange={(fieldIds) => { void setDetailFields(activeTable.id, fieldIds).catch(() => setError("详情字段保存失败，已恢复")); }} onClose={() => setDetailFieldsOpen(false)} />}
   </main>;
