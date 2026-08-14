@@ -40,6 +40,12 @@ describe("parseGridLayout", () => {
     expect(layout.pipeline?.sorts).toEqual([{ id: "title-sort", fieldId: "title", direction: "desc" }]);
   });
 
+  it("恢复旧视图时清理不再允许的分组字段和折叠状态", () => {
+    const file = { ...fields[1], id: "files", fieldType: "file" as const };
+    const layout = parseGridLayout({ group: { fieldId: "files", direction: "desc", collapsedKeys: ["x"] } }, [...fields, file]);
+    expect(layout.pipeline?.group).toEqual({ fieldId: null, direction: "asc", collapsedKeys: [] });
+  });
+
   it("将图片和文件编辑草稿规范化为多附件 URL 列表", () => {
     const file: FieldSummary = { ...fields[1], id: "files", fieldType: "file" };
     expect(normalizeGridValue(file, "https://a.test/one.pdf, https://a.test/two.pdf")).toEqual(["https://a.test/one.pdf", "https://a.test/two.pdf"]);

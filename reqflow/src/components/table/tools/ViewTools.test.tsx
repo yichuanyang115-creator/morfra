@@ -81,6 +81,24 @@ describe("ViewTools", () => {
     expect(screen.getByRole("button", { name: "下移 分数 排序" })).toBeTruthy();
   });
 
+  it("分组先选允许字段，隐藏字段可选，启用后只管理单一字段与方向", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByRole("button", { name: "分组" }));
+    expect(screen.queryByRole("combobox")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "＋ 添加分组字段" }));
+    screen.getByRole("listbox", { name: "选择分组字段" });
+    expect(screen.queryByRole("option", { name: /标题/ })).toBeNull();
+    expect(screen.queryByRole("option", { name: /附件/ })).toBeNull();
+    expect(screen.getByRole("option", { name: /分数.*已隐藏/ })).toBeTruthy();
+    await user.click(screen.getAllByRole("option", { name: /分数/ })[0]);
+    expect(screen.getByRole("button", { name: "分组" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("分数 分组方向")).toHaveValue("asc");
+    expect(screen.queryByRole("button", { name: "＋ 添加分组字段" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "清除分组" }));
+    expect(screen.getByRole("button", { name: "＋ 添加分组字段" })).toHaveFocus();
+  });
+
   it("条件填色规则支持复制和启停", async () => {
     const user = userEvent.setup();
     render(<Harness />);
