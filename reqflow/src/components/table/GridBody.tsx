@@ -1,7 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect } from "react";
 import type { CSSProperties, RefObject } from "react";
-import { ROW_NUMBER_WIDTH, type ColumnLayout } from "../../lib/table/columnLayout";
+import { ADD_FIELD_COLUMN_WIDTH, ROW_NUMBER_WIDTH, type ColumnLayout } from "../../lib/table/columnLayout";
 import { containsCell, selectRows, type GridPoint, type GridSelection } from "../../lib/table/selectionModel";
 import type { RecordData } from "../../types/domain";
 import { GridCell } from "./GridCell";
@@ -37,12 +37,13 @@ interface GridBodyProps {
   onToggleGroup?: (key: string) => void;
   onCreateInGroup?: (key: string) => void;
   rowTops?: number[];
+  showAddFieldColumn?: boolean;
 }
 
 const GROUP_HEADER_HEIGHT = 32;
 const GROUP_FOOTER_HEIGHT = 28;
 
-export function GridBody({ gridId, parentRef, layouts, frozenBoundaryFieldId, frozenBoundaryWidth = ROW_NUMBER_WIDTH, scrollLeft = 0, records, rowHeight, selection, editing, onOpenDetail, onRenderedRecordsChange, onSelectCell, onExtendSelection, onSelectRows, onStartEditing, onContextCell, onContextRow, onToggleCheckbox, conditionalColors = [], recordGroups = [], groups = [], collapsedKeys = [], onToggleGroup, onCreateInGroup, rowTops }: GridBodyProps) {
+export function GridBody({ gridId, parentRef, layouts, frozenBoundaryFieldId, frozenBoundaryWidth = ROW_NUMBER_WIDTH, scrollLeft = 0, records, rowHeight, selection, editing, onOpenDetail, onRenderedRecordsChange, onSelectCell, onExtendSelection, onSelectRows, onStartEditing, onContextCell, onContextRow, onToggleCheckbox, conditionalColors = [], recordGroups = [], groups = [], collapsedKeys = [], onToggleGroup, onCreateInGroup, rowTops, showAddFieldColumn = false }: GridBodyProps) {
   const grouped = recordGroups.length === records.length;
   const itemSize = (index: number) => (grouped && recordGroups[index]?.collapsed ? 0 : rowHeight) + (grouped && recordGroups[index]?.first ? GROUP_HEADER_HEIGHT : 0) + (grouped && recordGroups[index]?.last && onCreateInGroup && !recordGroups[index]?.collapsed ? GROUP_FOOTER_HEIGHT : 0);
   const rowVirtualizer = useVirtualizer({ count: records.length, getScrollElement: () => parentRef.current, estimateSize: itemSize, overscan: 4 });
@@ -60,9 +61,9 @@ export function GridBody({ gridId, parentRef, layouts, frozenBoundaryFieldId, fr
       const record = records[virtualRow.index];
       const group = grouped ? recordGroups[virtualRow.index] : undefined;
       const contentTop = group?.first ? GROUP_HEADER_HEIGHT : 0;
-      return <div key={`${record.id}:${group?.key ?? "flat"}`} role="row" aria-rowindex={virtualRow.index + 1} className="morfra-grid-row" data-row-index={virtualRow.index} style={{ width: gridWidth(layouts), height: itemSize(virtualRow.index), transform: `translateY(${virtualRow.start}px)` }}>
+      return <div key={`${record.id}:${group?.key ?? "flat"}`} role="row" aria-rowindex={virtualRow.index + 1} className="morfra-grid-row" data-row-index={virtualRow.index} style={{ width: gridWidth(layouts, showAddFieldColumn), height: itemSize(virtualRow.index), transform: `translateY(${virtualRow.start}px)` }}>
         {group?.first && <GroupHeader group={group} onToggle={onToggleGroup} />}
-        {!group?.collapsed && <div className="morfra-grid-record-row" style={{ gridTemplateColumns: gridTemplate(layouts), top: contentTop, height: rowHeight }}>
+        {!group?.collapsed && <div className="morfra-grid-record-row" style={{ gridTemplateColumns: gridTemplate(layouts, showAddFieldColumn), top: contentTop, height: rowHeight }}>
         <div role="rowheader" className={`morfra-grid-row-number morfra-grid-sticky ${selection?.rows.includes(virtualRow.index) ? "is-selected" : ""}`} onPointerDown={(event) => {
           if ((event.target as HTMLElement).closest("button")) return;
           event.preventDefault();
@@ -81,6 +82,7 @@ export function GridBody({ gridId, parentRef, layouts, frozenBoundaryFieldId, fr
           const clippedWidth = layout.frozen ? 0 : Math.max(0, frozenBoundaryWidth + scrollLeft - cellLeft);
           return <div key={layout.field.id} className={`morfra-grid-cell ${layout.frozen ? "is-frozen" : ""} ${layout.field.id === frozenBoundaryFieldId ? "is-frozen-edge" : ""}`} data-column-index={columnIndex} style={layout.frozen ? { left: `var(--grid-sticky-${layout.field.id})`, width: layout.width } : { left: cellLeft, width: layout.width, clipPath: clippedWidth ? `inset(0 0 0 ${Math.min(layout.width, clippedWidth)}px)` : undefined }}><GridCell id={`${gridId}-cell-${point.row}-${point.column}`} field={layout.field} record={record} point={point} selected={selected} active={active} editing={isEditing} conditionalColor={color} readOnly={layout.field.id.startsWith("collapsed:") || ["auto_number", "created_time", "updated_time"].includes(layout.field.fieldType)} onPointerDown={(event) => { if (event.button !== 2) { event.preventDefault(); onSelectCell(point, event.shiftKey); } }} onPointerEnter={(event) => { if (event.buttons === 1) onExtendSelection(point); }} onDoubleClick={() => onStartEditing(point)} onContextMenu={(event) => onContextCell(point, event)} onToggleCheckbox={() => onToggleCheckbox(point)} onOpenDetail={layout.field.isTitle ? () => onOpenDetail(record.id) : undefined} detailLabel={`打开第 ${virtualRow.index + 1} 条记录详情`} /></div>;
         })}
+        {showAddFieldColumn && <div className="morfra-grid-add-field-cell" aria-hidden="true" style={{ left: ROW_NUMBER_WIDTH + layouts.reduce((sum, layout) => sum + layout.width, 0), width: ADD_FIELD_COLUMN_WIDTH }} />}
         </div>}
         {group?.last && onCreateInGroup && <div className="morfra-record-group-footer" style={{ top: contentTop + rowHeight, height: GROUP_FOOTER_HEIGHT }}><button type="button" onClick={() => onCreateInGroup(group.key)}>＋ 在“{group.label}”中新建记录</button></div>}
       </div>;
@@ -96,5 +98,5 @@ function GroupHeader({ group, onToggle }: { group: Pick<ProjectedGroup, "key" | 
   return <div className="morfra-record-group-header" style={{ height: GROUP_HEADER_HEIGHT }}><button type="button" aria-label={`${group.label}分组`} aria-expanded={!group.collapsed} onClick={() => onToggle?.(group.key)}>{group.collapsed ? "›" : "⌄"}</button><strong>{group.label}</strong><span>{group.count} 条记录</span></div>;
 }
 
-function gridTemplate(layouts: ColumnLayout[]): CSSProperties["gridTemplateColumns"] { return `${ROW_NUMBER_WIDTH}px ${layouts.map((layout) => `${layout.width}px`).join(" ")}`; }
-function gridWidth(layouts: ColumnLayout[]) { return ROW_NUMBER_WIDTH + layouts.reduce((sum, layout) => sum + layout.width, 0); }
+function gridTemplate(layouts: ColumnLayout[], includeAddField: boolean): CSSProperties["gridTemplateColumns"] { return `${ROW_NUMBER_WIDTH}px ${layouts.map((layout) => `${layout.width}px`).join(" ")}${includeAddField ? ` ${ADD_FIELD_COLUMN_WIDTH}px` : ""}`; }
+function gridWidth(layouts: ColumnLayout[], includeAddField: boolean) { return ROW_NUMBER_WIDTH + layouts.reduce((sum, layout) => sum + layout.width, 0) + (includeAddField ? ADD_FIELD_COLUMN_WIDTH : 0); }

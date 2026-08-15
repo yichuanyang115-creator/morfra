@@ -28,7 +28,7 @@ describe("GridHeader 冻结菜单", () => {
     expect(document.querySelector('[data-field-type-icon="text"]')).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "打开 状态 字段菜单" }));
     expect(screen.getByText("类型：单选")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "＋ 添加字段" }));
+    fireEvent.click(screen.getByRole("button", { name: "添加字段" }));
     fireEvent.click(screen.getByRole("option", { name: "数字" }));
     await waitFor(() => expect(onCreateField).toHaveBeenCalledWith("number", "数字"));
   });
@@ -43,5 +43,15 @@ describe("GridHeader 冻结菜单", () => {
       expect.stringContaining("morfra-grid-column-header"),
       "morfra-grid-add-field-header",
     ]);
+    expect(header).toHaveStyle({ gridTemplateColumns: "48px 240px 200px 200px 40px" });
+    expect(screen.getByRole("button", { name: "添加字段" })).toHaveTextContent("＋");
+  });
+
+  it("关闭字段类型选择器后将焦点返回末尾添加字段按钮", async () => {
+    render(<GridHeader layouts={layouts} rowHeight={40} onCreateField={vi.fn()} onResize={vi.fn()} onAutoFit={vi.fn()} onFreezeTo={vi.fn()} onClearExtraFreeze={vi.fn()} />);
+    const trigger = screen.getByRole("button", { name: "添加字段" });
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "关闭字段类型选择器" }));
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 });

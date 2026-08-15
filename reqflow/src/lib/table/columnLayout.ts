@@ -1,6 +1,7 @@
 import type { FieldSummary, FieldType } from "../../types/domain";
 
 export const ROW_NUMBER_WIDTH = 48;
+export const ADD_FIELD_COLUMN_WIDTH = 40;
 export const MIN_SCROLLABLE_WIDTH = 280;
 
 const DEFAULT_WIDTHS: Record<FieldType, number> = {

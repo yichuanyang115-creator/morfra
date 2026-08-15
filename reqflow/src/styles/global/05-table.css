@@ -191,7 +191,7 @@
 .morfra-storage-data-area-table {
   isolation: isolate;
   box-sizing: border-box;
-  margin: 0 4px 4px;
+  margin: 0 8px 4px;
   border: 1px solid var(--morfra-border-subtle);
   border-radius: var(--morfra-radius-control);
   box-shadow: var(--morfra-shadow-grid-frame);
@@ -222,8 +222,11 @@
 .morfra-grid-header-menu button:hover:not(:disabled) { background: var(--morfra-accent-subtle); }
 .morfra-grid-header-menu button:disabled { color: var(--morfra-text-disabled); cursor: not-allowed; }
 .morfra-grid-field-type-label { color: var(--morfra-text-secondary); font-size: 10px; padding: 4px 7px 2px; }
-.morfra-grid-add-field-header { position: relative; display: flex; min-width: 0; align-items: center; border-right: 1px solid var(--morfra-border-subtle); background: var(--morfra-surface-canvas); padding: 0 8px; }
-.morfra-grid-add-field-header > button { border: 0; background: transparent; color: var(--morfra-accent-primary); cursor: pointer; font: inherit; font-size: 11px; padding: 4px; white-space: nowrap; }
+.morfra-grid-add-field-header { position: relative; display: flex; min-width: 0; align-items: center; justify-content: center; border-right: 1px solid var(--morfra-border-subtle); background: var(--morfra-surface-canvas); }
+.morfra-grid-add-field-trigger { display: grid; width: 100%; height: 100%; place-items: center; border: 0; background: transparent; color: var(--morfra-accent-primary); cursor: pointer; font: inherit; font-size: 17px; line-height: 1; }
+.morfra-grid-add-field-trigger:hover, .morfra-grid-add-field-trigger:focus-visible { background: var(--morfra-accent-subtle); outline: none; }
+.morfra-grid-add-field-cell { position: absolute; top: 0; height: 100%; box-sizing: border-box; border-right: 1px solid var(--morfra-border-subtle); background: var(--morfra-surface-content); pointer-events: none; }
+.morfra-grid-row:hover .morfra-grid-add-field-cell { background: color-mix(in srgb, var(--morfra-accent-subtle) 38%, var(--morfra-surface-content)); }
 .morfra-field-type-picker { position: absolute; z-index: 24; top: calc(100% + 4px); right: 4px; width: 184px; border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); color: var(--morfra-text-primary); padding: 8px; }
 .morfra-field-type-picker.is-inline { position: static; width: auto; box-shadow: none; }
 .morfra-field-type-picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--morfra-text-secondary); font-size: 11px; font-weight: 600; padding: 1px 2px 6px; }

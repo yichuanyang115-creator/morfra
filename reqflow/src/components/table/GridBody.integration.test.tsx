@@ -68,6 +68,20 @@ describe("GridBody 真实滚动虚拟化", () => {
     expect(row.querySelector(".morfra-grid-row-number")?.parentElement).toBe(row);
   });
 
+  it("只为真实记录投影不可编辑的末尾添加字段空单元格", async () => {
+    const parentRef = { current: document.createElement("div") };
+    Object.defineProperties(parentRef.current, { clientHeight: { configurable: true, value: 160 }, clientWidth: { configurable: true, value: 360 }, offsetHeight: { configurable: true, value: 160 }, offsetWidth: { configurable: true, value: 360 } });
+    parentRef.current.getBoundingClientRect = () => RECT;
+    const { container } = render(<GridBody gridId="operation-column" parentRef={parentRef} layouts={layouts.slice(0, 2)} records={records.slice(0, 1)} rowHeight={40} showAddFieldColumn selection={null} editing={null} onOpenDetail={vi.fn()} onRenderedRecordsChange={vi.fn()} onSelectCell={vi.fn()} onExtendSelection={vi.fn()} onSelectRows={vi.fn()} onStartEditing={vi.fn()} onContextCell={vi.fn()} onToggleCheckbox={vi.fn()} />);
+    await waitFor(() => expect(container.querySelector(".morfra-grid-record-row")).toBeTruthy());
+    const row = container.querySelector(".morfra-grid-record-row") as HTMLElement;
+    expect(row.style.gridTemplateColumns).toBe("48px 120px 120px 40px");
+    const operationCell = row.querySelector(".morfra-grid-add-field-cell") as HTMLElement;
+    expect(operationCell).toBeTruthy();
+    expect(operationCell).toHaveAttribute("aria-hidden", "true");
+    expect(operationCell).not.toHaveAttribute("tabindex");
+  });
+
   it("在虚拟表格行流中渲染组头、组内投影和组尾新增入口", async () => {
     const { container, getByText, getAllByText, getByRole } = render(<GroupedGridHarness />);
     await waitFor(() => expect(getByText("待办")).toBeTruthy());

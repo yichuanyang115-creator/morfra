@@ -1,4 +1,4 @@
-import { ROW_NUMBER_WIDTH, type ColumnLayout } from "../../lib/table/columnLayout";
+import { ADD_FIELD_COLUMN_WIDTH, ROW_NUMBER_WIDTH, type ColumnLayout } from "../../lib/table/columnLayout";
 import type { FieldType } from "../../types/domain";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { FieldTypePicker } from "../fields/FieldTypePicker";
@@ -36,9 +36,15 @@ function GridHeaderCell({ layout, frozenBoundary, rowHeight, autoEdit, onAutoEdi
 
 function QuickAddField({ onCreate, onCreated }: { onCreate: (fieldType: FieldType, name: string) => Promise<string>; onCreated: (fieldId: string) => void }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  function closePicker() {
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  }
   return <div className="morfra-grid-add-field-header">
-    {open ? <FieldTypePicker onCreate={async (fieldType, name) => { const fieldId = await onCreate(fieldType, name); onCreated(fieldId); setOpen(false); }} onClose={() => setOpen(false)} /> : <button type="button" onClick={() => setOpen(true)}>＋ 添加字段</button>}
+    <button ref={triggerRef} type="button" className="morfra-grid-add-field-trigger" aria-label="添加字段" aria-expanded={open} onClick={() => setOpen(true)}>＋</button>
+    {open && <FieldTypePicker onCreate={async (fieldType, name) => { const fieldId = await onCreate(fieldType, name); onCreated(fieldId); setOpen(false); }} onClose={closePicker} />}
   </div>;
 }
 
-function gridTemplate(layouts: ColumnLayout[], includeAddField: boolean) { return `${ROW_NUMBER_WIDTH}px ${layouts.map((layout) => `${layout.width}px`).join(" ")}${includeAddField ? " 112px" : ""}`; }
+function gridTemplate(layouts: ColumnLayout[], includeAddField: boolean) { return `${ROW_NUMBER_WIDTH}px ${layouts.map((layout) => `${layout.width}px`).join(" ")}${includeAddField ? ` ${ADD_FIELD_COLUMN_WIDTH}px` : ""}`; }
