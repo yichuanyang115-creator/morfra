@@ -51,14 +51,21 @@ button {
   height: 14px;
 }
 
-:focus-visible {
+:focus-visible:not(input):not(select):not(textarea):not([contenteditable]) {
   outline: 2px solid var(--semantic-action-base);
   outline-offset: 1px;
   border-radius: 4px;
 }
 
-.morfra-shell :focus-visible {
+.morfra-shell :focus-visible:not(input):not(select):not(textarea):not([contenteditable]) {
   outline-color: var(--morfra-focus-ring);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus {
+  border-color: var(--morfra-focus-ring);
+  outline: none;
 }
 
 /* 拖拽分隔条调整看板宽度时锁住全局光标和选中行为，避免拖着拖着突然选中一片文字。 */

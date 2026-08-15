@@ -145,6 +145,10 @@
   padding: 6px 8px;
 }
 
+.morfra-sidebar-create input:focus {
+  border-color: var(--morfra-focus-ring);
+}
+
 .morfra-sidebar-create button {
   width: 28px;
   border: 0;
@@ -214,7 +218,6 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid var(--morfra-border-subtle);
   padding: 8px 14px;
 }
 

@@ -15,7 +15,7 @@
 
 .morfra-table-title-input {
   width: min(50vw, 460px);
-  border: 1px solid var(--morfra-focus-ring);
+  border: 1px solid var(--morfra-border-default);
   border-radius: var(--morfra-radius-control);
   background: var(--morfra-surface-content);
   color: var(--morfra-text-primary);
@@ -40,7 +40,6 @@
   flex: none;
   align-items: stretch;
   gap: 4px;
-  border-bottom: 1px solid var(--morfra-border-subtle);
   padding: 0 8px;
 }
 
@@ -110,7 +109,7 @@
 
 .morfra-view-tab-input {
   width: 112px;
-  border: 1px solid var(--morfra-focus-ring);
+  border: 1px solid var(--morfra-border-default);
   border-radius: var(--morfra-radius-control);
   background: var(--morfra-surface-content);
   color: var(--morfra-text-primary);

@@ -268,7 +268,6 @@ html[data-reduced-motion="true"] .morfra-sidebar::after {
 
 .morfra-table-emoji-search input:focus {
   border-color: var(--morfra-focus-ring);
-  box-shadow: 0 0 0 2px var(--morfra-accent-subtle);
 }
 
 .morfra-table-emoji-categories {
@@ -365,7 +364,7 @@ html[data-reduced-motion="true"] .morfra-sidebar::after {
 .morfra-table-rename-input {
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--morfra-focus-ring);
+  border: 1px solid var(--morfra-border-default);
   border-radius: var(--morfra-radius-control);
   background: var(--morfra-surface-content);
   color: var(--morfra-text-primary);
