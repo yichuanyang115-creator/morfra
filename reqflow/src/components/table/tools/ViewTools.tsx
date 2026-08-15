@@ -28,10 +28,11 @@ export function ViewTools(props: ViewToolsProps) {
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const close = (restoreFocus = true) => { const tool = open; setOpen(null); if (restoreFocus && tool) triggerRefs.current[tool]?.focus(); };
   useEffect(() => { const outside = (event: PointerEvent) => { if (open && !(event.target as Element).closest(".morfra-view-tool-anchor, .morfra-view-tool-panel, .morfra-color-palette")) close(); }; document.addEventListener("pointerdown", outside); return () => document.removeEventListener("pointerdown", outside); }, [open]);
+  useEffect(() => { const closeTools = () => setOpen(null); window.addEventListener("morfra-close-view-tools", closeTools); return () => window.removeEventListener("morfra-close-view-tools", closeTools); }, []);
   const validFilterCount = config.filters.filter((filter) => isCompleteCondition(filter, fields)).length;
   const validSortCount = config.sorts.filter((sort, index, all) => isSortableField(fields.find((field) => field.id === sort.fieldId)) && all.findIndex((item) => item.fieldId === sort.fieldId) === index).length;
   const validColorCount = config.conditionalColors.filter((rule) => isCompleteCondition(rule, fields)).length;
-  const toggle = (tool: Exclude<OpenTool, null>) => { if (open === tool) close(true); else setOpen(tool); };
+  const toggle = (tool: Exclude<OpenTool, null>) => { if (open === tool) close(true); else { window.dispatchEvent(new Event("morfra-close-field-manager")); setOpen(tool); } };
   return <div className="morfra-view-toolbar-actions">
     <label className="morfra-view-search">
       <span className="sr-only">搜索当前视图</span>

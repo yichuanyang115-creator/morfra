@@ -211,6 +211,12 @@ textarea:focus-visible,
   outline-color: var(--morfra-focus-ring) !important;
 }
 
+/* 字段列表的行内重命名已经以单条边框表示焦点；不再叠加全局 2px 外描边。 */
+.morfra-field-rename-input:focus-visible {
+  outline: none !important;
+  outline-offset: 0;
+}
+
 /* 正文 Tab / Block editor，数值对齐设计稿《需求管理系统原型.html》.block-editor 规则块 */
 .block-editor {
   min-height: 220px;
