@@ -184,19 +184,16 @@
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  padding: 18px 20px 20px;
+  padding: 0;
 }
 
-.morfra-storage-surface {
+.morfra-storage-workspace {
   display: flex;
   min-width: 0;
   min-height: 0;
   flex: 1;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--morfra-border-subtle);
-  border-radius: var(--morfra-radius-panel);
-  background: var(--morfra-surface-content);
 }
 
 .morfra-sidebar-scope {

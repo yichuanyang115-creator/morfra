@@ -184,7 +184,7 @@
   flex: 1;
   flex-direction: column;
   overflow: hidden;
-  background: var(--morfra-surface-canvas);
+  background: var(--morfra-surface-content);
   padding: 0;
 }
 
@@ -196,7 +196,6 @@
   flex: 1;
   flex-direction: column;
   margin-top: 0;
-  border: 1px solid var(--morfra-border-subtle);
   background: var(--morfra-surface-content);
   overflow: hidden;
 }
