@@ -168,6 +168,10 @@
   background: var(--morfra-surface-content);
 }
 
+.morfra-shell[data-window-mode="regular"] .morfra-main {
+  margin-inline: calc(-1 * var(--morfra-resizer-hit-width));
+}
+
 .morfra-storage-embedded,
 .morfra-standalone-storage {
   height: 100%;

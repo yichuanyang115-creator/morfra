@@ -34,6 +34,7 @@
   --morfra-business-orange: #a85d00;
   --morfra-shadow-floating: 0 14px 32px rgba(15, 23, 42, 0.14);
   --morfra-shadow-panel: -8px 0 24px rgba(15, 23, 42, 0.08);
+  --morfra-shadow-grid-frame: 0 1px 5px rgba(15, 23, 42, 0.08);
   --morfra-radius-control: 6px;
   --morfra-radius-panel: 10px;
   --morfra-titlebar-height: 40px;
@@ -68,6 +69,7 @@ html[data-appearance="dark"] {
   --morfra-status-warning: #e5b95d;
   --morfra-status-success: #78d89a;
   --morfra-status-info: #86b8f4;
+  --morfra-shadow-grid-frame: 0 1px 5px rgba(0, 0, 0, 0.22);
   --morfra-business-blue: #7ca7ff;
   --morfra-business-teal: #65c6c6;
   --morfra-business-purple: #aa91ef;
@@ -104,6 +106,7 @@ html[data-appearance="dark"] {
     --morfra-status-warning: #e5b95d;
     --morfra-status-success: #78d89a;
     --morfra-status-info: #86b8f4;
+    --morfra-shadow-grid-frame: 0 1px 5px rgba(0, 0, 0, 0.22);
     --morfra-business-blue: #7ca7ff;
     --morfra-business-teal: #65c6c6;
     --morfra-business-purple: #aa91ef;

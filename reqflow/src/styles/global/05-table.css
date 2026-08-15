@@ -188,6 +188,15 @@
   padding: 0;
 }
 
+.morfra-storage-data-area-table {
+  isolation: isolate;
+  box-sizing: border-box;
+  margin: 0 4px 4px;
+  border: 1px solid var(--morfra-border-subtle);
+  border-radius: var(--morfra-radius-control);
+  box-shadow: var(--morfra-shadow-grid-frame);
+}
+
 .morfra-data-grid {
   display: flex;
   min-width: 0;

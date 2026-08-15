@@ -217,7 +217,7 @@ export function MorfraShell({ mainContent }: MorfraShellProps) {
   };
 
   return (
-    <div className="morfra-shell" data-testid="morfra-shell" data-window-mode={layout.mode} data-sidebar-open={sidebarOpen} data-right-panel-mode={layout.rightPanelMode} style={{ "--morfra-sidebar-width": `${layout.sidebarWidth}px`, "--morfra-right-panel-width": `${layout.rightPanelWidth}px` } as CSSProperties}>
+    <div className="morfra-shell" data-testid="morfra-shell" data-window-mode={layout.mode} data-sidebar-open={sidebarOpen} data-right-panel-mode={layout.rightPanelMode} style={{ "--morfra-sidebar-width": `${layout.sidebarWidth}px`, "--morfra-right-panel-width": `${layout.rightPanelWidth}px`, "--morfra-resizer-hit-width": `${PANEL_RESIZER_WIDTH}px` } as CSSProperties}>
       <StorageAICascade />
       <WindowTitlebar sidebarOpen={layout.mode === "narrow" ? narrowSidebarOpen : sidebarOpen} aiOpen={aiOpen} aiCompleted={aiCompleted} onToggleSidebar={handleToggleSidebar} onCreateTable={handleCreateTable} onToggleAi={handleToggleAi} />
       <div className="morfra-shell-body" style={{ gridTemplateColumns }}>
