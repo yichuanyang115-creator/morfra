@@ -14,10 +14,11 @@ import {
   reorderStorageRecords,
   moveStorageBoardCard,
   updateStorageField,
+  applyStorageFieldDraft,
   updateStorageFieldOption,
   updateStorageCell,
 } from "../lib/ipc/storageClient";
-import type { StorageCellUpdate, StorageNewRecord } from "../lib/ipc/storageClient";
+import type { StorageCellUpdate, StorageFieldDraftDeletion, StorageFieldDraftOption, StorageNewRecord } from "../lib/ipc/storageClient";
 import type { FieldType, JsonValue, OptionUsage, TableDataSnapshot } from "../types/domain";
 
 interface TableDataState {
@@ -27,6 +28,7 @@ interface TableDataState {
   load: (tableId: string) => Promise<TableDataSnapshot>;
   createField: (tableId: string, name: string, fieldType: FieldType, config: JsonValue) => Promise<TableDataSnapshot>;
   updateField: (fieldId: string, name: string, fieldType: FieldType, config: JsonValue) => Promise<TableDataSnapshot>;
+  applyFieldDraft: (fieldId: string, name: string, fieldType: FieldType, config: JsonValue, options: StorageFieldDraftOption[], deletions: StorageFieldDraftDeletion[]) => Promise<TableDataSnapshot>;
   deleteField: (fieldId: string) => Promise<TableDataSnapshot>;
   reorderFields: (tableId: string, fieldIds: string[]) => Promise<TableDataSnapshot>;
   createOption: (fieldId: string, name: string, color?: string) => Promise<TableDataSnapshot>;
@@ -66,6 +68,7 @@ export const useTableDataStore = create<TableDataState>((set) => ({
   },
   createField: (tableId, name, fieldType, config) => runMutation(set, () => createStorageField(tableId, name, fieldType, config)),
   updateField: (fieldId, name, fieldType, config) => runMutation(set, () => updateStorageField(fieldId, name, fieldType, config)),
+  applyFieldDraft: (fieldId, name, fieldType, config, options, deletions) => runMutation(set, () => applyStorageFieldDraft(fieldId, name, fieldType, config, options, deletions)),
   deleteField: (fieldId) => runMutation(set, () => deleteStorageField(fieldId)),
   reorderFields: (tableId, fieldIds) => runMutation(set, () => reorderStorageFields(tableId, fieldIds)),
   createOption: (fieldId, name, color) => runMutation(set, () => createStorageFieldOption(fieldId, name, color)),

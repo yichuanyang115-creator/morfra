@@ -124,6 +124,48 @@ pub fn update_field(
     Ok(backup)
 }
 
+pub fn apply_field_draft(
+    connection: &mut Connection,
+    field_id: &str,
+    name: &str,
+    field_type: &str,
+    config: Value,
+    options: &[super::domain::FieldDraftOptionInput],
+    deletions: &[super::domain::FieldDraftDeletionInput],
+) -> Result<FieldBackup, StorageError> {
+    validate_field_type(field_type)?;
+    let name = validate_name(name, "字段")?;
+    let backup = capture_field(connection, field_id)?;
+    let transaction = connection.transaction()?;
+    let current = load_field_row_tx(&transaction, field_id)?;
+    if current.is_title == 1 && field_type != "text" { return Err(StorageError::validation("主标题字段只能保持文本类型")); }
+    if current.field_type != field_type {
+        convert_field_values(&transaction, &current, field_type)?;
+        if current.field_type == "select" && field_type != "select" { transaction.execute("UPDATE table_configs SET activity_field_id = NULL WHERE table_id = ?1 AND activity_field_id = ?2", params![current.table_id, field_id])?; }
+    }
+    transaction.execute("UPDATE fields SET name = ?1, field_type = ?2, config_json = ?3, updated_at = ?4 WHERE id = ?5", params![name, field_type, normalize_field_config(field_type, config)?, timestamp(), field_id])?;
+    if field_type == "select" || field_type == "multi_select" {
+        for deletion in deletions {
+            let option = transaction.query_row("SELECT id, field_id, name, color, position, created_at, updated_at FROM field_options WHERE id = ?1 AND field_id = ?2", params![deletion.option_id, field_id], |row| Ok(FieldOptionRow { id: row.get(0)?, field_id: row.get(1)?, name: row.get(2)?, color: row.get(3)?, position: row.get(4)?, created_at: row.get(5)?, updated_at: row.get(6)? })).optional()?.ok_or_else(|| StorageError::validation("选项不存在"))?;
+            rewrite_option_values(&transaction, &option, &deletion.mode, deletion.replacement_id.as_deref())?;
+            clean_field_references(&transaction, &current.table_id, field_id, Some((&option.id, deletion.replacement_id.as_deref())) )?;
+            transaction.execute("DELETE FROM field_options WHERE id = ?1", [&option.id])?;
+        }
+        for option in options {
+            let option_name = validate_name(&option.name, "选项")?;
+            if let Some(id) = option.id.as_deref().filter(|id| !id.starts_with("draft-")) {
+                transaction.execute("UPDATE field_options SET name = ?1, color = ?2, position = ?3, updated_at = ?4 WHERE id = ?5 AND field_id = ?6", params![option_name, option.color, option.position, timestamp(), id, field_id])?;
+            } else {
+                let id = new_id("option"); let now = timestamp();
+                transaction.execute("INSERT INTO field_options (id, field_id, name, color, position, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6)", params![id, field_id, option_name, option.color, option.position, now])?;
+            }
+        }
+    }
+    touch_project(&transaction)?;
+    transaction.commit()?;
+    Ok(backup)
+}
+
 pub fn delete_field(
     connection: &mut Connection,
     field_id: &str,

@@ -5,7 +5,7 @@ use tauri::State;
 
 use super::commands::active_project_path;
 use super::connection;
-use super::domain::{OptionUsage, TableDataSnapshot};
+use super::domain::{FieldDraftDeletionInput, FieldDraftOptionInput, OptionUsage, TableDataSnapshot};
 use super::error::{StorageError, StorageErrorCode};
 use super::field_repository;
 use super::lifecycle;
@@ -75,6 +75,24 @@ pub fn storage_update_field(
         &field_type,
         config,
     )?;
+    let table_id = backup.field.table_id.clone();
+    push_undo(state.inner(), UndoAction::RestoreField { backup })?;
+    table_data(&path, &table_id)
+}
+
+#[tauri::command]
+pub fn storage_apply_field_draft(
+    field_id: String,
+    name: String,
+    field_type: String,
+    config: Value,
+    options: Vec<FieldDraftOptionInput>,
+    deletions: Vec<FieldDraftDeletionInput>,
+    state: State<'_, Mutex<StorageState>>,
+) -> Result<TableDataSnapshot, StorageError> {
+    let path = active_project_path(state.inner())?;
+    let mut opened = connection::open_project(&path)?;
+    let backup = field_repository::apply_field_draft(&mut opened.connection, &field_id, &name, &field_type, config, &options, &deletions)?;
     let table_id = backup.field.table_id.clone();
     push_undo(state.inner(), UndoAction::RestoreField { backup })?;
     table_data(&path, &table_id)

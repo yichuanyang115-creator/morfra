@@ -74,6 +74,7 @@ pub fn run() {
             storage::field_commands::storage_load_table_data,
             storage::field_commands::storage_create_field,
             storage::field_commands::storage_update_field,
+            storage::field_commands::storage_apply_field_draft,
             storage::field_commands::storage_delete_field,
             storage::field_commands::storage_reorder_fields,
             storage::field_commands::storage_create_field_option,

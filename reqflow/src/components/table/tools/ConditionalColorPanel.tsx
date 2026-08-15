@@ -1,16 +1,45 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { FieldSummary } from "../../../types/domain";
 import { filterOperatorsFor, isCompleteFilter, type ConditionalColorRule, type FilterOperator } from "../../../lib/table/viewPipeline";
 import { fieldTypeIcon, move, newId, operatorLabel, Panel, type PanelProps, replace } from "./viewToolShared";
 
-const COLORS: Array<{ value: ConditionalColorRule["color"]; label: string }> = [
+export const COLOR_PALETTE_OPTIONS: Array<{ value: string; label: string }> = [
   ["gray", "灰色"], ["blue", "蓝色"], ["cyan", "青色"], ["green", "绿色"], ["yellow", "黄色"], ["orange", "橙色"], ["red", "红色"], ["pink", "粉色"], ["purple", "紫色"],
 ].flatMap(([family, name]) => [
-  { value: `${family}-light` as ConditionalColorRule["color"], label: `${name} · 浅色` },
+  { value: `${family}-light`, label: `${name} · 浅色` },
   { value: family as ConditionalColorRule["color"], label: name },
-  { value: `${family}-strong` as ConditionalColorRule["color"], label: `${name} · 重色` },
+  { value: `${family}-strong`, label: `${name} · 重色` },
 ]);
+
+export function ColorPalette({ open, anchorRef, value, ariaLabel, onChange, onClose }: { open: boolean; anchorRef: RefObject<HTMLButtonElement | null>; value: string; ariaLabel: string; onChange: (color: string) => void; onClose: () => void }) {
+  const [position, setPosition] = useState<CSSProperties>();
+  const paletteRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = anchorRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const width = 190; const height = 70;
+      const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
+      const top = rect.bottom + height + 8 > window.innerHeight ? Math.max(12, rect.top - height - 8) : rect.bottom + 8;
+      setPosition({ position: "fixed", zIndex: 1001, left, top });
+    };
+    place(); window.addEventListener("resize", place); window.addEventListener("scroll", place, true);
+    return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
+  }, [anchorRef, open]);
+  useEffect(() => {
+    if (!open) return;
+    const isInside = (target: EventTarget | null) => target instanceof Node && (paletteRef.current?.contains(target) || anchorRef.current?.contains(target));
+    const closeOutside = (event: PointerEvent | FocusEvent) => { if (!isInside(event.target)) onClose(); };
+    document.addEventListener("pointerdown", closeOutside, true);
+    document.addEventListener("focusin", closeOutside, true);
+    window.addEventListener("blur", onClose);
+    return () => { document.removeEventListener("pointerdown", closeOutside, true); document.removeEventListener("focusin", closeOutside, true); window.removeEventListener("blur", onClose); };
+  }, [anchorRef, onClose, open]);
+  if (!open || typeof document === "undefined") return null;
+  return createPortal(<div ref={paletteRef} className="morfra-color-palette" style={position} role="listbox" aria-label={ariaLabel} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose(); requestAnimationFrame(() => anchorRef.current?.focus()); } }}>{COLOR_PALETTE_OPTIONS.map((color) => <button key={color.value} type="button" role="option" aria-label={color.label} aria-selected={value === color.value} className={`color-${color.value}`} onClick={() => { onChange(color.value); onClose(); requestAnimationFrame(() => anchorRef.current?.focus()); }}><span aria-hidden="true">{value === color.value ? "✓" : ""}</span></button>)}</div>, document.body);
+}
 
 export function ConditionalColorPanel({ fields, config, onChange, onClose, visibleFieldIds, anchor }: PanelProps & { visibleFieldIds?: string[] }) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -61,29 +90,15 @@ export function ConditionalColorPanel({ fields, config, onChange, onClose, visib
 function ColorRuleRow({ index, field, rule, operatorRef, onChange, onChangeField, onRemove, draggable, onDragStart, onDrop }: { index: number; field: FieldSummary; rule: ConditionalColorRule; operatorRef: (node: HTMLSelectElement | null) => void; onChange: (rule: ConditionalColorRule) => void; onChangeField: () => void; onRemove: () => void; draggable: boolean; onDragStart: () => void; onDrop: () => void }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const colorRef = useRef<HTMLButtonElement>(null);
-  const [palettePosition, setPalettePosition] = useState<CSSProperties>();
   const noValue = ["isEmpty", "isNotEmpty", "isChecked", "isUnchecked"].includes(rule.operator);
-  useLayoutEffect(() => {
-    if (!paletteOpen) return;
-    const place = () => {
-      const rect = colorRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const width = 190; const height = 70;
-      const left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12));
-      const top = rect.bottom + height + 8 > window.innerHeight ? Math.max(12, rect.top - height - 8) : rect.bottom + 8;
-      setPalettePosition({ position: "fixed", zIndex: 1001, left, top });
-    };
-    place(); window.addEventListener("resize", place); window.addEventListener("scroll", place, true);
-    return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); };
-  }, [paletteOpen]);
-  const palette = paletteOpen && typeof document !== "undefined" ? createPortal(<div className="morfra-color-palette" style={palettePosition} role="listbox" aria-label="选择填色颜色" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setPaletteOpen(false); requestAnimationFrame(() => colorRef.current?.focus()); } }}>{COLORS.map((color) => <button key={color.value} type="button" role="option" aria-label={color.label} aria-selected={rule.color === color.value} className={`color-${color.value}`} onClick={() => { onChange({ ...rule, color: color.value }); setPaletteOpen(false); requestAnimationFrame(() => colorRef.current?.focus()); }}><span aria-hidden="true">{rule.color === color.value ? "✓" : ""}</span></button>)}</div>, document.body) : null;
+  const palette = <ColorPalette open={paletteOpen} anchorRef={colorRef} value={rule.color} ariaLabel="选择填色颜色" onChange={(color) => onChange({ ...rule, color: color as ConditionalColorRule["color"] })} onClose={() => setPaletteOpen(false)} />;
   return <section draggable={draggable} className="morfra-color-rule" aria-label={`${field.name} 条件填色规则`} onDragStart={onDragStart} onDragOver={(event) => event.preventDefault()} onDrop={onDrop}>
     <span className="morfra-color-priority" aria-label={`优先级 ${index + 1}`}>#{index + 1}</span>
     <button type="button" className="morfra-color-field" aria-label={`更换 ${field.name} 填色字段`} onClick={onChangeField}><span aria-hidden="true">{fieldTypeIcon(field)}</span><span>{field.name}</span></button>
     <select ref={operatorRef} aria-label={`${field.name} 填色运算符`} value={rule.operator} onChange={(event) => { const operator = event.target.value as FilterOperator; onChange({ ...rule, operator, value: ["isEmpty", "isNotEmpty", "isChecked", "isUnchecked"].includes(operator) ? undefined : rule.value }); }}>{filterOperatorsFor(field).map((operator) => <option key={operator} value={operator}>{operatorLabel(operator, field)}</option>)}</select>
     <span className="morfra-color-value">{!noValue && <ColorValueInput key={`${field.id}:${rule.operator}`} field={field} rule={rule} onCommit={(value) => onChange({ ...rule, value })} />}</span>
     <span className="morfra-color-arrow" aria-hidden="true">→</span>
-    <span className="morfra-color-picker"><button ref={colorRef} type="button" className={`morfra-color-swatch color-${rule.color}`} aria-expanded={paletteOpen} aria-haspopup="listbox" aria-label={`填色：${COLORS.find((item) => item.value === rule.color)?.label ?? rule.color}`} onClick={() => setPaletteOpen((current) => !current)} />{palette}</span>
+    <span className="morfra-color-picker"><button ref={colorRef} type="button" className={`morfra-color-swatch color-${rule.color}`} aria-expanded={paletteOpen} aria-haspopup="listbox" aria-label={`填色：${COLOR_PALETTE_OPTIONS.find((item) => item.value === rule.color)?.label ?? rule.color}`} onClick={() => setPaletteOpen((current) => !current)} />{palette}</span>
     <button type="button" className="morfra-color-remove" aria-label={`删除 ${field.name} 填色规则`} onClick={onRemove}>×</button>
   </section>;
 }

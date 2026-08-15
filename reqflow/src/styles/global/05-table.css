@@ -225,6 +225,40 @@
 .morfra-field-type-picker-options button:hover:not(:disabled), .morfra-field-type-picker-options button:focus-visible { background: var(--morfra-accent-subtle); outline: none; }
 .morfra-field-type-picker-options button:disabled { cursor: wait; opacity: .62; }
 .morfra-field-type-picker > p { margin: 6px 2px 0; color: var(--morfra-status-danger); font-size: 10px; }
+
+/* Field editor draft controls share the compact tool-popover language. */
+.morfra-field-manager-panel .morfra-field-selector { display: flex; width: 100%; min-height: 32px; align-items: center; gap: 7px; border: 1px solid var(--morfra-border-subtle); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-canvas); color: var(--morfra-text-primary); font: inherit; font-size: 12px; padding: 5px 8px; text-align: left; }
+.morfra-field-manager-panel { font-size: 12px; line-height: 1.35; }
+.morfra-field-manager-panel button, .morfra-field-manager-panel input { font: inherit; }
+.morfra-field-manager-panel [role="listbox"], .morfra-field-manager-panel [role="switch"], .morfra-field-manager-panel section[aria-label="选项"] { font-size: 12px; }
+.morfra-field-manager-panel section[aria-label="选项"] > div:first-child { color: var(--morfra-text-secondary); font-size: 11px; font-weight: 600; letter-spacing: .01em; }
+.morfra-field-manager-panel section[aria-label="选项"] input { color: var(--morfra-text-primary); font-size: 12px; }
+.morfra-field-manager-panel .morfra-field-selector:hover, .morfra-field-manager-panel .morfra-field-selector:focus-visible { border-color: var(--morfra-accent-primary); background: var(--morfra-accent-subtle); outline: none; }
+.morfra-field-manager-panel [role="listbox"] { border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); }
+.morfra-field-manager-panel [role="listbox"] [role="option"] { border: 0; border-radius: 4px; background: transparent; color: var(--morfra-text-primary); font: inherit; }
+.morfra-field-manager-panel [role="listbox"] [role="option"]:hover, .morfra-field-manager-panel [role="listbox"] [role="option"][aria-selected="true"] { background: var(--morfra-accent-subtle); }
+.morfra-field-editor-menu { border: 1px solid var(--morfra-border-default); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); box-shadow: var(--shadow-dialog); color: var(--morfra-text-primary); font-size: 12px; }
+.morfra-field-editor-menu [role="option"] { border: 0; border-radius: 4px; background: transparent; color: inherit; font: inherit; }
+.morfra-field-editor-menu [role="option"]:hover, .morfra-field-editor-menu [role="option"][aria-selected="true"] { background: var(--morfra-accent-subtle); }
+.morfra-field-manager-panel [role="switch"] { border-color: var(--morfra-border-subtle); color: var(--morfra-text-primary); font: inherit; font-size: 12px; }
+.morfra-field-manager-panel [role="switch"]:hover, .morfra-field-manager-panel [role="switch"]:focus-visible { background: var(--morfra-accent-subtle); outline: none; }
+.morfra-field-manager-panel footer > button { border: 1px solid var(--morfra-border-subtle); border-radius: var(--morfra-radius-control); background: var(--morfra-surface-content); color: var(--morfra-text-secondary); font: inherit; font-size: 12px; padding: 6px 10px; }
+.morfra-field-manager-panel footer > button:last-child { border-color: var(--morfra-accent-primary); background: var(--morfra-accent-primary); color: var(--morfra-surface-content); }
+.morfra-field-option-list { border-top: 1px solid var(--morfra-border-subtle); padding-top: 8px; }
+.morfra-field-option-heading { margin-bottom: 3px; color: var(--morfra-text-secondary); font-size: 11px; font-weight: 600; letter-spacing: .01em; }
+.morfra-field-option-row { display: grid; grid-template-columns: 16px 20px minmax(0, 1fr) 20px; align-items: center; column-gap: 8px; min-height: 36px; border-bottom: 1px solid var(--morfra-border-subtle); }
+.morfra-field-option-handle, .morfra-field-option-delete { border: 0; background: transparent; color: var(--morfra-text-tertiary); cursor: grab; font: inherit; line-height: 1; padding: 2px; }
+.morfra-field-option-handle:active { cursor: grabbing; }
+.morfra-field-option-color { width: 20px; height: 20px; border: 1px solid var(--morfra-border-default); border-radius: 50%; cursor: pointer; padding: 0; }
+.morfra-field-option-color:focus-visible { outline: 2px solid var(--morfra-focus-ring); outline-offset: 2px; }
+.morfra-field-option-name { min-width: 0; overflow: hidden; border: 0; background: transparent; color: var(--morfra-text-primary); font: inherit; font-size: 12px; padding: 3px 0; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.morfra-field-option-name.is-empty { min-height: 24px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--morfra-border-subtle); }
+.morfra-field-option-name.is-empty:focus-visible { box-shadow: inset 0 0 0 1px var(--morfra-focus-ring); outline: none; }
+input.morfra-field-option-name { border-radius: 3px; box-shadow: inset 0 0 0 1px var(--morfra-border-subtle); padding: 3px 5px; }
+input.morfra-field-option-name:focus-visible { box-shadow: inset 0 0 0 1px var(--morfra-focus-ring); outline: none !important; outline-offset: 0; }
+.morfra-field-option-delete { color: var(--morfra-text-secondary); cursor: pointer; font-size: 16px; }
+.morfra-field-option-delete:hover, .morfra-field-option-delete:focus-visible { color: var(--morfra-status-danger); outline: none; }
+.morfra-field-option-add { margin-top: 7px; border: 0; background: transparent; color: var(--morfra-accent-primary); cursor: pointer; font: inherit; font-size: 12px; padding: 3px 0; }
 .morfra-grid-field-name-input { min-width: 0; flex: 1; border: 0; border-radius: 3px; background: var(--morfra-surface-content); box-shadow: inset 0 0 0 2px var(--morfra-focus-ring); color: var(--morfra-text-primary); font: inherit; font-size: inherit; padding: 3px 4px; }
 .morfra-grid-header-error { position: absolute; z-index: 12; top: calc(100% + 2px); left: 4px; max-width: 220px; overflow: hidden; border-radius: 3px; background: var(--morfra-status-danger); color: var(--morfra-surface-content); font-size: 10px; padding: 3px 5px; text-overflow: ellipsis; white-space: nowrap; }
 .morfra-grid-resize { position: absolute; z-index: 2; top: 0; right: -4px; width: 8px; height: 100%; border: 0; background: transparent; cursor: col-resize; }

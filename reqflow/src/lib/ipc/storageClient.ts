@@ -132,6 +132,12 @@ export async function updateStorageField(fieldId: string, name: string, fieldTyp
   return invoke<TableDataSnapshot>("storage_update_field", { fieldId, name, fieldType, config });
 }
 
+export interface StorageFieldDraftOption { id?: string; name: string; color: string; position: number; }
+export interface StorageFieldDraftDeletion { optionId: string; mode: "delete" | "replace" | "clear"; replacementId: string | null; }
+export async function applyStorageFieldDraft(fieldId: string, name: string, fieldType: FieldType, config: JsonValue, options: StorageFieldDraftOption[], deletions: StorageFieldDraftDeletion[]): Promise<TableDataSnapshot> {
+  return invoke<TableDataSnapshot>("storage_apply_field_draft", { fieldId, name, fieldType, config, options, deletions });
+}
+
 export async function deleteStorageField(fieldId: string): Promise<TableDataSnapshot> {
   return invoke<TableDataSnapshot>("storage_delete_field", { fieldId });
 }

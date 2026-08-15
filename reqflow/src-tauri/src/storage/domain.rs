@@ -86,3 +86,20 @@ pub struct OptionUsage {
     pub record_count: i64,
     pub view_rule_count: i64,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FieldDraftOptionInput {
+    pub id: Option<String>,
+    pub name: String,
+    pub color: String,
+    pub position: i64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FieldDraftDeletionInput {
+    pub option_id: String,
+    pub mode: String,
+    pub replacement_id: Option<String>,
+}

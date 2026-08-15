@@ -1,50 +1,16 @@
-import { useEffect, useState } from "react";
-import type { FieldOptionSummary, FieldSummary, FieldType, JsonValue } from "../../types/domain";
-import { OptionEditor } from "./OptionEditor";
-import { FIELD_TYPE_LABELS } from "./FieldTypeIcon";
-
-interface Props {
-  field: FieldSummary;
-  error: string | null;
-  onDirtyChange?: (dirty: boolean) => void;
-  onBack: () => void;
-  onSave: (field: FieldSummary, type: FieldType, config: JsonValue) => Promise<boolean>;
-  onCreateOption: (fieldId: string, name: string, color?: string) => Promise<void>;
-  onUpdateOption: (option: FieldOptionSummary, name: string, color: string) => Promise<void>;
-  onDeleteOption: (option: FieldOptionSummary) => Promise<void>;
-  onReorderOption: (fieldId: string, optionIds: string[]) => Promise<void>;
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import type { FieldSummary, FieldType, JsonValue } from "../../types/domain";
+import { FIELD_TYPE_LABELS, FieldTypeIcon } from "./FieldTypeIcon";
+import { OptionEditor, type DraftOption } from "./OptionEditor";
+export interface FieldDraft { fieldType: FieldType; config: JsonValue; options: DraftOption[]; }
+export function FieldEditPage({ field, error, saving = false, onBack, onSave }: { field: FieldSummary; error: string | null; saving?: boolean; onBack: () => void; onSave: (field: FieldSummary, draft: FieldDraft) => Promise<boolean> }) {
+  const [draft, setDraft] = useState<FieldDraft>({ fieldType: field.fieldType, config: field.config, options: field.options }); const [open, setOpen] = useState<"type" | "format" | null>(null);
+  useEffect(() => setDraft({ fieldType: field.fieldType, config: field.config, options: field.options }), [field]);
+  const value = (key: string) => draft.config && typeof draft.config === "object" && !Array.isArray(draft.config) ? draft.config[key] : undefined;
+  const change = (key: string, next: JsonValue) => { const current = draft.config && typeof draft.config === "object" && !Array.isArray(draft.config) ? draft.config : {}; setDraft({ ...draft, config: { ...current, [key]: next } }); };
+  const dirty = JSON.stringify(draft) !== JSON.stringify({ fieldType: field.fieldType, config: field.config, options: field.options });
+  return <><header className="flex items-center border-b border-(--module-scope-border-subtle) px-3 py-2"><h2 id="field-manager-title" className="sr-only">字段设置</h2><button type="button" aria-label="返回字段列表" onClick={onBack}>‹</button></header><div className="min-h-0 flex-1 overflow-y-auto p-3"><div className="grid gap-2"><Picker label="字段类型" disabled={field.isTitle} open={open === "type"} onToggle={() => setOpen(open === "type" ? null : "type")} selected={draft.fieldType} items={(Object.keys(FIELD_TYPE_LABELS) as FieldType[]).map(value => ({ value, label: FIELD_TYPE_LABELS[value] }))} icon onSelect={value => { setDraft({ ...draft, fieldType: value as FieldType }); setOpen(null); }} />{draft.fieldType === "number" && <Picker label="数字格式" open={open === "format"} onToggle={() => setOpen(open === "format" ? null : "format")} selected={(value("format") as string) ?? "number"} items={[{ value: "number", label: "普通数字" }, { value: "percent", label: "百分数" }, { value: "currency", label: "货币" }]} onSelect={format => { change("format", format); setOpen(null); }} />}{draft.fieldType === "text" && <SwitchRow title="支持多行显示" checked={value("multiline") === true} onChange={next => change("multiline", next)} />}{draft.fieldType === "date" && <SwitchRow title="包含具体时间" checked={value("includeTime") === true} onChange={next => change("includeTime", next)} />}{(draft.fieldType === "select" || draft.fieldType === "multi_select") && <><OptionEditor options={draft.options} onChange={options => setDraft({ ...draft, options })} /><SwitchRow title="填写时允许新增选项" checked={value("allowCreate") !== false} onChange={next => change("allowCreate", next)} /></>}</div>{error && <p role="alert">{error}</p>}</div><footer className="flex justify-end gap-2 border-t border-(--module-scope-border-subtle) p-2"><button type="button" onClick={onBack} disabled={saving}>取消</button><button type="button" disabled={!dirty || saving || draft.options.some(option => !option.deleted && !option.name.trim())} onClick={() => void onSave(field, draft)}>{saving ? "保存中…" : "保存"}</button></footer></>;
 }
-
-export function FieldEditPage({ field, error, onBack, onSave, onCreateOption, onUpdateOption, onDeleteOption, onReorderOption }: Props) {
-  const [type, setType] = useState(field.fieldType);
-  const [config, setConfig] = useState<JsonValue>(field.config);
-  const control = "h-8 min-w-0 rounded-(--r-sm) border border-(--module-scope-border-subtle) bg-(--module-scope-background-canvas) px-2 text-[12px]";
-
-  useEffect(() => { setType(field.fieldType); setConfig(field.config); }, [field]);
-
-  async function apply(nextType: FieldType, nextConfig: JsonValue) {
-    const applied = await onSave(field, nextType, nextConfig);
-    if (!applied) { setType(field.fieldType); setConfig(field.config); return; }
-    setType(nextType); setConfig(nextConfig);
-  }
-
-  function changeConfig(key: string, next: JsonValue) {
-    const current = config && typeof config === "object" && !Array.isArray(config) ? config : {};
-    void apply(type, { ...current, [key]: next });
-  }
-
-  return <>
-    <header className="flex items-center border-b border-(--module-scope-border-subtle) px-3 py-2"><h2 id="field-manager-title" className="sr-only">字段设置</h2><button type="button" aria-label="返回字段列表" title="返回字段列表" className="grid size-7 place-items-center rounded-(--r-sm) text-(--module-scope-text-secondary) hover:bg-(--module-scope-action-soft) hover:text-(--module-scope-text-primary)" onClick={onBack}><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m9.5 3.5-4 4 4 4" /></svg></button></header>
-    <div className="min-h-0 flex-1 overflow-y-auto p-3"><div className="grid gap-2">
-      <select aria-label="字段类型" disabled={field.isTitle} className={control} value={type} onChange={(event) => void apply(event.target.value as FieldType, config)}>{(Object.keys(FIELD_TYPE_LABELS) as FieldType[]).map((key) => <option key={key} value={key}>{FIELD_TYPE_LABELS[key]}</option>)}</select>
-      {type === "number" && <select aria-label="数字格式" className={control} value={value(config, "format") as string ?? "number"} onChange={(event) => changeConfig("format", event.target.value)}><option value="number">普通数字</option><option value="percent">百分数</option><option value="currency">货币</option></select>}
-      {type === "text" && <Toggle label="支持多行显示" checked={value(config, "multiline") === true} onChange={(next) => changeConfig("multiline", next)} />}
-      {type === "date" && <Toggle label="包含具体时间" checked={value(config, "includeTime") === true} onChange={(next) => changeConfig("includeTime", next)} />}
-      {(type === "select" || type === "multi_select") && <Toggle label="填写时允许新增选项" checked={value(config, "allowCreate") !== false} onChange={(next) => changeConfig("allowCreate", next)} />}
-      {(type === "select" || type === "multi_select") && <OptionEditor options={field.options} onCreate={(name, color) => onCreateOption(field.id, name, color)} onUpdate={onUpdateOption} onDelete={onDeleteOption} onReorder={(ids) => onReorderOption(field.id, ids)} />}
-    </div>{error && <p role="alert">{error}</p>}</div>
-  </>;
-}
-
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (next: boolean) => void }) { return <label>{label}<input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /></label>; }
-function value(config: JsonValue, key: string): JsonValue | undefined { return config && typeof config === "object" && !Array.isArray(config) ? config[key] : undefined; }
+function Picker({ label, selected, items, open, disabled, icon, onToggle, onSelect }: { label: string; selected: string; items: { value: string; label: string }[]; open: boolean; disabled?: boolean; icon?: boolean; onToggle: () => void; onSelect: (value: string) => void }) { const item = items.find(item => item.value === selected); const trigger = useRef<HTMLButtonElement>(null); const rect = open ? trigger.current?.getBoundingClientRect() : null; const height = Math.min(232, items.length * 34 + 8); const top = rect && rect.bottom + 6 + height > window.innerHeight ? rect.top - height - 6 : rect?.bottom; const menu = open && rect && typeof document !== "undefined" ? createPortal(<div role="listbox" aria-label={label} style={{ position: "fixed", top, left: rect.left, width: rect.width, zIndex: 1100 }} className="morfra-field-editor-menu p-1">{items.map(item => <button key={item.value} type="button" role="option" aria-selected={item.value === selected} className="flex w-full items-center gap-2 px-2 py-1.5 text-left" onClick={() => onSelect(item.value)}>{icon && <FieldTypeIcon type={item.value as FieldType} />}{item.label}<span className="ml-auto">{item.value === selected ? "✓" : ""}</span></button>)}</div>, document.body) : null; return <div><button ref={trigger} type="button" aria-label={label} aria-haspopup="listbox" aria-expanded={open} disabled={disabled} className="morfra-field-selector flex h-8 w-full items-center gap-2 rounded-(--r-sm) border px-2" onClick={onToggle}>{icon && <FieldTypeIcon type={selected as FieldType} />}<span>{item?.label}</span><span className="ml-auto">⌄</span></button>{menu}</div>; }
+function SwitchRow({ title, checked, onChange }: { title: string; checked: boolean; onChange: (next: boolean) => void }) { return <button type="button" role="switch" aria-checked={checked} className="flex min-h-11 w-full items-center justify-between border-y px-1 text-left" onClick={() => onChange(!checked)}><span>{title}</span><span className={`relative h-5 w-9 rounded-full ${checked ? "bg-(--module-scope-action-base)" : "bg-(--module-scope-border-strong)"}`}><span className={`absolute top-0.5 size-4 rounded-full bg-white ${checked ? "translate-x-4" : "translate-x-0.5"}`} /></span></button>; }
