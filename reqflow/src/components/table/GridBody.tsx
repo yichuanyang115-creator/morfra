@@ -14,6 +14,9 @@ interface GridBodyProps {
   gridId: string;
   parentRef: RefObject<HTMLDivElement | null>;
   layouts: ColumnLayout[];
+  frozenBoundaryFieldId?: string;
+  frozenBoundaryWidth?: number;
+  scrollLeft?: number;
   records: RecordData[];
   rowHeight: number;
   selection: GridSelection | null;
@@ -39,7 +42,7 @@ interface GridBodyProps {
 const GROUP_HEADER_HEIGHT = 32;
 const GROUP_FOOTER_HEIGHT = 28;
 
-export function GridBody({ gridId, parentRef, layouts, records, rowHeight, selection, editing, onOpenDetail, onRenderedRecordsChange, onSelectCell, onExtendSelection, onSelectRows, onStartEditing, onContextCell, onContextRow, onToggleCheckbox, conditionalColors = [], recordGroups = [], groups = [], collapsedKeys = [], onToggleGroup, onCreateInGroup, rowTops }: GridBodyProps) {
+export function GridBody({ gridId, parentRef, layouts, frozenBoundaryFieldId, frozenBoundaryWidth = ROW_NUMBER_WIDTH, scrollLeft = 0, records, rowHeight, selection, editing, onOpenDetail, onRenderedRecordsChange, onSelectCell, onExtendSelection, onSelectRows, onStartEditing, onContextCell, onContextRow, onToggleCheckbox, conditionalColors = [], recordGroups = [], groups = [], collapsedKeys = [], onToggleGroup, onCreateInGroup, rowTops }: GridBodyProps) {
   const grouped = recordGroups.length === records.length;
   const itemSize = (index: number) => (grouped && recordGroups[index]?.collapsed ? 0 : rowHeight) + (grouped && recordGroups[index]?.first ? GROUP_HEADER_HEIGHT : 0) + (grouped && recordGroups[index]?.last && onCreateInGroup && !recordGroups[index]?.collapsed ? GROUP_FOOTER_HEIGHT : 0);
   const rowVirtualizer = useVirtualizer({ count: records.length, getScrollElement: () => parentRef.current, estimateSize: itemSize, overscan: 4 });
@@ -52,7 +55,7 @@ export function GridBody({ gridId, parentRef, layouts, records, rowHeight, selec
   const emptyGroups = groups.filter((group) => group.count === 0);
   const emptyGroupHeight = GROUP_HEADER_HEIGHT + (onCreateInGroup ? GROUP_FOOTER_HEIGHT : 0);
   return <div className="morfra-grid-body" style={{ height: recordsHeight + emptyGroups.length * emptyGroupHeight }}>
-    <GridSelectionLayer selection={selection} layouts={layouts} rowHeight={rowHeight} rowTops={rowTops} />
+    <GridSelectionLayer selection={selection} layouts={layouts} rowHeight={rowHeight} rowTops={rowTops} frozenBoundaryWidth={frozenBoundaryWidth} scrollLeft={scrollLeft} />
     {virtualRows.map((virtualRow) => {
       const record = records[virtualRow.index];
       const group = grouped ? recordGroups[virtualRow.index] : undefined;
@@ -74,7 +77,9 @@ export function GridBody({ gridId, parentRef, layouts, records, rowHeight, selec
           const active = selection?.active.row === point.row && selection.active.column === point.column;
           const isEditing = editing?.row === point.row && editing.column === point.column;
           const color = conditionalColors.find((rule) => rule.enabled && rule.fieldId === layout.field.id && matchesCondition(valueForCell(layout.field, record), rule.operator, rule.value))?.color;
-          return <div key={layout.field.id} className={`morfra-grid-cell ${layout.frozen ? "is-frozen" : ""}`} data-column-index={columnIndex} style={layout.frozen ? { left: `var(--grid-sticky-${layout.field.id})`, width: layout.width } : { left: ROW_NUMBER_WIDTH + (virtualColumn?.start ?? left), width: layout.width }}><GridCell id={`${gridId}-cell-${point.row}-${point.column}`} field={layout.field} record={record} point={point} selected={selected} active={active} editing={isEditing} conditionalColor={color} readOnly={layout.field.id.startsWith("collapsed:") || ["auto_number", "created_time", "updated_time"].includes(layout.field.fieldType)} onPointerDown={(event) => { if (event.button !== 2) { event.preventDefault(); onSelectCell(point, event.shiftKey); } }} onPointerEnter={(event) => { if (event.buttons === 1) onExtendSelection(point); }} onDoubleClick={() => onStartEditing(point)} onContextMenu={(event) => onContextCell(point, event)} onToggleCheckbox={() => onToggleCheckbox(point)} onOpenDetail={layout.field.isTitle ? () => onOpenDetail(record.id) : undefined} detailLabel={`打开第 ${virtualRow.index + 1} 条记录详情`} /></div>;
+          const cellLeft = ROW_NUMBER_WIDTH + (virtualColumn?.start ?? left);
+          const clippedWidth = layout.frozen ? 0 : Math.max(0, frozenBoundaryWidth + scrollLeft - cellLeft);
+          return <div key={layout.field.id} className={`morfra-grid-cell ${layout.frozen ? "is-frozen" : ""} ${layout.field.id === frozenBoundaryFieldId ? "is-frozen-edge" : ""}`} data-column-index={columnIndex} style={layout.frozen ? { left: `var(--grid-sticky-${layout.field.id})`, width: layout.width } : { left: cellLeft, width: layout.width, clipPath: clippedWidth ? `inset(0 0 0 ${Math.min(layout.width, clippedWidth)}px)` : undefined }}><GridCell id={`${gridId}-cell-${point.row}-${point.column}`} field={layout.field} record={record} point={point} selected={selected} active={active} editing={isEditing} conditionalColor={color} readOnly={layout.field.id.startsWith("collapsed:") || ["auto_number", "created_time", "updated_time"].includes(layout.field.fieldType)} onPointerDown={(event) => { if (event.button !== 2) { event.preventDefault(); onSelectCell(point, event.shiftKey); } }} onPointerEnter={(event) => { if (event.buttons === 1) onExtendSelection(point); }} onDoubleClick={() => onStartEditing(point)} onContextMenu={(event) => onContextCell(point, event)} onToggleCheckbox={() => onToggleCheckbox(point)} onOpenDetail={layout.field.isTitle ? () => onOpenDetail(record.id) : undefined} detailLabel={`打开第 ${virtualRow.index + 1} 条记录详情`} /></div>;
         })}
         </div>}
         {group?.last && onCreateInGroup && <div className="morfra-record-group-footer" style={{ top: contentTop + rowHeight, height: GROUP_FOOTER_HEIGHT }}><button type="button" onClick={() => onCreateInGroup(group.key)}>＋ 在“{group.label}”中新建记录</button></div>}
