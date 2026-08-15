@@ -21,6 +21,23 @@ describe("GridHeader 冻结菜单", () => {
     expect(onClearExtraFreeze).toHaveBeenCalledOnce();
   });
 
+  it("字段菜单在焦点移出或点击字段外部时收起", () => {
+    render(<GridHeader layouts={layouts} rowHeight={40} onResize={vi.fn()} onAutoFit={vi.fn()} onFreezeTo={vi.fn()} onClearExtraFreeze={vi.fn()} />);
+    const trigger = screen.getByRole("button", { name: "打开 状态 字段菜单" });
+
+    fireEvent.click(trigger);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    fireEvent.blur(trigger, { relatedTarget: document.body });
+    expect(screen.queryByRole("menu")).toBeNull();
+
+    fireEvent.click(trigger);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
   it("字段类型只作为装饰图标，类型文字只在更多菜单中出现，并支持快速添加字段", async () => {
     const onCreateField = vi.fn().mockResolvedValue("new-field");
     render(<GridHeader layouts={layouts} rowHeight={40} onCreateField={onCreateField} onResize={vi.fn()} onAutoFit={vi.fn()} onFreezeTo={vi.fn()} onClearExtraFreeze={vi.fn()} />);
