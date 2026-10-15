@@ -12,7 +12,7 @@
 
 ## 1. 当前基线
 
-- 主代码目录：`reqflow/`。
+- 主代码目录：`morfra/`。
 - 前端：React 19.1、TypeScript 7、Zustand 5、Tailwind CSS 4、Vite 8、Vitest 4。
 - 桌面：Tauri 2，目标为 macOS 13+ Apple Silicon。
 - 当前右侧栏：`ChatPanel` + `chatStore`，按项目保存一条假对话消息流到 `_chat.md`。
@@ -92,12 +92,12 @@ Phase 2 与 Phase 4 在代码所有权隔离时可并行，但默认按序执行
 
 **关键文件：**
 
-- `reqflow/src/types/ai.ts` — AI 领域类型与持久化版本。
-- `reqflow/src/lib/ai/tableDataAdapter.ts` — 只读表数据端口。
-- `reqflow/src/lib/ai/paths.ts` — AI 应用级与按表路径。
-- `reqflow/src/lib/ai/persistence.ts` — 原子读写、版本校验与损坏回退。
-- `reqflow/src/lib/ai/legacyChatMigration.ts` — 旧假聊天偏好迁移解析。
-- `reqflow/src/fixtures/aiEvaluationTables.ts` — 独立开发与评估固定数据。
+- `morfra/src/types/ai.ts` — AI 领域类型与持久化版本。
+- `morfra/src/lib/ai/tableDataAdapter.ts` — 只读表数据端口。
+- `morfra/src/lib/ai/paths.ts` — AI 应用级与按表路径。
+- `morfra/src/lib/ai/persistence.ts` — 原子读写、版本校验与损坏回退。
+- `morfra/src/lib/ai/legacyChatMigration.ts` — 旧假聊天偏好迁移解析。
+- `morfra/src/fixtures/aiEvaluationTables.ts` — 独立开发与评估固定数据。
 
 **验证：**
 
@@ -128,16 +128,16 @@ Phase 2 与 Phase 4 在代码所有权隔离时可并行，但默认按序执行
 
 **关键文件：**
 
-- `reqflow/src/components/app-settings/AIServiceSettings.tsx` — 服务配置页面。
-- `reqflow/src/components/app-settings/AIProviderEditor.tsx` — 单组配置编辑器。
-- `reqflow/src/components/app-settings/AppSettingsNav.tsx` — 增加 AI 服务入口。
-- `reqflow/src/components/app-settings/AppSettingsPage.tsx` — 渲染 AI 服务设置。
-- `reqflow/src/stores/aiProviderStore.ts` — 非敏感配置状态与持久化。
-- `reqflow/src/lib/ai/keychainClient.ts` — 前端 Tauri 命令封装。
-- `reqflow/src-tauri/src/ai/keychain.rs` — Keychain set/status/delete。
-- `reqflow/src-tauri/src/ai/commands.rs` — 密钥相关命令边界。
-- `reqflow/src-tauri/Cargo.toml` — 引入 `keyring`。
-- `reqflow/src-tauri/src/lib.rs` — 注册 AI 命令。
+- `morfra/src/components/app-settings/AIServiceSettings.tsx` — 服务配置页面。
+- `morfra/src/components/app-settings/AIProviderEditor.tsx` — 单组配置编辑器。
+- `morfra/src/components/app-settings/AppSettingsNav.tsx` — 增加 AI 服务入口。
+- `morfra/src/components/app-settings/AppSettingsPage.tsx` — 渲染 AI 服务设置。
+- `morfra/src/stores/aiProviderStore.ts` — 非敏感配置状态与持久化。
+- `morfra/src/lib/ai/keychainClient.ts` — 前端 Tauri 命令封装。
+- `morfra/src-tauri/src/ai/keychain.rs` — Keychain set/status/delete。
+- `morfra/src-tauri/src/ai/commands.rs` — 密钥相关命令边界。
+- `morfra/src-tauri/Cargo.toml` — 引入 `keyring`。
+- `morfra/src-tauri/src/lib.rs` — 注册 AI 命令。
 
 **验证：**
 
@@ -171,12 +171,12 @@ Phase 2 与 Phase 4 在代码所有权隔离时可并行，但默认按序执行
 
 **关键文件：**
 
-- `reqflow/src-tauri/src/ai/provider.rs` — OpenAI 兼容请求与响应解析。
-- `reqflow/src-tauri/src/ai/stream.rs` — SSE 解析、Channel 推送和取消控制。
-- `reqflow/src-tauri/src/ai/errors.rs` — 用户可理解的错误类型。
-- `reqflow/src-tauri/src/ai/commands.rs` — list/test/chat/cancel 命令。
-- `reqflow/src/lib/ai/providerClient.ts` — 前端模型列表、测试和流式调用封装。
-- `reqflow/src/stores/aiProviderStore.ts` — 能力状态、模型缓存和手填模型。
+- `morfra/src-tauri/src/ai/provider.rs` — OpenAI 兼容请求与响应解析。
+- `morfra/src-tauri/src/ai/stream.rs` — SSE 解析、Channel 推送和取消控制。
+- `morfra/src-tauri/src/ai/errors.rs` — 用户可理解的错误类型。
+- `morfra/src-tauri/src/ai/commands.rs` — list/test/chat/cancel 命令。
+- `morfra/src/lib/ai/providerClient.ts` — 前端模型列表、测试和流式调用封装。
+- `morfra/src/stores/aiProviderStore.ts` — 能力状态、模型缓存和手填模型。
 
 **验证：**
 
@@ -209,12 +209,12 @@ Phase 2 与 Phase 4 在代码所有权隔离时可并行，但默认按序执行
 
 **关键文件：**
 
-- `reqflow/src/lib/ai/tableSnapshot.ts` — 适配并规范化表快照。
-- `reqflow/src/lib/ai/analysisPlan.ts` — 分析计划类型与校验。
-- `reqflow/src/lib/ai/analysisEngine.ts` — 本地确定性执行器。
-- `reqflow/src/lib/ai/contextBuilder.ts` — 最小化云端上下文。
-- `reqflow/src/lib/ai/contextRouter.ts` — 双模式数据读取判断。
-- `reqflow/src/lib/ai/evaluation.ts` — 固定问题与结果断言。
+- `morfra/src/lib/ai/tableSnapshot.ts` — 适配并规范化表快照。
+- `morfra/src/lib/ai/analysisPlan.ts` — 分析计划类型与校验。
+- `morfra/src/lib/ai/analysisEngine.ts` — 本地确定性执行器。
+- `morfra/src/lib/ai/contextBuilder.ts` — 最小化云端上下文。
+- `morfra/src/lib/ai/contextRouter.ts` — 双模式数据读取判断。
+- `morfra/src/lib/ai/evaluation.ts` — 固定问题与结果断言。
 
 **验证：**
 
@@ -246,11 +246,11 @@ Phase 2 与 Phase 4 在代码所有权隔离时可并行，但默认按序执行
 
 **关键文件：**
 
-- `reqflow/src/stores/aiConversationStore.ts` — 会话、消息与活动请求状态。
-- `reqflow/src/lib/ai/chatOrchestrator.ts` — 路由、计划、本地执行与模型回答编排。
-- `reqflow/src/lib/ai/titleGenerator.ts` — 自动标题与静默回退。
-- `reqflow/src/lib/ai/messagePersistence.ts` — 流式完成、停止与失败的落盘边界。
-- `reqflow/src/stores/chatStore.ts` — 在接入阶段改为面板兼容外观层或移除假消息职责。
+- `morfra/src/stores/aiConversationStore.ts` — 会话、消息与活动请求状态。
+- `morfra/src/lib/ai/chatOrchestrator.ts` — 路由、计划、本地执行与模型回答编排。
+- `morfra/src/lib/ai/titleGenerator.ts` — 自动标题与静默回退。
+- `morfra/src/lib/ai/messagePersistence.ts` — 流式完成、停止与失败的落盘边界。
+- `morfra/src/stores/chatStore.ts` — 在接入阶段改为面板兼容外观层或移除假消息职责。
 
 **验证：**
 
@@ -284,17 +284,17 @@ Phase 2 与 Phase 4 在代码所有权隔离时可并行，但默认按序执行
 
 **关键文件：**
 
-- `reqflow/src/components/chat/ChatPanel.tsx` — 面板容器与视图切换。
-- `reqflow/src/components/chat/ChatHeader.tsx` — 模式、历史、新建与收起。
-- `reqflow/src/components/chat/ChatContextBar.tsx` — 表名与分析范围。
-- `reqflow/src/components/chat/ChatEmptyState.tsx` — 配置、空表和场景入口。
-- `reqflow/src/components/chat/ChatHistoryView.tsx` — 当前表会话管理。
-- `reqflow/src/components/chat/ChatComposer.tsx` — 输入、选择范围、模型、发送 / 停止。
-- `reqflow/src/components/chat/ChatMessage.tsx` — 用户与普通 AI 消息。
-- `reqflow/src/components/chat/AnalysisAnswer.tsx` — 数字、表格和记录引用。
-- `reqflow/src/components/layout/MainLayout.tsx` — 宽屏第三栏与窄屏抽屉切换。
-- `reqflow/src/components/topbar/ChatToggle.tsx` — 完成提示与可访问状态。
-- `reqflow/package.json` — 增加 Markdown 渲染依赖。
+- `morfra/src/components/chat/ChatPanel.tsx` — 面板容器与视图切换。
+- `morfra/src/components/chat/ChatHeader.tsx` — 模式、历史、新建与收起。
+- `morfra/src/components/chat/ChatContextBar.tsx` — 表名与分析范围。
+- `morfra/src/components/chat/ChatEmptyState.tsx` — 配置、空表和场景入口。
+- `morfra/src/components/chat/ChatHistoryView.tsx` — 当前表会话管理。
+- `morfra/src/components/chat/ChatComposer.tsx` — 输入、选择范围、模型、发送 / 停止。
+- `morfra/src/components/chat/ChatMessage.tsx` — 用户与普通 AI 消息。
+- `morfra/src/components/chat/AnalysisAnswer.tsx` — 数字、表格和记录引用。
+- `morfra/src/components/layout/MainLayout.tsx` — 宽屏第三栏与窄屏抽屉切换。
+- `morfra/src/components/topbar/ChatToggle.tsx` — 完成提示与可访问状态。
+- `morfra/package.json` — 增加 Markdown 渲染依赖。
 
 **验证：**
 
@@ -331,9 +331,9 @@ Phase 2 与 Phase 4 在代码所有权隔离时可并行，但默认按序执行
 
 **关键文件：**
 
-- `reqflow/src/adapters/ai/currentProjectTableAdapter.ts` — 当前代码的临时宿主适配。
-- `reqflow/src/lib/ai/integrationChecks.ts` — 宿主契约运行时断言。
-- `reqflow/src/fixtures/aiEvaluationCases.ts` — 最终评估集。
+- `morfra/src/adapters/ai/currentProjectTableAdapter.ts` — 当前代码的临时宿主适配。
+- `morfra/src/lib/ai/integrationChecks.ts` — 宿主契约运行时断言。
+- `morfra/src/fixtures/aiEvaluationCases.ts` — 最终评估集。
 - `initiatives/ai-assistant/INTEGRATION-CONTRACT.md` — 根据实现事实收紧契约，不扩大需求。
 
 **验证：**
@@ -366,7 +366,7 @@ $APPLOCALDATA/
                 └── <conversationId>.md
 
 macOS Keychain
-└── service: reqflow.ai.provider
+└── service: morfra.ai.provider
     └── account: <providerConfigId>  # API Key
 ```
 

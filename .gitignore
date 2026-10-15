@@ -4,10 +4,11 @@
 # 系统文件
 .DS_Store
 
-# 构建产物 / 依赖（reqflow/ 自带 .gitignore，这里兜底）
-reqflow/node_modules/
-reqflow/dist/
-reqflow/src-tauri/target/
+# 构建产物 / 依赖（morfra/ 自带 .gitignore，这里兜底）
+node_modules/
+morfra/node_modules/
+morfra/dist/
+morfra/src-tauri/target/
 .pnpm-store/
 
 # 环境变量

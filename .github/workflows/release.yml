@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: lts/*
           cache: pnpm
-          cache-dependency-path: reqflow/pnpm-lock.yaml
+          cache-dependency-path: morfra/pnpm-lock.yaml
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -31,16 +31,16 @@ jobs:
           targets: aarch64-apple-darwin
 
       - name: install frontend dependencies
-        working-directory: reqflow
+        working-directory: morfra
         run: pnpm install --frozen-lockfile
 
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          projectPath: reqflow
+          projectPath: morfra
           tagName: ${{ github.ref_name }}
-          releaseName: 'reqflow ${{ github.ref_name }}'
+          releaseName: 'Morfra ${{ github.ref_name }}'
           releaseDraft: false
           prerelease: false
           args: '--target aarch64-apple-darwin'

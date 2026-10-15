@@ -238,7 +238,7 @@ $APPLOCALDATA/ai/providers.json
 $APPLOCALDATA/ai/preferences.json
 $APPLOCALDATA/ai/tables/<tableId>/conversations.json
 $APPLOCALDATA/ai/tables/<tableId>/conversations/<conversationId>.md
-macOS Keychain: reqflow.ai.provider / <providerConfigId>
+macOS Keychain: morfra.ai.provider / <providerConfigId>
 ```
 
 - 所有普通文件都必须有版本字段并使用原子替换。

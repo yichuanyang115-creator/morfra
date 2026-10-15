@@ -27,7 +27,7 @@
 | 审查、修复与整改计划 | `docs/audits/AUDIT-REGISTER.md` | 当前问题状态的唯一入口；先读总账，再按其中链接读取本次任务必要的详细报告。总账不是产品事实或开发计划。 |
 | AI 表格助手独立实现 | `initiatives/ai-assistant/Product-Spec.md`、`initiatives/ai-assistant/DEV-PLAN.md` | 独立工作流事实；状态冲突时结合该单元 Git 与所有者交接判断，不由根计划猜测。 |
 | AI 与主产品接入边界 | `initiatives/ai-assistant/INTEGRATION-CONTRACT.md` | 只约束双方边界；当前字段类型映射仍需在接入前与 v3 表模型对齐。 |
-| 具体实现 | 目标代码、直接调用方、对应测试 | 先定位再读取，禁止先加载整个 `reqflow/src`。 |
+| 具体实现 | 目标代码、直接调用方、对应测试 | 先定位再读取，禁止先加载整个 `morfra/src`。 |
 
 当前开发默认完整读取 `Product-Spec.md` 与本次 Phase 关联的条目；只有调查旧行为或定位历史回归时，才读取 `docs/archive/Product-Spec-v2.md` 与 `docs/archive/Design-Brief-v2.md`。
 
@@ -40,7 +40,7 @@
 - `docs/archive/`：已完成 Phase 与历史材料；仅在兼容排查、回归定位、迁移或用户明确指定时读取。
 - `.codex/`：Codex hooks、Agent 配置和进化状态；仅在其对应流程触发时读取。
 - `.agents/skills/`：仅在任务命中对应 Skill 时读取该 Skill 及其明确要求的引用文件。
-- `reqflow/node_modules/`、`reqflow/dist/`、`reqflow/src-tauri/target/`、`.pnpm-store/`：依赖、构建或缓存产物，永不作为业务上下文读取。
+- `morfra/node_modules/`、`morfra/dist/`、`morfra/src-tauri/target/`、`.pnpm-store/`：依赖、构建或缓存产物，永不作为业务上下文读取。
 
 ## 4. 冲突处理
 

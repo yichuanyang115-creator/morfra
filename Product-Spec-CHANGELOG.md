@@ -410,3 +410,9 @@
 ### 规则修订
 
 - EXP-015：单元格及连续选区的选中从“低强度冷蓝底色与边界”改为“仅低强度冷蓝边界”；内容底色与条件填色保持可读，编辑态和键盘焦点继续使用各自独立边界。
+
+## [v3.0-rename] - 2026-10-15
+### 技术标识对齐
+- GitHub 仓库由 `yichuanyang115-creator/reqflow` 更名为 `yichuanyang115-creator/morfra`，本地 remote 同步更新。
+- 项目代码目录由 `reqflow/` 更名为 `morfra/`；npm 包名、Cargo crate 名（`morfra`/`morfra_lib`）、Bundle Identifier（`com.yichuangyang.morfra`）、内置模板 id（`morfra`）、更新器仓库名、AI Keychain service（`morfra.ai.provider`）与 release workflow 全部同步对齐。
+- `v3.0-rebaseline` 中"暂不重命名技术标识"的决定就此完成闭环；历史 Changelog 条目保留原文，不回溯改写。

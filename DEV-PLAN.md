@@ -12,9 +12,9 @@
 
 ## 1. 当前状态与执行边界
 
-- 项目代码目录继续使用 `reqflow/`；用户可见名称在 v3 中统一为 `Morfra`，代码目录、npm 包名与 Bundle Identifier 暂不做无收益的路径迁移。
+- 项目代码目录已由 `reqflow/` 更名为 `morfra/`（2026-10-15）；npm 包名、Cargo crate 名与 Bundle Identifier 已同步对齐 Morfra。
 - Phase 32～44 已完成；Phase 45 已获用户整体批准，当前只执行该 Phase。
-- 当前工作区存在 AI 独立进程的未提交改动。任何 Phase 开始前必须重新检查 Git 状态；不得覆盖 `reqflow/src/**/ai/`、`reqflow/src/components/chat/`、`reqflow/src/components/app-settings/AI*`、`reqflow/src-tauri/src/ai/` 及其共享入口中的并行改动。
+- 当前工作区存在 AI 独立进程的未提交改动。任何 Phase 开始前必须重新检查 Git 状态；不得覆盖 `morfra/src/**/ai/`、`morfra/src/components/chat/`、`morfra/src/components/app-settings/AI*`、`morfra/src-tauri/src/ai/` 及其共享入口中的并行改动。
 - v3 不迁移旧 Markdown、`schema.json` 或旧看板业务数据；可以替换旧主数据链路，但不得借机删除 AI 独立工作流的数据和配置。
 - 每次只执行一个获批准 Phase。完成后必须通过 Code Review、测试完整性、编译验证和功能测试，再等待下一 Phase 批准；用户未明确要求时不提交、不推送。当前用户要求以真实应用逐项验收为界，验收前仅执行字段管理重构的定向验证，不提前触发全套收口门禁。
 
@@ -163,7 +163,7 @@
 | `activity_comments` | Phase 41 | 活动节点说明与评论 |
 | `attachments` | Phase 42 | 图片/文件元数据、项目内相对路径和引用关系 |
 
-数据库迁移文件从 `reqflow/src-tauri/migrations/001_v3_init.sql` 开始；迁移编号只增不改，测试必须覆盖空库升级、重复打开和失败回滚。
+数据库迁移文件从 `morfra/src-tauri/migrations/001_v3_init.sql` 开始；迁移编号只增不改，测试必须覆盖空库升级、重复打开和失败回滚。
 
 ## 6. 功能依赖图
 
@@ -213,17 +213,17 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src-tauri/src/storage/mod.rs` — 存储模块入口和 Tauri 注册边界。
-- `reqflow/src-tauri/src/storage/connection.rs` — 项目数据库连接、PRAGMA 与路径验证。
-- `reqflow/src-tauri/src/storage/migrations.rs` — 迁移注册、升级前保护和失败回滚。
-- `reqflow/src-tauri/src/storage/repository.rs` — 表、视图、字段和记录的领域仓库。
-- `reqflow/src-tauri/src/storage/commands.rs` — 受约束的项目与数据命令。
-- `reqflow/src-tauri/src/storage/undo.rs` — 当前会话事务逆操作栈。
-- `reqflow/src-tauri/migrations/001_v3_init.sql` — v3 初始数据库结构和索引。
-- `reqflow/src-tauri/Cargo.toml`、`reqflow/src-tauri/Cargo.lock` — 增加并锁定 SQLite 依赖；保留 AI 进程已加入的依赖。
-- `reqflow/src-tauri/src/lib.rs` — 以增量方式注册 storage 模块和命令，不覆盖 AI 命令注册。
-- `reqflow/src/types/domain.ts` — 前端稳定项目、表、字段、视图与记录类型。
-- `reqflow/src/lib/ipc/storageClient.ts` — 类型化 Tauri IPC 客户端。
+- `morfra/src-tauri/src/storage/mod.rs` — 存储模块入口和 Tauri 注册边界。
+- `morfra/src-tauri/src/storage/connection.rs` — 项目数据库连接、PRAGMA 与路径验证。
+- `morfra/src-tauri/src/storage/migrations.rs` — 迁移注册、升级前保护和失败回滚。
+- `morfra/src-tauri/src/storage/repository.rs` — 表、视图、字段和记录的领域仓库。
+- `morfra/src-tauri/src/storage/commands.rs` — 受约束的项目与数据命令。
+- `morfra/src-tauri/src/storage/undo.rs` — 当前会话事务逆操作栈。
+- `morfra/src-tauri/migrations/001_v3_init.sql` — v3 初始数据库结构和索引。
+- `morfra/src-tauri/Cargo.toml`、`morfra/src-tauri/Cargo.lock` — 增加并锁定 SQLite 依赖；保留 AI 进程已加入的依赖。
+- `morfra/src-tauri/src/lib.rs` — 以增量方式注册 storage 模块和命令，不覆盖 AI 命令注册。
+- `morfra/src/types/domain.ts` — 前端稳定项目、表、字段、视图与记录类型。
+- `morfra/src/lib/ipc/storageClient.ts` — 类型化 Tauri IPC 客户端。
 
 **共享文件规则：** `Cargo.toml`、`Cargo.lock` 与 `src-tauri/src/lib.rs` 当前已有 AI 独立进程改动。Phase 32 开始时必须先读取这三份文件及其未提交 diff，只做保留现有 AI 声明的增量合并；若另一进程仍在同时写入，先完成可隔离的 storage 模块，待其形成稳定存档点后再合并共享入口。共享入口未安全合并前，Phase 32 不得判定完成。
 
@@ -251,14 +251,14 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/styles/tokens.css` — v3 浅深模式语义 Token 和材质降级。
-- `reqflow/src/styles/global.css` — SF 字体、滚动、焦点、减少动态效果与窗口基础样式。
-- `reqflow/src/components/layout/MorfraShell.tsx` — 响应式区域编排根组件。
-- `reqflow/src/components/layout/WindowTitlebar.tsx` — 导航与 AI 开关的标题栏宿主。
-- `reqflow/src/components/layout/RightPanelHost.tsx` — 详情/AI 双栏、单栏和抽屉状态机。
-- `reqflow/src/stores/layoutStore.ts` — 用户偏好与瞬时响应式状态分离。
-- `reqflow/src/lib/layout/windowLayout.ts` — 宽度、高度和面板优先级纯函数。
-- `reqflow/src-tauri/tauri.conf.json` — Morfra 窗口标题及 960×640 最小尺寸。
+- `morfra/src/styles/tokens.css` — v3 浅深模式语义 Token 和材质降级。
+- `morfra/src/styles/global.css` — SF 字体、滚动、焦点、减少动态效果与窗口基础样式。
+- `morfra/src/components/layout/MorfraShell.tsx` — 响应式区域编排根组件。
+- `morfra/src/components/layout/WindowTitlebar.tsx` — 导航与 AI 开关的标题栏宿主。
+- `morfra/src/components/layout/RightPanelHost.tsx` — 详情/AI 双栏、单栏和抽屉状态机。
+- `morfra/src/stores/layoutStore.ts` — 用户偏好与瞬时响应式状态分离。
+- `morfra/src/lib/layout/windowLayout.ts` — 宽度、高度和面板优先级纯函数。
+- `morfra/src-tauri/tauri.conf.json` — Morfra 窗口标题及 960×640 最小尺寸。
 
 **验收标准：**
 
@@ -284,13 +284,13 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/sidebar/ProjectSwitcher.tsx` — 最近项目及新建/打开入口。
-- `reqflow/src/components/sidebar/TableList.tsx` — 当前项目表列表与拖拽排序。
-- `reqflow/src/components/workspace/TableHeader.tsx` — 表名与表级操作。
-- `reqflow/src/components/workspace/ViewTabBar.tsx` — 单行视图标签及溢出菜单。
-- `reqflow/src/components/workspace/ViewToolbar.tsx` — 当前视图工具宿主。
-- `reqflow/src/stores/workspaceStore.ts` — 当前项目、表、视图和最近项目协调。
-- `reqflow/src-tauri/src/storage/commands.rs` — 项目、表和视图生命周期事务。
+- `morfra/src/components/sidebar/ProjectSwitcher.tsx` — 最近项目及新建/打开入口。
+- `morfra/src/components/sidebar/TableList.tsx` — 当前项目表列表与拖拽排序。
+- `morfra/src/components/workspace/TableHeader.tsx` — 表名与表级操作。
+- `morfra/src/components/workspace/ViewTabBar.tsx` — 单行视图标签及溢出菜单。
+- `morfra/src/components/workspace/ViewToolbar.tsx` — 当前视图工具宿主。
+- `morfra/src/stores/workspaceStore.ts` — 当前项目、表、视图和最近项目协调。
+- `morfra/src-tauri/src/storage/commands.rs` — 项目、表和视图生命周期事务。
 
 **验收标准：**
 
@@ -316,14 +316,14 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/fields/FieldManager.tsx` — 表级字段和字段组管理。
-- `reqflow/src/components/fields/FieldEditor.tsx` — 字段类型与配置编辑。
-- `reqflow/src/components/fields/OptionEditor.tsx` — 选项颜色、排序和删除影响流程。
-- `reqflow/src/components/fields/FieldTypeConversionDialog.tsx` — 有损转换预览与确认。
-- `reqflow/src/stores/tableDataStore.ts` — 当前表字段、记录与事务结果状态。
-- `reqflow/src/lib/fields/valueConversion.ts` — 与 Rust 同合同的可预览转换规则。
-- `reqflow/src-tauri/src/storage/field_repository.rs` — 字段、选项、组及转换事务。
-- `reqflow/src-tauri/src/storage/record_repository.rs` — 记录与类型化单元格值。
+- `morfra/src/components/fields/FieldManager.tsx` — 表级字段和字段组管理。
+- `morfra/src/components/fields/FieldEditor.tsx` — 字段类型与配置编辑。
+- `morfra/src/components/fields/OptionEditor.tsx` — 选项颜色、排序和删除影响流程。
+- `morfra/src/components/fields/FieldTypeConversionDialog.tsx` — 有损转换预览与确认。
+- `morfra/src/stores/tableDataStore.ts` — 当前表字段、记录与事务结果状态。
+- `morfra/src/lib/fields/valueConversion.ts` — 与 Rust 同合同的可预览转换规则。
+- `morfra/src-tauri/src/storage/field_repository.rs` — 字段、选项、组及转换事务。
+- `morfra/src-tauri/src/storage/record_repository.rs` — 记录与类型化单元格值。
 
 **验收标准：**
 
@@ -349,13 +349,13 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/table/DataGrid.tsx` — 表格状态与虚拟化编排。
-- `reqflow/src/components/table/GridHeader.tsx` — 字段组、列头、冻结和宽度控制。
-- `reqflow/src/components/table/GridBody.tsx` — 可见行列渲染。
-- `reqflow/src/components/table/GridCell.tsx` — 类型化只读展示基座。
-- `reqflow/src/components/table/FieldVisibilityPanel.tsx` — 当前视图字段布局。
-- `reqflow/src/lib/table/columnLayout.ts` — 组块、冻结和有效宽度计算。
-- `reqflow/src/lib/table/virtualGrid.ts` — 行列虚拟窗口与 overscan 合同。
+- `morfra/src/components/table/DataGrid.tsx` — 表格状态与虚拟化编排。
+- `morfra/src/components/table/GridHeader.tsx` — 字段组、列头、冻结和宽度控制。
+- `morfra/src/components/table/GridBody.tsx` — 可见行列渲染。
+- `morfra/src/components/table/GridCell.tsx` — 类型化只读展示基座。
+- `morfra/src/components/table/FieldVisibilityPanel.tsx` — 当前视图字段布局。
+- `morfra/src/lib/table/columnLayout.ts` — 组块、冻结和有效宽度计算。
+- `morfra/src/lib/table/virtualGrid.ts` — 行列虚拟窗口与 overscan 合同。
 
 **验收标准：**
 
@@ -381,14 +381,14 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/table/GridSelectionLayer.tsx` — 单元格区域与活动格视觉。
-- `reqflow/src/components/table/GridCell.tsx` — 选中、编辑和只读状态切换。
-- `reqflow/src/components/table/editors/CellEditorHost.tsx` — 类型化编辑器宿主。
-- `reqflow/src/components/table/editors/SelectEditor.tsx` — 单选/多选草稿和提交。
-- `reqflow/src/components/table/editors/DateEditor.tsx` — 日期/时间编辑。
-- `reqflow/src/lib/table/selectionModel.ts` — 区域、行选择和活动格纯模型。
-- `reqflow/src/lib/table/keyboardNavigation.ts` — 选中/编辑键盘状态机。
-- `reqflow/src/stores/gridInteractionStore.ts` — 当前视图瞬时选择与编辑状态。
+- `morfra/src/components/table/GridSelectionLayer.tsx` — 单元格区域与活动格视觉。
+- `morfra/src/components/table/GridCell.tsx` — 选中、编辑和只读状态切换。
+- `morfra/src/components/table/editors/CellEditorHost.tsx` — 类型化编辑器宿主。
+- `morfra/src/components/table/editors/SelectEditor.tsx` — 单选/多选草稿和提交。
+- `morfra/src/components/table/editors/DateEditor.tsx` — 日期/时间编辑。
+- `morfra/src/lib/table/selectionModel.ts` — 区域、行选择和活动格纯模型。
+- `morfra/src/lib/table/keyboardNavigation.ts` — 选中/编辑键盘状态机。
+- `morfra/src/stores/gridInteractionStore.ts` — 当前视图瞬时选择与编辑状态。
 
 **验收标准：**
 
@@ -414,13 +414,13 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/lib/table/clipboard.ts` — TSV 与内部类型剪贴板编码。
-- `reqflow/src/lib/table/pastePlan.ts` — 目标映射、转换和完整校验计划。
-- `reqflow/src/components/table/GridContextMenu.tsx` — 单元格、同字段与行上下文操作。
-- `reqflow/src/components/table/BulkDeleteDialog.tsx` — 记录数量确认。
-- `reqflow/src/stores/undoStore.ts` — 当前会话 Undo 协调和 Toast 摘要。
-- `reqflow/src-tauri/src/storage/mutation_commands.rs` — 单值、批量、粘贴和删除事务。
-- `reqflow/src-tauri/src/storage/undo.rs` — 精确逆操作执行。
+- `morfra/src/lib/table/clipboard.ts` — TSV 与内部类型剪贴板编码。
+- `morfra/src/lib/table/pastePlan.ts` — 目标映射、转换和完整校验计划。
+- `morfra/src/components/table/GridContextMenu.tsx` — 单元格、同字段与行上下文操作。
+- `morfra/src/components/table/BulkDeleteDialog.tsx` — 记录数量确认。
+- `morfra/src/stores/undoStore.ts` — 当前会话 Undo 协调和 Toast 摘要。
+- `morfra/src-tauri/src/storage/mutation_commands.rs` — 单值、批量、粘贴和删除事务。
+- `morfra/src-tauri/src/storage/undo.rs` — 精确逆操作执行。
 
 **验收标准：**
 
@@ -446,14 +446,14 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/table/tools/SearchControl.tsx` — 临时搜索。
-- `reqflow/src/components/table/tools/FilterPanel.tsx` — 类型化筛选条件。
-- `reqflow/src/components/table/tools/SortPanel.tsx` — 多字段稳定排序。
-- `reqflow/src/components/table/tools/GroupPanel.tsx` — 单级分组设置。
-- `reqflow/src/components/table/tools/ConditionalColorPanel.tsx` — 条件填色规则。
-- `reqflow/src/lib/table/viewPipeline.ts` — 筛选、搜索、分组、排序和渲染顺序。
-- `reqflow/src/lib/table/groupProjection.ts` — 单值/多值投影及唯一计数。
-- `reqflow/src-tauri/src/storage/query_repository.rs` — 索引化筛选、排序和候选记录查询。
+- `morfra/src/components/table/tools/SearchControl.tsx` — 临时搜索。
+- `morfra/src/components/table/tools/FilterPanel.tsx` — 类型化筛选条件。
+- `morfra/src/components/table/tools/SortPanel.tsx` — 多字段稳定排序。
+- `morfra/src/components/table/tools/GroupPanel.tsx` — 单级分组设置。
+- `morfra/src/components/table/tools/ConditionalColorPanel.tsx` — 条件填色规则。
+- `morfra/src/lib/table/viewPipeline.ts` — 筛选、搜索、分组、排序和渲染顺序。
+- `morfra/src/lib/table/groupProjection.ts` — 单值/多值投影及唯一计数。
+- `morfra/src-tauri/src/storage/query_repository.rs` — 索引化筛选、排序和候选记录查询。
 
 **验收标准：**
 
@@ -479,12 +479,12 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/board/KanbanView.tsx` — v3 看板编排与可见区。
-- `reqflow/src/components/board/KanbanColumn.tsx` — 列头、折叠、计数和快速新增。
-- `reqflow/src/components/board/KanbanCard.tsx` — 主标题、字段展示和直接编辑。
-- `reqflow/src/lib/board/boardProjection.ts` — 任意字段分组和多值投影。
-- `reqflow/src/lib/board/boardOrdering.ts` — 列顺序与各投影位置。
-- `reqflow/src-tauri/src/storage/board_repository.rs` — 看板位置、列配置和跨组事务。
+- `morfra/src/components/board/KanbanView.tsx` — v3 看板编排与可见区。
+- `morfra/src/components/board/KanbanColumn.tsx` — 列头、折叠、计数和快速新增。
+- `morfra/src/components/board/KanbanCard.tsx` — 主标题、字段展示和直接编辑。
+- `morfra/src/lib/board/boardProjection.ts` — 任意字段分组和多值投影。
+- `morfra/src/lib/board/boardOrdering.ts` — 列顺序与各投影位置。
+- `morfra/src-tauri/src/storage/board_repository.rs` — 看板位置、列配置和跨组事务。
 
 **验收标准：**
 
@@ -510,13 +510,13 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/detail/RecordDetailPanel.tsx` — v3 详情宿主与字段区。
-- `reqflow/src/components/detail/DetailFieldVisibility.tsx` — 表级详情字段配置。
-- `reqflow/src/components/detail/tabs/ActivityTab.tsx` — 关联状态与历史时间线适配。
-- `reqflow/src/components/settings/ActivityFieldBinding.tsx` — 活动 Tab 单选字段关联。
-- `reqflow/src-tauri/src/storage/activity_repository.rs` — 活动快照、评论和联动事务。
-- `reqflow/src-tauri/src/storage/templates.rs` — 空白与需求管理模板创建。
-- `reqflow/src/lib/templates/requirementManagement.ts` — 模板前端展示描述与预览。
+- `morfra/src/components/detail/RecordDetailPanel.tsx` — v3 详情宿主与字段区。
+- `morfra/src/components/detail/DetailFieldVisibility.tsx` — 表级详情字段配置。
+- `morfra/src/components/detail/tabs/ActivityTab.tsx` — 关联状态与历史时间线适配。
+- `morfra/src/components/settings/ActivityFieldBinding.tsx` — 活动 Tab 单选字段关联。
+- `morfra/src-tauri/src/storage/activity_repository.rs` — 活动快照、评论和联动事务。
+- `morfra/src-tauri/src/storage/templates.rs` — 空白与需求管理模板创建。
+- `morfra/src/lib/templates/requirementManagement.ts` — 模板前端展示描述与预览。
 
 **验收标准：**
 
@@ -542,12 +542,12 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src-tauri/src/storage/attachments.rs` — 项目内复制、命名、引用和清理。
-- `reqflow/src-tauri/src/storage/backup.rs` — 在线备份、轮换、恢复和完整性校验。
-- `reqflow/src/components/fields/ImageCell.tsx` — 图片缩略图、预览和失败状态。
-- `reqflow/src/components/fields/FileCell.tsx` — 文件名、打开、替换和缺失状态。
-- `reqflow/src/components/settings/BackupSettings.tsx` — 立即备份、备份列表和恢复入口。
-- `reqflow/src/stores/recoveryStore.ts` — 备份/恢复进度与错误状态。
+- `morfra/src-tauri/src/storage/attachments.rs` — 项目内复制、命名、引用和清理。
+- `morfra/src-tauri/src/storage/backup.rs` — 在线备份、轮换、恢复和完整性校验。
+- `morfra/src/components/fields/ImageCell.tsx` — 图片缩略图、预览和失败状态。
+- `morfra/src/components/fields/FileCell.tsx` — 文件名、打开、替换和缺失状态。
+- `morfra/src/components/settings/BackupSettings.tsx` — 立即备份、备份列表和恢复入口。
+- `morfra/src/stores/recoveryStore.ts` — 备份/恢复进度与错误状态。
 
 **验收标准：**
 
@@ -573,13 +573,13 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/adapters/ai/currentStorageTableAdapter.ts` — 主产品 v3 只读表快照适配与 HostActions。
-- `reqflow/src/lib/ai/integrationChecks.ts` — AI 数据生命周期校验与删除级联协调。
-- `reqflow/src/components/storage/StorageAIHost.tsx` — 真实存储宿主、面板与删除事件接线。
-- `reqflow/src/components/layout/WindowTitlebar.tsx` — 唯一 AI 开关。
-- `reqflow/src/components/layout/RightPanelHost.tsx` — AI 的栏位/抽屉宿主状态。
-- `reqflow/src/stores/workspaceStore.ts` — 活动表与选择事件源。
-- `reqflow/src-tauri/src/lib.rs` — 存储与 AI 命令共同注册的共享入口。
+- `morfra/src/adapters/ai/currentStorageTableAdapter.ts` — 主产品 v3 只读表快照适配与 HostActions。
+- `morfra/src/lib/ai/integrationChecks.ts` — AI 数据生命周期校验与删除级联协调。
+- `morfra/src/components/storage/StorageAIHost.tsx` — 真实存储宿主、面板与删除事件接线。
+- `morfra/src/components/layout/WindowTitlebar.tsx` — 唯一 AI 开关。
+- `morfra/src/components/layout/RightPanelHost.tsx` — AI 的栏位/抽屉宿主状态。
+- `morfra/src/stores/workspaceStore.ts` — 活动表与选择事件源。
+- `morfra/src-tauri/src/lib.rs` — 存储与 AI 命令共同注册的共享入口。
 
 **验收标准：**
 
@@ -605,13 +605,13 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/App.tsx` — v3 启动、错误恢复和唯一工作区入口。
-- `reqflow/src/components/layout/MorfraShell.tsx` — 最终窗口矩阵修正。
-- `reqflow/src/components/table/DataGrid.tsx` — 性能与可访问性收口。
-- `reqflow/src-tauri/src/storage/query_repository.rs` — 查询计划、索引和性能修正。
-- `reqflow/src/styles/tokens.css` — 最终浅深模式与对比度落值。
-- `reqflow/src/styles/global.css` — 动效、滚动、焦点和系统设置收口。
-- `reqflow/src-tauri/tauri.conf.json` — 用户可见 Morfra 桌面配置。
+- `morfra/src/App.tsx` — v3 启动、错误恢复和唯一工作区入口。
+- `morfra/src/components/layout/MorfraShell.tsx` — 最终窗口矩阵修正。
+- `morfra/src/components/table/DataGrid.tsx` — 性能与可访问性收口。
+- `morfra/src-tauri/src/storage/query_repository.rs` — 查询计划、索引和性能修正。
+- `morfra/src/styles/tokens.css` — 最终浅深模式与对比度落值。
+- `morfra/src/styles/global.css` — 动效、滚动、焦点和系统设置收口。
+- `morfra/src-tauri/tauri.conf.json` — 用户可见 Morfra 桌面配置。
 
 **验收标准：**
 
@@ -642,16 +642,16 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/layout/WindowTitlebar.tsx` — 标题栏控件顺序、项目切换和新建表入口。
-- `reqflow/src/components/layout/MorfraShell.tsx` — 48px 侧栏双态、窄窗浮层与创建流程编排。
-- `reqflow/src/components/layout/LayoutResizer.tsx`、`MorfraShell.tsx`、`reqflow/src/lib/layout/windowLayout.ts`、`reqflow/src/stores/layoutStore.ts` — 侧栏拖拽阈值、回弹差、同手势反向展开与真实收起宽度语义。
-- `reqflow/src/components/sidebar/TableList.tsx`、`TableActionsMenu.tsx`、`TableEmojiPicker.tsx` — 表列表双态、Emoji 与不裁切菜单。
-- `reqflow/src/lib/tableEmojiCatalog.ts`、`reqflow/src/lib/tableEmojiPreferences.ts`、`emojibase-data` — Unicode / CLDR Emoji 分类、双语搜索元数据与应用级最近记录。
-- `reqflow/src/stores/projectStore.ts`、`reqflow/src/lib/ipc/storageClient.ts`、`reqflow/src/types/domain.ts` — Emoji 状态、IPC 与前端领域类型。
-- `reqflow/src-tauri/src/storage/`、`reqflow/src-tauri/src/commands/` — SQLite 兼容升级、查询映射和 Emoji 原子更新命令。
-- `reqflow/src/styles/02-shell.css` — 标题栏、48px 窄栏、状态与浮层样式。
-- `reqflow/src/styles/global/02-shell.css` — 仅侧栏的极光毛玻璃装饰层、静态基底与减少动态效果降级。
-- `reqflow/src/components/storage/StorageWorkspace.tsx`、`reqflow/src/components/table/{DataGrid,GridHeader,GridBody,GridCell}.tsx`、`reqflow/src/components/view/{TableHeader,ViewToolbar,ViewTools}.tsx` — 表格层级、工具栏、字段表头、记录详情入口与快速新增字段。
+- `morfra/src/components/layout/WindowTitlebar.tsx` — 标题栏控件顺序、项目切换和新建表入口。
+- `morfra/src/components/layout/MorfraShell.tsx` — 48px 侧栏双态、窄窗浮层与创建流程编排。
+- `morfra/src/components/layout/LayoutResizer.tsx`、`MorfraShell.tsx`、`morfra/src/lib/layout/windowLayout.ts`、`morfra/src/stores/layoutStore.ts` — 侧栏拖拽阈值、回弹差、同手势反向展开与真实收起宽度语义。
+- `morfra/src/components/sidebar/TableList.tsx`、`TableActionsMenu.tsx`、`TableEmojiPicker.tsx` — 表列表双态、Emoji 与不裁切菜单。
+- `morfra/src/lib/tableEmojiCatalog.ts`、`morfra/src/lib/tableEmojiPreferences.ts`、`emojibase-data` — Unicode / CLDR Emoji 分类、双语搜索元数据与应用级最近记录。
+- `morfra/src/stores/projectStore.ts`、`morfra/src/lib/ipc/storageClient.ts`、`morfra/src/types/domain.ts` — Emoji 状态、IPC 与前端领域类型。
+- `morfra/src-tauri/src/storage/`、`morfra/src-tauri/src/commands/` — SQLite 兼容升级、查询映射和 Emoji 原子更新命令。
+- `morfra/src/styles/02-shell.css` — 标题栏、48px 窄栏、状态与浮层样式。
+- `morfra/src/styles/global/02-shell.css` — 仅侧栏的极光毛玻璃装饰层、静态基底与减少动态效果降级。
+- `morfra/src/components/storage/StorageWorkspace.tsx`、`morfra/src/components/table/{DataGrid,GridHeader,GridBody,GridCell}.tsx`、`morfra/src/components/view/{TableHeader,ViewToolbar,ViewTools}.tsx` — 表格层级、工具栏、字段表头、记录详情入口与快速新增字段。
 
 **完成标准：**
 
@@ -685,10 +685,10 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/fields/FieldManager.tsx` — 模态容器、列表/编辑页面导航、焦点限制、退出确认、滚动与焦点恢复。
-- `reqflow/src/components/fields/FieldEditor.tsx`、`FieldEditPage.tsx` — 紧凑字段列表行与草稿编辑页的职责拆分。
-- `reqflow/src/components/fields/FieldEditor.test.tsx`、`FieldManager.test.tsx` — 列表、编辑导航、草稿、关闭与焦点交互覆盖。
-- `reqflow/src/components/storage/StorageWorkspace.tsx`、`reqflow/src/components/workspace/TableHeader.tsx` — 维持字段管理触发器和关闭后的焦点返回。
+- `morfra/src/components/fields/FieldManager.tsx` — 模态容器、列表/编辑页面导航、焦点限制、退出确认、滚动与焦点恢复。
+- `morfra/src/components/fields/FieldEditor.tsx`、`FieldEditPage.tsx` — 紧凑字段列表行与草稿编辑页的职责拆分。
+- `morfra/src/components/fields/FieldEditor.test.tsx`、`FieldManager.test.tsx` — 列表、编辑导航、草稿、关闭与焦点交互覆盖。
+- `morfra/src/components/storage/StorageWorkspace.tsx`、`morfra/src/components/workspace/TableHeader.tsx` — 维持字段管理触发器和关闭后的焦点返回。
 
 **完成标准：**
 
@@ -720,9 +720,9 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/fields/FieldManager.tsx`、`FieldEditPage.tsx` — 非模态锚定容器、页内导航、草稿离开规则与焦点。
-- `reqflow/src/components/storage/StorageWorkspace.tsx`、`reqflow/src/components/workspace/TableHeader.tsx`、`reqflow/src/components/table/tools/ViewTools.tsx` — 触发器 ARIA、工具浮层互斥与焦点协作。
-- `reqflow/src/components/fields/FieldManager.test.tsx`、`reqflow/src/components/workspace/TableHeader.test.tsx` — 打开、关闭、草稿丢弃、互斥与 ARIA 定向覆盖。
+- `morfra/src/components/fields/FieldManager.tsx`、`FieldEditPage.tsx` — 非模态锚定容器、页内导航、草稿离开规则与焦点。
+- `morfra/src/components/storage/StorageWorkspace.tsx`、`morfra/src/components/workspace/TableHeader.tsx`、`morfra/src/components/table/tools/ViewTools.tsx` — 触发器 ARIA、工具浮层互斥与焦点协作。
+- `morfra/src/components/fields/FieldManager.test.tsx`、`morfra/src/components/workspace/TableHeader.test.tsx` — 打开、关闭、草稿丢弃、互斥与 ARIA 定向覆盖。
 
 **完成标准：**
 
@@ -749,9 +749,9 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/fields/FieldEditPage.tsx`、`FieldManager.tsx` — 草稿生命周期、保存/取消/影响确认与焦点恢复。
-- `reqflow/src/components/fields/OptionEditor.tsx`、新增设置组件 — 自定义选择器、switch 设置行、选项草稿列表与颜色色板。
-- `reqflow/src/stores/tableDataStore.ts`、`reqflow/src/lib/ipc/storageClient.ts`、`reqflow/src-tauri/src/storage/*` — 原子字段配置命令及失败回滚。
+- `morfra/src/components/fields/FieldEditPage.tsx`、`FieldManager.tsx` — 草稿生命周期、保存/取消/影响确认与焦点恢复。
+- `morfra/src/components/fields/OptionEditor.tsx`、新增设置组件 — 自定义选择器、switch 设置行、选项草稿列表与颜色色板。
+- `morfra/src/stores/tableDataStore.ts`、`morfra/src/lib/ipc/storageClient.ts`、`morfra/src-tauri/src/storage/*` — 原子字段配置命令及失败回滚。
 - 对应字段组件测试与 Rust 存储测试 — 草稿取消、原子提交、失败回滚、引用选项影响处理及键盘交互。
 
 **完成标准：**
@@ -778,8 +778,8 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/storage/StorageWorkspace.tsx` — 主显示区语义容器。
-- `reqflow/src/styles/global/03-navigation.css`、`05-table.css` — 连续画布与网格边界层级。
+- `morfra/src/components/storage/StorageWorkspace.tsx` — 主显示区语义容器。
+- `morfra/src/styles/global/03-navigation.css`、`05-table.css` — 连续画布与网格边界层级。
 
 **完成标准：**
 
@@ -805,8 +805,8 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/storage/StorageWorkspace.tsx` — 仅为表格视图标记数据画布卡片。
-- `reqflow/src/styles/tokens/morfra.css`、`global/05-table.css` — 浅深模式卡片阴影 Token、极窄边距与内容裁切。
+- `morfra/src/components/storage/StorageWorkspace.tsx` — 仅为表格视图标记数据画布卡片。
+- `morfra/src/styles/tokens/morfra.css`、`global/05-table.css` — 浅深模式卡片阴影 Token、极窄边距与内容裁切。
 
 **完成标准：**
 
@@ -844,7 +844,7 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/fields/FieldManager.tsx`、`FieldEditor.tsx`、`FieldManager.test.tsx`、`reqflow/src/styles/global/05-table.css`。
+- `morfra/src/components/fields/FieldManager.tsx`、`FieldEditor.tsx`、`FieldManager.test.tsx`、`morfra/src/styles/global/05-table.css`。
 
 **完成标准：**
 
@@ -857,8 +857,8 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/components/table/GridHeader.tsx`、`GridBody.tsx`、`DataGrid.tsx` — 虚拟列投影、结构与交互。
-- `reqflow/src/lib/table/columnLayout.ts`、`reqflow/src/styles/global/05-table.css` — 统一宽度令牌和卡片/列样式。
+- `morfra/src/components/table/GridHeader.tsx`、`GridBody.tsx`、`DataGrid.tsx` — 虚拟列投影、结构与交互。
+- `morfra/src/lib/table/columnLayout.ts`、`morfra/src/styles/global/05-table.css` — 统一宽度令牌和卡片/列样式。
 
 **完成标准：**
 
@@ -883,7 +883,7 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/styles/global/03-navigation.css`、`04-workspace.css`、`05-table.css` — 顶部连续表面、Tabs 选中线与嵌入式工具栏边界。
+- `morfra/src/styles/global/03-navigation.css`、`04-workspace.css`、`05-table.css` — 顶部连续表面、Tabs 选中线与嵌入式工具栏边界。
 
 **完成标准：**
 
@@ -909,7 +909,7 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/styles/global/01-foundation.css`、`02-shell.css`、`03-navigation.css`、`04-workspace.css`、`05-table.css`、`07-panels.css` — 全局输入焦点、既有输入边界与搜索外壳。
+- `morfra/src/styles/global/01-foundation.css`、`02-shell.css`、`03-navigation.css`、`04-workspace.css`、`05-table.css`、`07-panels.css` — 全局输入焦点、既有输入边界与搜索外壳。
 
 **完成标准：**
 
@@ -933,7 +933,7 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src/styles/global/05-table.css` — 单元格选中与选区覆盖层视觉。
+- `morfra/src/styles/global/05-table.css` — 单元格选中与选区覆盖层视觉。
 
 **完成标准：**
 
@@ -958,8 +958,8 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 
 **关键文件：**
 
-- `reqflow/src-tauri/migrations/011_allow_empty_field_names.sql`、`reqflow/src-tauri/src/storage/{migrations,field_repository_data,field_repository_validation}.rs`。
-- `reqflow/src/components/table/GridHeader.tsx`、`GridHeader.test.tsx`、`reqflow/src/styles/global/05-table.css`。
+- `morfra/src-tauri/migrations/011_allow_empty_field_names.sql`、`morfra/src-tauri/src/storage/{migrations,field_repository_data,field_repository_validation}.rs`。
+- `morfra/src/components/table/GridHeader.tsx`、`GridHeader.test.tsx`、`morfra/src/styles/global/05-table.css`。
 
 **完成标准：**
 
