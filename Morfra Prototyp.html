@@ -1,0 +1,4061 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>需求管理 · 看板</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/geist-sans@latest/index.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/fontsource/css/geist-mono@latest/index.css" />
+<style data-od-inline-asset="css/styles.css">
+/* ===== 令牌 =====
+   【预览】蓝白奶油质感调色板：中性色阶整体换成偏蓝色相（hue ~235），
+   同时把明度往上提、chroma 压低，读出来是"冷调的奶油"——不是暖黄
+   奶油的甜腻感，是蓝白瓷器般的柔和光泽。--surface 也从纯白 0 0 0
+   改成极淡的蓝白，避免卡片和背景对比过硬、失去"奶油"的连续感。
+   投影同步换成偏蓝的深色（原来是中性灰 rgba(20,20,25,…)），这样
+   阴影本身也带着这套色相，不会和奶油底色打架。
+   方向 B（Height/Cron 式精致原生工具感）的结构没有变——阶段横条/
+   卡片层次、accent-solid 两处实色橙依旧沿用之前的方案，这次只换
+   中性色阶本身。 */
+:root {
+  --bg: oklch(96% 0.012 238);
+  --surface: oklch(99% 0.006 235);
+  --surface-2: oklch(94% 0.014 238);
+  --fg: oklch(23% 0.022 250);
+  --muted: oklch(50% 0.02 245);
+  /* muted-2 从 66%→52%：这个令牌同时被用在纯装饰图标（chevron/搜索
+     放大镜等，只需要 1.4.11 的 3:1）和实际承载信息的小字（数量、
+     字段标签、任务负责人/截止日期、时间戳等，需要 1.4.3 的 4.5:1）
+     两类场景——原值 66% 相对 surface/surface-2/bg 只有 2.6-3.0:1，
+     两类场景都不达标。52% 是能让两类场景同时过 4.5:1 门槛的最亮值
+     （对 surface-2 刚好 4.62:1），没有拆出第二个令牌是因为这个属性
+     在全文件有 30+ 处引用，拆分需要逐处判断"这处是装饰还是文字"，
+     属于比"打磨"更大的结构改动；先用一个都合规的值堵住可访问性缺口。 */
+  --muted-2: oklch(52% 0.016 240);
+  --border: oklch(88% 0.014 235);
+  --border-strong: oklch(79% 0.018 235);
+
+  --accent: #e88330;
+  --accent-text: color-mix(in oklch, #e88330 62%, black 38%);
+  --accent-soft: color-mix(in oklch, #e88330 14%, white 86%);
+  --accent-soft-strong: color-mix(in oklch, #e88330 24%, white 76%);
+  --accent-solid: #e88330;
+  /* accent-solid-fg 原来是近白色，跟 --accent-solid 实测只有 2.64:1，
+     连非文字 UI 组件的 3:1 门槛都没过。换成深墨色，实测 6.7:1，文字
+     4.5:1 门槛也稳稳过。 */
+  --accent-solid-fg: oklch(20% 0.02 40);
+
+  --sev-p0: oklch(53% 0.20 24);
+  --sev-p0-soft: oklch(94% 0.03 24);
+  /* sev-p1 原 58%→52%：相对 soft 底色实测只有 3.64:1，小字文字要求
+     4.5:1 没达标，下压一档到 4.68:1。 */
+  --sev-p1: oklch(52% 0.14 78);
+  --sev-p1-soft: oklch(94% 0.045 78);
+  --sev-p2: var(--muted-2);
+  --sev-p2-soft: oklch(95% 0.004 255);
+
+  --st-todo: var(--muted-2);
+  --st-todo-soft: oklch(95% 0.004 255);
+  /* st-progress 原 56%→50%：实测 3.91:1 不达标，下压到 4.99:1 */
+  --st-progress: oklch(50% 0.16 250);
+  --st-progress-soft: oklch(94% 0.03 250);
+  /* st-done 原 55%→49%：实测 3.88:1 不达标，下压到 5.01:1 */
+  --st-done: oklch(49% 0.13 150);
+  --st-done-soft: oklch(94% 0.035 150);
+  --st-blocked: oklch(53% 0.19 22);
+  --st-blocked-soft: oklch(94% 0.03 22);
+
+  --font-display: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --topbar-h: 34px;
+  --board-w: 821px; /* 跟 js/app.js 里 state.boardWidth 的默认值保持一致；JS 加载后会用
+                        内联样式覆盖这个值，这里只是页面渲染出来之前的静态兜底 */
+  --detail-max-w: 660px; /* 详情面板内容的固定上限——面板本身是 1fr 占满剩余空间，
+                             但内容不会被拉得比这个值更宽，超过这个宽度继续拖看板
+                             分隔条也没有视觉变化，这是方案B 用户确认选定的行为 */
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+button { font-family: inherit; }
+::selection { background: var(--accent-soft-strong); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+/* 键盘可访问性硬门槛（WCAG 2.4.7 Focus Visible，Level A）：全文件有
+   21 处输入框/下拉框/文本域各自写了 outline:none（为了去掉原生蓝框，
+   换成 hover/focus 时的底色+描边反馈），层叠下来的结果是键盘 Tab 到
+   几乎所有表单控件时完全没有焦点提示——鼠标用户看得到 hover 反馈，
+   键盘用户什么都看不到。
+   这条规则必须用 !important：这 21 处里有 `.topbar-search input`
+   `.pop-item .pop-rename-input` 这类复合选择器，优先级比单个元素+
+   伪类选择器更高或打平（打平时源码顺序更晚的赢，而它们全部排在
+   这条规则后面），逐条改 21 处样式选择器风险更高、也更容易漏改，
+   !important 是这种"补齐一个被到处覆盖的可访问性基线"场景下更可靠
+   的做法——它只在键盘 focus-visible 时生效，不影响鼠标点击后的
+   hover/active 样式。 */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[contenteditable]:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 1px;
+}
+
+svg.icon { width: 18px; height: 18px; flex: none; }
+svg.icon-sm { width: 14px; height: 14px; }
+
+/* ===== APP 外壳 =====
+   两层结构：顶部条横跨整个视口宽度（不属于中栏/右栏任一列），下方是
+   "中栏＋右栏"两栏区。侧边栏已砍掉——项目切换、搜索、设置全部收进
+   顶部条，看板是唯一的内容视图。 */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+/* 三列：看板 / 分隔条 / 详情面板。拖拽只改变 --board-w 这一个变量，
+   详情面板列是 1fr，自动拿剩余空间——方案B：看板宽度精确贴合内容
+   （不依赖窗口尺寸飘忽），详情面板内容自己用 --detail-max-w 封顶，
+   不会被拉得太宽。跟"收起/全屏"两个离散跳转按钮共用同一套网格，
+   互不冲突：那两个按钮改的是 detail-collapsed/detail-fullscreen
+   这两个 class，会覆盖掉两侧列。 */
+.app-body {
+  display: grid;
+  grid-template-columns: var(--board-w) 6px 1fr;
+  flex: 1;
+  min-height: 0;
+  transition: grid-template-columns 0.18s ease;
+}
+.app-body.resizing { transition: none; }
+.app.detail-collapsed .app-body { grid-template-columns: 1fr 0 0; }
+.app.detail-fullscreen .app-body { grid-template-columns: 0 0 1fr; }
+.app.detail-collapsed .panel-resizer,
+.app.detail-fullscreen .panel-resizer { display: none; }
+
+/* 拖拽手柄：常态几乎隐形（一条细线），hover/拖拽时才显出可交互的
+   高亮条——跟看板其它"点击才展开"的节制交互统一，不用常驻抓手图标
+   占着视觉噪音 */
+.panel-resizer {
+  position: relative;
+  cursor: col-resize;
+  background: var(--border);
+  transition: background 0.12s;
+}
+.panel-resizer:hover,
+.panel-resizer.dragging { background: var(--accent); }
+.panel-resizer::before {
+  /* 实际可点击/可拖拽的判定区比视觉细线宽得多，6px 的线太窄不好抓 */
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: -5px; right: -5px;
+}
+/* 拖拽过程中鼠标可能扫过其它文字/输入框，锁住全局光标和选中行为，
+   避免拖着拖着突然选中一片需求名文字 */
+body.resizing-panel { cursor: col-resize; user-select: none; }
+body.resizing-panel * { user-select: none; }
+
+/* ===== 顶部条 =====
+   固定高度 46px，三段式布局：左侧项目名（点击弹出切换列表）、中间
+   搜索框常驻、右侧设置 + 右栏收起/展开开关。收起/展开按钮直接是这条
+   横跨全宽的条的最右端内容，不需要 fixed 定位——条本身的位置在收起/
+   展开/全屏三种状态下都不变，按钮自然也不变。 */
+/* 顶部条：project 和 actions 用 justify-content:space-between 分别钉在
+   两端（无论项目名多长，actions 永远是最右侧）。搜索框用 position:
+   absolute + left:50% 相对整条顶部条真正居中——不是"project 和 actions
+   之间"的居中（那样项目名一变长中点就跟着偏），是不受两侧宽度影响的
+   绝对居中。 */
+.topbar {
+  position: relative;
+  height: var(--topbar-h);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-weight: 590;
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  max-width: 320px;
+}
+.topbar-project:hover { background: var(--surface); }
+.topbar-project span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-project .chev-down { color: var(--muted-2); flex: none; }
+
+.topbar-search-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 380px;
+  max-width: 40vw;
+}
+.topbar-search {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: 5px 10px;
+  position: relative;
+}
+.topbar-search:has(input:focus) { border-color: var(--accent); }
+.topbar-search svg { color: var(--muted-2); flex: none; }
+.topbar-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 12.5px;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+.topbar-search input::placeholder { color: var(--muted-2); }
+.topbar-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  box-shadow: 0 12px 32px -8px rgba(30, 40, 70, 0.18), 0 2px 8px rgba(30,40,70,0.05);
+  z-index: 50;
+  padding: 5px;
+}
+
+.topbar-actions { flex: none; display: flex; align-items: center; gap: 2px; }
+.topbar-icon-btn {
+  width: 26px; height: 26px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.topbar-icon-btn:hover { background: var(--surface); color: var(--fg); }
+
+/* ===== MAIN COLUMN ===== */
+.main-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+}
+
+.view-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* 建立唯一、干净的堆叠上下文边界：容器内的字段说明行、阶段横条（两层
+     sticky）、普通需求行的层级比较都在这一套上下文规则下完成，不会被
+     祖先链上其他隐式堆叠上下文分走、产生比较歧义——这是需求行持续
+     穿透到 sticky 元素上方问题的根因修复，不是滚动时序补丁。 */
+  isolation: isolate;
+  /* 始终预留滚动条宽度，阶段折叠/展开导致内容总高度跨越"需要滚动"的
+     临界点时，滚动条出现/消失不再挤压或释放内容可用宽度——避免列表
+     整体宽度跳动。不支持的浏览器安全退化为原行为。 */
+  scrollbar-gutter: stable;
+  /* 抑制过顶回弹，跟堆叠层级无关，单独保留 */
+  overscroll-behavior: contain;
+  /* 顶部不留 padding：容器内边距会在 sticky 说明行和滚动区顶端之间
+     留一条缝隙，滚动时这条缝隙正是需求行能露出来的地方。说明行自己
+     的呼吸空间改用它自身的高度/padding 来给，不再依赖容器顶部留白。 */
+  padding: 0 22px 24px;
+}
+/* ===== 空状态 ===== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 60px 20px;
+  color: var(--muted);
+  text-align: center;
+}
+.empty-state .empty-icon { color: var(--border-strong); }
+.empty-state p { margin: 0; font-size: 13px; }
+
+/* ===== 看板：双层吸顶 =====
+   字段说明行 sticky top:0（高度固定 34px），阶段胶囊 sticky top:34px
+   叠在字段说明正下方——两者出现时机互斥（滚动前都在原位，滚动后胶囊
+   补位到字段说明下方），不会互相覆盖。--board-header-h 供胶囊的
+   sticky top 复用，避免两处写死的像素值走散。 */
+:root { --board-header-h: 34px; }
+
+/* 需求行 7 个数据列收紧到贴合内容实际宽度后（名称列封顶 320px），
+   右侧会露出真实空白，不再被名称列的 1.6fr 吸收掉。--board-row-max-w
+   是这套收紧宽度的总和（名称列上限 320px + 7 个数据列 356px + 7 个
+   12px 列间距 84px + 左右内边距 16px = 776px），阶段标题横条
+   （.stage-head）跟表头/需求行共用这个变量封顶，两者收窄到同一个
+   可视宽度，不会一个撑满、一个收紧看着错位。 */
+:root { --board-row-max-w: 776px; }
+
+.board-field-header {
+  display: grid;
+  grid-template-columns: minmax(140px, 320px) 40px 56px 56px 52px 56px 56px 40px;
+  align-items: center;
+  gap: 12px;
+  max-width: var(--board-row-max-w);
+  height: var(--board-header-h);
+  padding: 0 8px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 4;
+  font-size: 11.5px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.board-field-header .fh-name { font-family: var(--font-body); font-weight: 550; }
+.board-field-header .fh-mono { font-family: var(--font-mono); text-align: center; }
+
+.stage-section { margin-bottom: 4px; }
+/* 阶段横条：整行是一个统一容器（白底 + 1px 描边框 + 小圆角），
+   左侧"箭头+名称+数量"和右侧"新建"操作都是这条横条内部的普通内容，
+   不再各自独立成孤立的小色块——回避了全圆角胶囊拉满整行的比例失衡，
+   也回避了纯灰底显得普通的问题。 */
+.stage-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 6px;
+  padding: 7px 8px 7px 10px;
+  max-width: var(--board-row-max-w);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  /* 卡片感的轻投影——阶段横条从"贴纸"升级为略微浮起的分区标签，
+     在滚动经过的连续阶段之间给出比描边更明显的一层边界。 */
+  box-shadow: 0 1px 2px rgba(30, 40, 70, 0.05);
+  position: sticky;
+  top: var(--board-header-h);
+  z-index: 3;
+}
+.stage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  user-select: none;
+}
+.stage-chip .chev {
+  color: var(--muted-2);
+  transition: transform 0.15s ease;
+  flex: none;
+}
+.stage-section.collapsed .stage-chip .chev { transform: rotate(-90deg); }
+.stage-chip .stage-name {
+  font-family: var(--font-display);
+  font-weight: 590;
+  font-size: 13px;
+  letter-spacing: -0.005em;
+}
+.stage-chip .stage-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+.stage-line { flex: 1; }
+/* 新建操作：文字+图标的 ghost 按钮，作为横条内容的自然延伸，
+   不再是孤立的纯图标方块 */
+.quick-add-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 4px 7px;
+  font-size: 12px;
+  color: var(--muted);
+  border: none;
+  background: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.quick-add-toggle:hover { background: var(--surface-2); color: var(--accent-text); }
+
+/* 排序入口：手动模式常态，按规则模式高亮——一眼能看出这个阶段现在
+   是不是按字段规则排的 */
+.stage-sort { position: relative; flex: none; }
+.stage-sort-btn {
+  width: 24px; height: 24px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--muted-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.stage-sort-btn:hover { background: var(--surface-2); color: var(--fg); }
+.stage-sort-btn.active { color: var(--accent-text); background: var(--accent-soft); }
+.sort-panel {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  width: 240px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: 0 12px 32px -8px rgba(30, 40, 70, 0.18), 0 2px 8px rgba(30,40,70,0.05);
+  padding: 8px;
+  z-index: 6;
+}
+/* 已手动调整顺序时的提示：不用用户去猜该选哪个字段才能恢复排序，
+   点一下就照面板当前显示的字段重新排一遍 */
+.sort-manual-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.sort-restore-btn {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font-size: 11.5px;
+  font-weight: 550;
+  padding: 2px 4px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.sort-restore-btn:hover { background: var(--accent-soft); }
+.sort-field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+}
+.sort-field-label {
+  flex: none;
+  width: 42px;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+.sort-field-select {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  padding: 4px 6px;
+  font-size: 12px;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+.sort-dir-btn {
+  width: 22px; height: 22px;
+  flex: none;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.sort-dir-btn:hover { background: var(--border); color: var(--fg); }
+.sort-dir-btn:disabled { opacity: 0.4; cursor: default; }
+
+.stage-body { display: flex; flex-direction: column; gap: 0; }
+.stage-section.collapsed .stage-body,
+.stage-section.collapsed .stage-empty { display: none; }
+.stage-empty {
+  padding: 14px 4px;
+  color: var(--muted-2);
+  font-size: 12.5px;
+}
+
+/* 新建草稿行：跟 .req-row 同网格，插入在列表最上方，只有名称列可编辑，
+   其余列留空占位。未输入内容时失焦/点别处会被移除，不写入任何数据。 */
+.draft-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 320px) 40px 56px 56px 52px 56px 56px 40px;
+  max-width: var(--board-row-max-w);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-soft);
+}
+.draft-row input {
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--fg);
+  font-family: var(--font-body);
+  width: 100%;
+}
+.draft-row input::placeholder { color: var(--muted-2); }
+
+/* ===== 需求行（表格样式） ===== */
+.req-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 320px) 40px 56px 56px 52px 56px 56px 40px;
+  max-width: var(--board-row-max-w);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px;
+  cursor: grab;
+  border: 1px solid transparent;
+  border-bottom: 1px solid var(--border);
+}
+.req-row:hover { background: var(--surface); }
+/* 选中态是看板上唯一敢用实色橙的地方之一：左侧 2px 实色竖条 +
+   soft 底色，取代之前"只有一圈很淡的描边"看不出选中的问题——
+   这条竖条借用 box-shadow 的 inset，不占布局宽度，不会挤动列。 */
+.req-row.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-strong);
+  box-shadow: inset 2px 0 0 0 var(--accent-solid);
+}
+.req-row.dragging { opacity: 0.4; }
+.req-row[draggable="true"]:active { cursor: grabbing; }
+/* 阶段内拖拽调顺序：一条插入线，跟"拖到整块阶段区域＝换阶段"的整块
+   高亮反馈区分开，避免两种拖拽目的在视觉上混在一起 */
+.req-row.drop-indicator-before { box-shadow: inset 0 2px 0 0 var(--accent); }
+.req-row.drop-indicator-after { box-shadow: inset 0 -2px 0 0 var(--accent); }
+.req-row .col-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--fg);
+}
+.req-row .col-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.req-row .col-sub {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.req-row .col-progress { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+.req-row .col-pri { display: flex; justify-content: center; }
+/* 进度%：行内可编辑数字输入，跟其余 col-sub 视觉量级一致，聚焦时才亮
+   边框，不喧宾夺主；出现在这一列的 % 后缀是纯文字，不属于输入框内容 */
+.progress-input {
+  width: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  outline: none;
+  padding: 1px 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.progress-input::-webkit-outer-spin-button,
+.progress-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.progress-input:hover, .progress-input:focus { background: var(--surface-2); border-color: var(--border); color: var(--fg); }
+
+.pri-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 590;
+  letter-spacing: 0.05em;
+  width: fit-content;
+}
+.pri-badge.p0 { background: var(--sev-p0-soft); color: var(--sev-p0); }
+.pri-badge.p1 { background: var(--sev-p1-soft); color: var(--sev-p1); }
+.pri-badge.p2 { background: var(--sev-p2-soft); color: var(--muted); }
+
+.stage-drop-target { background: var(--accent-soft) !important; outline: 1.5px dashed var(--accent); outline-offset: -3px; }
+
+.dropzone-row {
+  min-height: 44px;
+}
+
+/* 发布阶段行内可编辑：方式下拉，跟其余数值列同一视觉量级，
+   hover/focus 才亮边框 */
+.release-select {
+  width: 100%;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--r-sm);
+  padding: 2px 4px;
+  text-align: center;
+  outline: none;
+}
+.release-select:hover, .release-select:focus { background: var(--surface-2); border-color: var(--border); color: var(--fg); }
+
+/* 发布日期列：原生 <input type="date"> 的内部图标/清除按钮/字段排布
+   在不同浏览器下无法可靠地用 CSS 对齐或裁掉，会导致数字被裁切或
+   偏移。改用"文字 + 透明输入框叠加"的方式——可见的日期文字用跟
+   其余日期列完全相同的 .col-sub 样式（因此天然居中对齐），真正的
+   <input type="date"> 整个铺满格子但完全透明，只用来接收点击、弹出
+   系统日期选择面板。选完之后 change 事件重渲染，文字随之更新。 */
+.release-date-cell { position: relative; }
+.release-date-cell .release-date-text { position: relative; z-index: 0; }
+.release-date-cell .release-date {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: none;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+.release-date-cell:hover .release-date-text { color: var(--fg); }
+
+/* 归档区域内嵌搜索框，跟阶段横条的新建按钮同一位置逻辑 */
+.stage-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 3px 8px;
+  background: var(--surface-2);
+}
+.stage-search svg { color: var(--muted-2); flex: none; }
+.stage-search input {
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 12px;
+  width: 150px;
+  color: var(--fg);
+  font-family: var(--font-body);
+}
+.stage-search input::placeholder { color: var(--muted-2); }
+.req-row.archive-row { grid-template-columns: 1.6fr 100px 100px; }
+.checkbox {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  cursor: pointer;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: transparent;
+}
+.checkbox.checked { background: var(--accent); border-color: var(--accent); color: white; }
+.checkbox svg { width: 10px; height: 10px; }
+
+.status-pill {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 590;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 99px;
+  cursor: pointer;
+  border: none;
+  flex: none;
+}
+.status-pill.todo { background: var(--st-todo-soft); color: var(--muted); }
+.status-pill.progress { background: var(--st-progress-soft); color: var(--st-progress); }
+.status-pill.done { background: var(--st-done-soft); color: var(--st-done); }
+.status-pill.blocked { background: var(--st-blocked-soft); color: var(--st-blocked); }
+
+/* 验收 Tab —— 跟任务 Tab 同一套两行卡片语言：第一行描述+三个结果按钮
+   +删除；不通过时第二行露出可点击展开的原因说明。三个结果按钮都是
+   明确可点的态（包括"未验证"），不再是"两个按钮都没亮"这种隐含状态 */
+.ac-list { display: flex; flex-direction: column; gap: 6px; }
+.ac-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  position: relative;
+}
+.ac-row.failed { border-color: var(--st-blocked); }
+.ac-row.failed::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px; bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--st-blocked);
+}
+.ac-row-main { display: flex; align-items: center; gap: 8px; }
+.ac-desc-btn {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 13px;
+  color: var(--fg);
+  font-family: var(--font-body);
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ac-desc-btn:hover { background: var(--surface-2); border-color: var(--border); }
+.ac-desc-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 13px;
+  color: var(--fg);
+  font-family: var(--font-body);
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  outline: none;
+}
+.ac-desc-input:hover, .ac-desc-input:focus { background: var(--surface); border-color: var(--border); }
+.ac-result-toggle {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.ac-btn {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  padding: 2px 7px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted-2);
+  cursor: pointer;
+}
+.ac-btn.pass.on { background: var(--st-done-soft); color: var(--st-done); border-color: transparent; }
+.ac-btn.fail.on { background: var(--st-blocked-soft); color: var(--st-blocked); border-color: transparent; }
+.ac-btn.neutral.on { background: var(--st-todo-soft); color: var(--muted); border-color: transparent; }
+.ac-row-del {
+  width: 24px; height: 24px;
+  flex: none;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--muted-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.ac-row-del:hover { background: var(--st-blocked-soft); color: var(--st-blocked); }
+/* 不通过原因：常态是一行灰字按钮，点击展开成小文本框——跟任务 Tab
+   的阻塞说明同一套形态 */
+.ac-fail-note {
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--st-blocked);
+  font-size: 11.5px;
+  padding: 2px 4px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ac-fail-note:hover { background: var(--st-blocked-soft); }
+.ac-fail-note-input {
+  width: 100%;
+  min-height: 44px;
+  resize: vertical;
+  border: 1px solid var(--st-blocked);
+  border-radius: var(--r-sm);
+  background: var(--st-blocked-soft);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  color: var(--fg);
+  outline: none;
+}
+/* 验收标准新建草稿行：跟任务草稿行同一套"顶部插入一行，回车/失焦
+   即创建，没字就放弃"的交互 */
+.ac-draft-row {
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  padding: 9px 8px;
+  background: var(--accent-soft);
+}
+.ac-draft-row .ac-desc-input { font-size: 13px; }
+
+/* ===== 详情面板 ===== */
+.detail-panel {
+  background: var(--surface);
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.app.detail-collapsed .detail-panel,
+.app.detail-fullscreen .detail-panel { border-left: none; }
+.detail-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  max-width: var(--detail-max-w); /* 详情面板列本身是 1fr、可能比这个值宽——内容封顶在
+                                       这个宽度，超过之后继续拖看板分隔条不再有视觉变化，
+                                       多出来的空间留在面板右侧（靠近窗口边缘），面板左侧
+                                       仍贴着分隔条，跟阅读顺序一致 */
+}
+.app.detail-fullscreen .detail-inner { max-width: 100%; }
+
+/* 详情面板是方向 B 的"主舞台"：标题区从 14px 的表单标题升级为
+   接近 H3 的展示字号 + 呼吸空间，让人一进来就知道这是当前的
+   主要工作对象，而不是列表旁边一个附属的属性表单。
+   （原计划在标题上方加一行阶段 eyebrow，用户反馈不需要，已去掉——
+   阶段信息本来就在下方属性卡的"阶段"字段里，不用在标题区重复。） */
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.detail-title-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 590;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  outline: none;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+}
+.detail-title-input:hover, .detail-title-input:focus { background: var(--surface-2); }
+.detail-header-btn {
+  width: 28px; height: 28px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.detail-header-btn:hover { background: var(--surface-2); color: var(--fg); }
+
+.detail-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* 属性区两列：8 个 label/value 对(优先级/负责人/来源/阶段/进度/阶段槪位/
+   截止日期/创建时间)按 4 列网格自动流成 4 行 2 列——attrRow() 依旧只输出
+   一对 label+value div,顺序不变,靠列数变化就完成了排布,不用改调用顺序。
+   label 列宽按最长标签"创建时间"/"截止日期"(4 字)留够空间。
+   方向 B 升级：整块套进 surface-2 底色的圆角卡片里，从"贴着标题下方
+   的一排裸表单字段"变成"标题舞台旁边一张独立的属性卡"，行高也松一档。 */
+.attr-grid {
+  display: grid;
+  /* value 列用 minmax(0, 1fr) 而不是裸 1fr——grid 子项默认
+     min-width:auto，浏览器算轨道宽度时会拿子项（尤其是 <select>/
+     <input type="date">，这两种表单控件天生有不小的固有渲染宽度）的
+     最大内容宽度兜底。详情面板宽度是看板拖拽后挤出来的剩余空间，
+     一旦变窄，1fr 轨道就会被这个固有宽度顶开，撑出圆角卡片背景
+     之外，看起来像"背景盖不住字段""字段跑到界面外"。minmax(0, 1fr)
+     显式把轨道的最小尺寸钉在 0，轨道就能真正收缩，控件跟着变窄，
+     不会撑破容器——跟之前 flex/grid 滚动区要补 min-height:0 是
+     同一类问题，只是这次是宽度方向。 */
+  grid-template-columns: 58px minmax(0, 1fr) 58px minmax(0, 1fr);
+  row-gap: 8px;
+  column-gap: 10px;
+  margin: 12px 16px;
+  padding: 12px 12px;
+  background: var(--surface-2);
+  border-radius: var(--r-lg);
+  align-items: center;
+}
+.attr-label { font-size: 12px; color: var(--muted-2); white-space: nowrap; }
+/* .attr-value 是 label/value 对里包 select/input 的那层 wrapper——
+   同样要显式 min-width:0，双重保险：即使某个浏览器对 minmax(0,…)
+   的轨道最小值计算有出入，这层也不会把自己撑宽到内容的固有尺寸。 */
+.attr-value { min-width: 0; }
+/* .attr-select / .attr-text-input / .attr-text-input.readonly 共享同一套
+   盒模型（边框、内边距、字号、行高、圆角），三种原生控件（select/input/
+   span）在这套统一规则下文字起始位置和行高一致，不再逐行错位。
+   select 额外去掉原生外观，换成统一的小箭头背景图，视觉上跟 input 完全同源。 */
+.attr-select,
+.attr-text-input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 28px;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 12.5px;
+  line-height: 26px;
+  color: var(--fg);
+  padding: 0 6px;
+  border-radius: var(--r-sm);
+  font-family: var(--font-body);
+  outline: none;
+}
+.attr-select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2368748a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+  background-size: 16px;
+}
+/* hover/focus 态改用 --surface（纯白），不再是 --surface-2——
+   属性卡本身现在就是 surface-2 底色，如果 hover 也用 surface-2，
+   悬浮反馈会完全消失看不出来。 */
+.attr-select:hover,
+.attr-text-input:hover,
+.attr-text-input:focus { background-color: var(--surface); border-color: var(--border); }
+.attr-text-input.readonly { color: var(--muted); pointer-events: none; }
+.attr-text-input.readonly:hover { background-color: transparent; border-color: transparent; }
+
+/* Tabs */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px 4px 12px;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+/* 标签栏动态平分：.tab-bar-tabs 撑满标签栏除右侧插槽之外的剩余空间
+   （flex:1，不再是贴内容宽度），五个 .tab-btn 各占 flex:1，均分这块
+   空间——详情面板拖宽/拖窄，整排标签跟着等比例变宽/变窄，不会像原来
+   贴文字宽度那样露出一截不成比例的空白。 */
+.tab-bar-tabs { display: flex; flex: 1; gap: 2px; min-width: 0; }
+/* Tab 栏右侧操作插槽：跟标签同一行，贴最右侧。产出/任务/验收放
+   "新建"图标按钮，正文放模板抽屉入口，活动没有对应操作、返回空 div
+   占位。这个容器本身是 flex:none 不设宽度，宽度完全靠内容撑起——
+   四个有按钮的分支靠 26×26 的 .tab-slot-btn 撑住，活动分支的空 div
+   没有内容会收缩到 0，让旁边 flex:1 的 .tab-bar-tabs 吃掉这块宽度，
+   切到活动 Tab 时五个标签按钮的宽度会跟着跳动。补一个跟按钮同尺寸
+   的 min-width/min-height，保证四个 Tab 切换时插槽宽度始终一致。 */
+.tab-bar-slot { display: flex; align-items: center; flex: none; position: relative; min-width: 26px; min-height: 26px; }
+.tab-slot-btn {
+  width: 26px; height: 26px;
+  border: 1px solid var(--border-strong);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--muted-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.tab-slot-btn:hover { color: var(--accent-text); border-color: var(--accent); background: var(--accent-soft); }
+.tab-btn {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  padding: 6px 10px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.tab-btn:hover { color: var(--fg); }
+/* 当前 Tab 用实心橙药丸，是这次"加强橙色存在感"里第二个、也是最后
+   一个敢用满饱和度 --accent-solid 的地方（第一个是看板选中行的左侧
+   竖条）——两处都是"当前状态指示"，语义一致，其余交互继续用 soft
+   底色，避免橙色被摊薄到每个按钮上都出现。药丸尺寸收紧到跟其它 tab
+   按钮同一个 padding，不再比未选中态显著更高更大。 */
+.tab-btn.active {
+  color: var(--accent-solid-fg);
+  background: var(--accent-solid);
+  font-weight: 550;
+}
+.tab-panel { padding: 16px; display: none; }
+.tab-panel.active { display: block; }
+
+/* 正文 Tab / Block editor */
+.block-editor {
+  min-height: 220px;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--fg);
+  outline: none;
+}
+.block-editor h2 { font-family: var(--font-display); font-size: 16px; font-weight: 590; margin: 18px 0 6px; letter-spacing: -0.005em; }
+.block-editor h2:first-child { margin-top: 0; }
+.block-editor p { margin: 0 0 10px; }
+.block-editor ul { margin: 0 0 10px; padding-left: 20px; }
+.block-editor li { margin-bottom: 3px; }
+.block-editor code {
+  font-family: var(--font-mono);
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
+.block-editor blockquote {
+  border-left: 2px solid var(--accent);
+  margin: 10px 0;
+  padding: 2px 0 2px 12px;
+  color: var(--muted);
+}
+.block-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted-2);
+}
+/* 模板抽屉的把手：现在跟"正文/产出/任务/验收/活动"标签同一行，
+   贴 Tab 栏最右侧（在 .tab-bar-slot 里），鼠标移上去（或悬浮进 drawer
+   本身）才展开列表；正在编辑某个模板时用 .pinned 强制展开，不受鼠标
+   移出影响，防止编辑到一半因为鼠标移出而收起丢内容的错觉 */
+.template-rail { position: relative; z-index: 5; }
+.template-rail-handle {
+  width: 26px; height: 26px;
+  border: 1px solid var(--border-strong);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--muted-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.template-rail-handle:hover { color: var(--accent-text); border-color: var(--accent); }
+.template-rail-drawer {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  width: 260px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: 0 12px 32px -8px rgba(30, 40, 70, 0.18), 0 2px 8px rgba(30,40,70,0.05);
+  padding: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.12s, transform 0.12s, visibility 0.12s;
+}
+.template-rail:hover .template-rail-drawer,
+.template-rail.pinned .template-rail-drawer {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+/* 悬浮态下把手和抽屉之间有个无内容的缝隙，鼠标从把手移向抽屉会经过
+   这段空白——垂直方向补一块透明的桥接区，避免刚好移出 hover 判定 */
+.template-rail::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  right: 0;
+  width: 100%;
+  height: 16px;
+}
+.tpl-drawer-head {
+  font-size: 11px;
+  color: var(--muted-2);
+  padding: 4px 6px 6px;
+  letter-spacing: 0.02em;
+}
+.tpl-drawer-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+.tpl-drawer-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: var(--r-sm);
+}
+.tpl-drawer-row:hover { background: var(--surface-2); }
+.tpl-drawer-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none;
+  background: none;
+  padding: 7px 8px;
+  font-size: 12.5px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.tpl-drawer-icon-btn {
+  width: 22px; height: 22px;
+  flex: none;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--muted-2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+}
+.tpl-drawer-row:hover .tpl-drawer-icon-btn { opacity: 1; }
+.tpl-drawer-icon-btn:hover { color: var(--fg); background: var(--surface); }
+.tpl-empty { font-size: 12px; color: var(--muted-2); padding: 8px 6px; }
+.tpl-drawer-add {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 7px 8px;
+  border-radius: var(--r-sm);
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tpl-drawer-add:hover { background: var(--surface-2); color: var(--accent-text); }
+
+/* 模板编辑态：抽屉变宽变高，内部复用正文自己的 block-editor 组件，
+   打字即所见，不再是另一套小文本框 */
+.template-rail.pinned .template-rail-drawer { width: 320px; max-height: 420px; }
+.tpl-editor-head { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.tpl-back-btn {
+  width: 22px; height: 22px;
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--muted-2);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+.tpl-back-btn:hover { color: var(--fg); background: var(--surface-2); }
+.tpl-editor-name {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: none;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-weight: 550;
+  font-family: inherit;
+  color: var(--fg);
+  outline: none;
+}
+.tpl-editor-name:hover, .tpl-editor-name:focus { background: var(--surface-2); border-color: var(--border); }
+.tpl-editor-body {
+  min-height: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 8px;
+  font-size: 12.5px;
+}
+.tpl-editor-body:focus { border-color: var(--accent); }
+
+/* 任务 / 验收 Tab 共用的顶部汇总行 */
+.tab-summary {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--muted-2);
+  margin-bottom: 10px;
+}
+/* 任务 Tab —— 每条是一张两行卡片，跟产出卡片同一套视觉语言：
+   第一行＝名称 + 状态 + 阻塞开关 + 删除；第二行＝负责人/截止日期/进度%。
+   负责人/日期以前创建后永远锁死默认值，现在点击展开成输入框编辑；
+   进度%改动频繁，直接常驻数字输入框，不用多一次点击展开。 */
+.task-list { display: flex; flex-direction: column; gap: 6px; }
+.task-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  position: relative;
+}
+/* 阻塞态给一条左侧强调条，跟产出卡片"完成态"左侧条子是同一手法，
+   保持视觉语言一致——阻塞和完成都是"值得一眼看到"的状态 */
+.task-row.blocked { border-color: var(--st-blocked); }
+.task-row.blocked::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px; bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--st-blocked);
+}
+.task-row-main { display: flex; align-items: center; gap: 8px; }
+.task-name-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 13px;
+  color: var(--fg);
+  font-family: var(--font-body);
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  outline: none;
+}
+.task-name-input:hover, .task-name-input:focus { background: var(--surface-2); border-color: var(--border); }
+.task-blocked-toggle {
+  width: 24px; height: 24px;
+  flex: none;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--muted-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.task-blocked-toggle:hover { background: var(--surface-2); color: var(--fg); }
+.task-blocked-toggle.active { color: var(--st-blocked); background: var(--st-blocked-soft); }
+.task-row-del {
+  width: 24px; height: 24px;
+  flex: none;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--muted-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.task-row-del:hover { background: var(--st-blocked-soft); color: var(--st-blocked); }
+.task-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+.task-meta-btn {
+  border: 1px solid transparent;
+  background: none;
+  color: var(--muted-2);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 3px 6px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+.task-meta-btn:hover { background: var(--surface-2); border-color: var(--border); color: var(--fg); }
+.task-meta-input {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 3px 6px;
+  border-radius: var(--r-sm);
+  outline: none;
+  width: 110px;
+}
+.task-meta-input:focus { border-color: var(--accent); }
+.task-progress-input {
+  width: 32px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: none;
+  outline: none;
+  padding: 3px 2px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: right;
+  margin-left: auto;
+  flex: none;
+}
+.task-progress-input:hover, .task-progress-input:focus { background: var(--surface-2); border-color: var(--border); color: var(--fg); }
+.task-progress-input::-webkit-outer-spin-button,
+.task-progress-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* 阻塞说明：常态是一行灰字按钮，点击展开成小文本框，跟产出 Tab 的
+   附加输入框同一套"点击才展开"的节制交互 */
+.task-block-note {
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--st-blocked);
+  font-size: 11.5px;
+  padding: 2px 4px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.task-block-note:hover { background: var(--st-blocked-soft); }
+.task-block-note-input {
+  width: 100%;
+  min-height: 44px;
+  resize: vertical;
+  border: 1px solid var(--st-blocked);
+  border-radius: var(--r-sm);
+  background: var(--st-blocked-soft);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  color: var(--fg);
+  outline: none;
+}
+/* 任务新建草稿行：完整表单一次性填完，不是先只填名称再回头编辑——
+   名称是唯一必填项，负责人/日期/进度想填就填，不填就留空。没有独立
+   的"创建"按钮：名称有字，点表单外任意处或按回车就创建；名称是空的，
+   点哪儿/回车都只是收起表单，不创建。跟任务卡片同一套两行结构。 */
+.task-draft-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-md);
+  padding: 9px 8px;
+  background: var(--accent-soft);
+}
+.task-draft-row-main { display: flex; align-items: center; gap: 8px; }
+.task-draft-row .task-name-input { font-size: 13px; }
+.task-draft-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+.task-draft-row-meta .task-meta-input { width: 110px; }
+
+/* 产出 Tab —— 每条是一张两行卡片：
+   第一行＝勾选(完成) + 可编辑名称 + 删卡；第二行＝附件槽（单个）。
+   两行分开是因为附件 chip 是不弹性的固定宽度块，跟名称输入框挤在同一行
+   会把名称压得很窄；拆成两行后名称输入框永远有整卡宽度可用。 */
+.produce-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  margin-bottom: 6px;
+  position: relative;
+}
+.produce-card:last-child { margin-bottom: 0; }
+/* 勾选完成：左侧一条实色强调条 + 卡片边框换成强调色，比之前"整卡刷一层
+   浅底色"更醒目——浅底色跟旁边灰底的附件 chip 太接近，看不出完成态 */
+.produce-card.checked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.produce-card.checked::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 8px; bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+}
+.produce-row-1 { display: flex; align-items: center; gap: 8px; }
+.produce-row-2 { display: flex; align-items: center; }
+.produce-name-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: none;
+  font-size: 13px;
+  color: var(--fg);
+  font-family: var(--font-body);
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  outline: none;
+}
+.produce-name-input:hover, .produce-name-input:focus { background: var(--surface); border-color: var(--border); }
+/* 删卡按钮：跟"移除附件"用不同的视觉权重区分——删卡是不可逆操作，
+   常态就带一点点存在感（浅灰底），而移除附件是可逆小动作，常态不显眼，
+   避免两个"×"看起来一样重、容易点错 */
+.produce-card-del {
+  width: 24px; height: 24px;
+  flex: none;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--muted-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.produce-card-del:hover { background: var(--st-blocked-soft); color: var(--st-blocked); }
+.produce-attach-slot { position: relative; width: 100%; }
+/* "+ 附加"改成有边框的虚线按钮，跟旁边有实边框的卡片视觉权重接近，
+   一眼能看出是可点击控件，不再像纯说明文字 */
+.produce-attach-add {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--muted);
+  background: none;
+  border: 1px dashed var(--border-strong);
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+}
+.produce-attach-add:hover { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+/* 附加输入：点"附加文件或链接"直接原地展开成这一行，不再经过
+   上传/链接二选一菜单——粘贴链接回车即添加，旁边一个小上传图标按钮。
+   在行内展开（不是绝对定位弹出），因为现在只有一种表单形态，
+   不需要像以前那样悬浮在窄按钮上方 */
+.produce-attach-inline {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+.produce-attach-inline input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
+  font-size: 12px;
+  outline: none;
+  font-family: var(--font-body);
+}
+.produce-attach-inline input:focus { border-color: var(--accent); }
+.produce-attach-upload-btn {
+  width: 28px; height: 28px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.produce-attach-upload-btn:hover { border-color: var(--accent); color: var(--accent-text); }
+/* 已挂附件时显示为图标+名称的 chip，点击直接打开；chip 本身不再限制
+   max-width——现在这一行只有它和移除按钮两样东西，不用担心挤名称 */
+.produce-attach-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  padding: 5px 9px;
+  text-decoration: none;
+}
+.produce-attach-chip svg { width: 13px; height: 13px; flex: none; }
+.produce-attach-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.produce-attach-chip:hover { color: var(--accent-text); }
+/* 移除附件：常态几乎不可见（只有颜色，没有底色），跟旁边常态就带底色
+   的删卡按钮形成"轻/重"对比，操作破坏性越大视觉权重越高 */
+.produce-attach-remove {
+  width: 22px; height: 22px;
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--muted-2);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  margin-left: 4px;
+}
+.produce-attach-remove:hover { background: var(--st-blocked-soft); color: var(--st-blocked); }
+
+/* 活动 Tab */
+.timeline { position: relative; padding-left: 20px; }
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px; top: 6px; bottom: 6px;
+  width: 1.5px;
+  background: var(--border);
+}
+.tl-node { position: relative; padding-bottom: 20px; }
+.tl-node:last-child { padding-bottom: 0; }
+.tl-dot {
+  position: absolute;
+  left: -20px; top: 2px;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border-strong);
+}
+.tl-node.current .tl-dot { border-color: var(--accent); background: var(--accent); }
+.tl-node-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.tl-node-head .tl-stage { font-family: var(--font-display); font-size: 13px; font-weight: 590; }
+.tl-node-head .tl-time { font-size: 11px; color: var(--muted-2); font-family: var(--font-mono); }
+/* 删除节点按钮：常态几乎隐形，跟"移除附件"同一套节制处理——这是危险
+   操作（删了会带走这个节点的说明和评论），不该在列表里显眼常驻 */
+.tl-node-del {
+  margin-left: auto;
+  width: 20px; height: 20px;
+  flex: none;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  color: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.tl-node:hover .tl-node-del { color: var(--muted-2); }
+.tl-node-del:hover { background: var(--st-blocked-soft); color: var(--st-blocked) !important; }
+.tl-item {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 0 4px 2px;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+  margin-left: 1px;
+  margin-bottom: 3px;
+}
+.tl-item .tl-change-field { color: var(--fg); }
+/* 节点说明：常态是一行灰字按钮，点击展开成小文本框——跟任务 Tab 的
+   阻塞说明同一套"点击才展开"的节制交互 */
+.tl-note {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 2px 4px;
+  margin-bottom: 2px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tl-note:hover { background: var(--surface-2); color: var(--fg); }
+.tl-note-input {
+  width: 100%;
+  min-height: 44px;
+  resize: vertical;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  color: var(--fg);
+  outline: none;
+  margin-bottom: 4px;
+}
+.tl-note-input:focus { border-color: var(--accent); }
+.tl-comment {
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  padding: 7px 9px;
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+.tl-comment .tl-comment-meta { color: var(--muted-2); font-size: 10.5px; margin-bottom: 2px; font-family: var(--font-mono); }
+/* 对节点评论：常态是一行不起眼的"+ 评论"文字按钮，点击就地展开成
+   输入框，回车发送——不再是页面底部一个只对最新节点生效的常驻输入条 */
+.tl-comment-add-btn {
+  border: none;
+  background: none;
+  color: var(--muted-2);
+  font-size: 11.5px;
+  padding: 3px 4px;
+  margin-top: 4px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.tl-comment-add-btn:hover { background: var(--surface-2); color: var(--fg); }
+.tl-comment-form { margin-top: 4px; }
+.tl-comment-form input {
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  padding: 6px 9px;
+  font-size: 12px;
+  outline: none;
+  font-family: var(--font-body);
+}
+.tl-comment-form input:focus { border-color: var(--accent); background: var(--surface); }
+
+.detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  color: var(--muted-2);
+  padding: 20px;
+  text-align: center;
+}
+
+/* ===== 遮罩 + 弹层 ===== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 40;
+}
+.popover {
+  position: fixed;
+  top: calc(var(--topbar-h) + 6px);
+  left: 12px;
+  width: 240px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: 0 12px 32px -8px rgba(30, 40, 70, 0.18), 0 2px 8px rgba(30,40,70,0.05);
+  z-index: 50;
+  padding: 6px;
+}
+.pop-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--fg);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.pop-item:hover { background: var(--surface-2); }
+.pop-item.active { background: var(--accent-soft); color: var(--accent-text); }
+.pop-item .pop-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 改名输入框：跟 .pop-name 占同一个位置，默认不显示；点击改名图标后
+   切换显示，输入框比纯文字更醒目地表明"现在可以编辑了" */
+.pop-item .pop-rename-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--surface);
+  padding: 2px 5px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--fg);
+  outline: none;
+}
+/* 改名/删除收进同一个紧凑操作组，而不是各自用整行大间距撑开——
+   两个按钮贴在一起、共用一次 hover 淡入，读起来是"一组工具"而不是
+   两个孤立漂浮的图标 */
+.pop-item .pop-actions {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: none;
+  opacity: 0;
+}
+.pop-item:hover .pop-actions { opacity: 1; }
+/* 纯图标展示：不用方框/灰底承托，只靠颜色变化做 hover 反馈。上次漏了
+   border:none——<button> 原生自带一条描边，之前被灰色背景盖住看不出来，
+   背景一去掉这条原生描边就露出来了，这才是截图里那个方框的来源 */
+.pop-item .pop-action-btn {
+  width: 20px; height: 20px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--muted-2);
+  display: grid;
+  place-items: center;
+  flex: none;
+  cursor: pointer;
+}
+.pop-item .pop-action-btn:hover { color: var(--fg); }
+.pop-item .pop-action-btn.danger:hover { color: var(--st-blocked); }
+.pop-divider { height: 1px; background: var(--border); margin: 5px 4px; }
+.pop-new-form { display: flex; gap: 5px; padding: 4px; }
+.pop-new-form input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 6px 8px;
+  font-size: 12.5px;
+  outline: none;
+  font-family: var(--font-body);
+}
+.pop-new-form input:focus { border-color: var(--accent); }
+.pop-new-form button {
+  width: 28px; height: 28px;
+  flex: none;
+  border: none;
+  background: var(--fg);
+  color: var(--surface);
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+/* 搜索结果：现在渲染进顶部条内嵌的 .topbar-search-dropdown 里，
+   不再是独立悬浮的搜索面板 */
+.search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: 12.5px;
+}
+.search-result-item:hover { background: var(--surface-2); }
+.search-result-item .sr-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-result-item .sr-stage { font-size: 11px; color: var(--muted-2); font-family: var(--font-mono); }
+.search-empty { padding: 20px; text-align: center; color: var(--muted-2); font-size: 12.5px; }
+
+/* 模态确认框（删除项目等） */
+.confirm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 38, 60, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+}
+.confirm-box {
+  width: 300px;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: 18px;
+  box-shadow: 0 24px 60px -12px rgba(25, 35, 65, 0.28);
+}
+.confirm-box h4 { margin: 0 0 6px; font-family: var(--font-display); font-size: 14px; }
+.confirm-box p { margin: 0 0 16px; font-size: 12.5px; color: var(--muted); }
+.confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.confirm-actions button {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  padding: 6px 13px;
+  border-radius: var(--r-sm);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.confirm-actions button.danger { background: var(--st-blocked); color: white; border-color: transparent; }
+
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 全局顶部条：横跨整个视口宽度，不属于中栏或右栏任一列。
+       左：项目名称（点击切换）。中：搜索框（常驻，输入即搜）。
+       右：设置 + 右栏收起/展开开关——按钮位置天然就是"画面右上角
+       同一个点"，不需要额外的固定定位技巧。 -->
+  <header class="topbar">
+    <button class="topbar-project" id="topbar-project" data-od-id="topbar-project" aria-haspopup="true">
+      <span id="topbar-project-name" data-od-id="topbar-project-name">项目</span>
+      <svg class="icon-sm chev-down" viewBox="0 0 20 20" fill="none"><path d="M5.5 8l4.5 4.5L14.5 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <div class="topbar-search-center">
+      <div class="topbar-search" data-od-id="topbar-search">
+        <svg class="icon-sm" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M17 17l-3.6-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input type="text" id="topbar-search-input" placeholder="搜索需求名称…" data-od-id="topbar-search-input" />
+        <div class="topbar-search-dropdown" id="topbar-search-dropdown" hidden></div>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <button class="topbar-icon-btn" id="settings-trigger" data-od-id="topbar-settings" aria-label="设置">
+        <svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M8.5 3.2h3l.45 1.9 1.75.9 1.85-.7 1.5 2.6-1.35 1.35v2l1.35 1.35-1.5 2.6-1.85-.7-1.75.9-.45 1.9h-3l-.45-1.9-1.75-.9-1.85.7-1.5-2.6 1.35-1.35v-2L2.95 8.9l1.5-2.6 1.85.7 1.75-.9.45-1.9Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.4" stroke="currentColor" stroke-width="1.4"/></svg>
+      </button>
+      <button class="topbar-icon-btn" id="panel-toggle-btn" data-od-id="panel-toggle-btn" aria-label="收起详情">
+        <svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M12 4.5 6 10l6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="app-body" id="app-body">
+    <main class="main-col">
+      <div class="view-container" id="view-container"></div>
+    </main>
+
+    <div class="panel-resizer" id="panel-resizer" data-od-id="panel-resizer" role="separator" aria-orientation="vertical" aria-label="调整详情面板宽度"></div>
+
+    <aside class="detail-panel" id="detail-panel" data-od-id="detail-panel">
+      <div class="detail-inner" id="detail-inner"></div>
+    </aside>
+  </div>
+
+  <div class="overlay" id="overlay" hidden></div>
+  <div class="popover proj-popover" id="proj-popover" hidden data-od-id="project-popover"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= 常量 ================= */
+  var STAGES = [
+    { key: 'collect', label: '收集' },
+    { key: 'need', label: '需求' },
+    { key: 'design', label: '设计' },
+    { key: 'dev', label: '开发' },
+    { key: 'verify', label: '验证' },
+    { key: 'release', label: '发布' },
+    { key: 'archive', label: '归档' }
+  ];
+  var STAGE_LABEL = {};
+  STAGES.forEach(function (s) { STAGE_LABEL[s.key] = s.label; });
+  var SOURCES = ['用户反馈', '竞品分析', '内部想法', '数据分析', '客户定制'];
+  /* 任务状态是待开始/进行中/完成三态循环；"阻塞"不在这个循环里——
+     它是独立的轻量开关（task.blocked + task.blockNote），可以在任意
+     状态下叠加标记，不影响三态循环本身。旧版本把 blocked 塞进同一个
+     状态枚举里循环，导致它永远循环不到（真 bug），现在拆开就没有这个
+     问题了 */
+  var TASK_STATUS = [
+    { key: 'todo', label: '待开始' },
+    { key: 'progress', label: '进行中' },
+    { key: 'done', label: '完成' }
+  ];
+  var TASK_STATUS_LABEL = {};
+  TASK_STATUS.forEach(function (s) { TASK_STATUS_LABEL[s.key] = s.label; });
+  var RELEASE_METHODS = ['全量', '灰度', '分批'];
+  var STORE_KEY = 'reqmgr:data:v1';
+
+  /* 看板排序：每个阶段独立一套排序配置（手动 / 按规则），归档阶段不
+     纳入——它已经有专属的"按最近流转时间倒序 + 搜索"逻辑 */
+  var SORT_FIELDS = [
+    { key: 'priority', label: '优先级' },
+    { key: 'deadline', label: '截止日期' },
+    { key: 'stayDays', label: '停留天数' },
+    { key: 'totalDays', label: '总耗时' },
+    { key: 'createdAt', label: '创建时间' }
+  ];
+  var SORT_FIELD_LABEL = {};
+  SORT_FIELDS.forEach(function (f) { SORT_FIELD_LABEL[f.key] = f.label; });
+  /* 默认按创建时间新的在前——跟没有排序功能之前的体感一致，用户感知
+     不到"规则模式"这个概念。只有真的拖拽调整过顺序，才会悄悄切成
+     manual；重新选一次排序字段（哪怕选的还是原来那个）就退回规则模式，
+     不需要用户主动理解"手动/规则"这两个词。 */
+  function defaultStageSort() {
+    return { mode: 'rule', primary: 'createdAt', primaryDir: 'desc', secondary: null, secondaryDir: 'desc' };
+  }
+  /* 高亮只代表"用了非默认的字段规则"——手动模式（拖拽产生的）不算，
+     它是用户主动调整过的顺序，不是需要被提醒"你改过设置"的状态 */
+  function isStageSortCustomized(sort) {
+    return sort.mode === 'rule' && (sort.primary !== 'createdAt' || sort.primaryDir !== 'desc' || !!sort.secondary);
+  }
+
+  /* ================= 工具函数 ================= */
+  function uid(prefix) { return prefix + '_' + Math.random().toString(36).slice(2, 9); }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function isoDaysAgo(n) {
+    var d = new Date(); d.setDate(d.getDate() - n);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+  function isoDaysFromNow(n) { return isoDaysAgo(-n); }
+  function todayIso() { return isoDaysAgo(0); }
+  function parseIso(iso) {
+    var p = iso.split('-');
+    return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+  }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    var d = parseIso(iso);
+    return (d.getMonth() + 1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(2);
+  }
+  function fmtDateTime(iso) {
+    if (!iso) return '—';
+    return fmtDate(iso.slice(0, 10));
+  }
+  function diffDaysFromToday(iso) {
+    if (!iso) return null;
+    var ms = parseIso(todayIso()) - parseIso(iso);
+    return Math.round(ms / 86400000);
+  }
+  function escapeHtml(str) {
+    return String(str == null ? '' : str).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function esc(str) { return escapeHtml(str); }
+
+  /* ================= 种子数据 ================= */
+  function makeReq(o) {
+    return Object.assign({
+      id: uid('req'),
+      priority: 'P2',
+      assignee: '',
+      source: '内部想法',
+      deadline: '',
+      progress: null,
+      closureType: null,
+      tasks: [],
+      acceptance: [],
+      transitions: [],
+      comments: [],
+      attachments: [],
+      body: '',
+      releaseMethod: '',
+      releaseDate: '',
+      manualOrder: null /* null＝还没分配过手动排序位——迁移/创建时才补真实数值，
+                            借此跟"已分配到 0 号位"区分开 */
+    }, o);
+  }
+
+  function seedRetailRequirements() {
+    var list = [];
+    list.push(makeReq({ name: '首页加载慢，用户吐槽', stage: 'collect', source: '用户反馈', createdAt: isoDaysAgo(20) }));
+    list.push(makeReq({ name: '希望支持深色模式', stage: 'collect', source: '用户反馈', createdAt: isoDaysAgo(12) }));
+    list.push(makeReq({ name: '对接企业微信登录', stage: 'collect', source: '内部想法', createdAt: isoDaysAgo(3) }));
+
+    list.push(makeReq({ name: '扫码支付失败重试机制', stage: 'need', priority: 'P0', assignee: '陈屿', deadline: isoDaysFromNow(10), createdAt: isoDaysAgo(18) }));
+    list.push(makeReq({ name: '订单列表虚拟滚动优化', stage: 'need', priority: 'P1', assignee: '林薇', deadline: isoDaysFromNow(20), createdAt: isoDaysAgo(15) }));
+    list.push(makeReq({ name: '导出报表为 PDF', stage: 'need', priority: 'P2', assignee: '陈屿', createdAt: isoDaysAgo(9) }));
+
+    list.push(makeReq({
+      name: '个人中心信息架构重构', stage: 'design', priority: 'P0', assignee: '林薇', deadline: isoDaysFromNow(6), createdAt: isoDaysAgo(22),
+      attachments: [
+        { id: uid('a'), name: '信息架构图', checked: true, attach: null, createdAt: isoDaysAgo(20), createdBy: '林薇' },
+        { id: uid('a'), name: '高保真原型', checked: true, attach: null, createdAt: isoDaysAgo(15), createdBy: '林薇' }
+      ]
+    }));
+    list.push(makeReq({
+      name: '深色模式视觉规范', stage: 'design', priority: 'P1', assignee: '吴桐', createdAt: isoDaysAgo(11),
+      attachments: [
+        { id: uid('a'), name: '色板定义', checked: true, attach: null, createdAt: isoDaysAgo(9), createdBy: '吴桐' },
+        { id: uid('a'), name: '组件深色态', checked: false, attach: null, createdAt: isoDaysAgo(6), createdBy: '吴桐' }
+      ]
+    }));
+
+    list.push(makeReq({
+      name: '订单详情页重构', stage: 'dev', priority: 'P0', assignee: '陈屿', deadline: isoDaysFromNow(4), createdAt: isoDaysAgo(25),
+      body: '<h2>背景</h2><p>订单详情页信息密度低，用户需要多次返回才能核对物流和优惠明细，客服工单里 23% 与此相关。</p><h2>方案</h2><ul><li>物流、优惠、发票信息合并进单屏可视区域</li><li>状态节点时间线替换纯文字状态</li></ul><blockquote>参考附件中的高保真原型。</blockquote>',
+      tasks: [
+        { id: uid('t'), name: '接口对接：订单聚合查询', assignee: '陈屿', deadline: isoDaysAgo(2), progress: 100, status: 'done', blocked: false, blockNote: '' },
+        { id: uid('t'), name: '页面开发：详情页布局', assignee: '林薇', deadline: isoDaysFromNow(2), progress: 60, status: 'progress', blocked: false, blockNote: '' },
+        { id: uid('t'), name: '单测覆盖', assignee: '吴桐', deadline: isoDaysFromNow(5), progress: 0, status: 'todo', blocked: true, blockNote: '等待接口对接任务先完成' }
+      ],
+      attachments: [
+        { id: uid('a'), name: '信息架构图', checked: true, attach: null, createdAt: isoDaysAgo(9), createdBy: '林薇' },
+        { id: uid('a'), name: '高保真原型', checked: true, attach: { type: 'link', url: 'https://figma.com/file/order-detail' }, createdAt: isoDaysAgo(7), createdBy: '林薇' },
+        { id: uid('a'), name: '接口字段对齐表', checked: false, attach: { type: 'file', url: '#', label: '接口字段对齐表.md' }, createdAt: isoDaysAgo(9), createdBy: '陈屿' }
+      ],
+      transitions: [
+        { id: uid('tr'), from: 'collect', to: 'need', timestamp: isoDaysAgo(23) + 'T09:20', by: '陈屿', note: '' },
+        { id: uid('tr'), from: 'need', to: 'design', timestamp: isoDaysAgo(18) + 'T14:05', by: '陈屿', note: '优先级评估为 P0，加急排期' },
+        { id: uid('tr2'), from: 'design', to: 'dev', timestamp: isoDaysAgo(7) + 'T11:30', by: '林薇', note: '' }
+      ],
+      comments: []
+    }));
+    var lastTr = list[list.length - 1].transitions[2].id;
+    list[list.length - 1].comments.push({ id: uid('c'), transitionId: lastTr, content: '设计稿已确认，可以排期开发，优先接口部分。', timestamp: isoDaysAgo(7) + 'T11:42' });
+
+    list.push(makeReq({
+      name: '消息推送服务迁移', stage: 'dev', priority: 'P1', assignee: '吴桐', deadline: isoDaysFromNow(12), createdAt: isoDaysAgo(14),
+      tasks: [
+        { id: uid('t'), name: '迁移推送 SDK', assignee: '吴桐', deadline: isoDaysFromNow(6), progress: 40, status: 'progress', blocked: false, blockNote: '' },
+        { id: uid('t'), name: '灰度验证', assignee: '吴桐', deadline: isoDaysFromNow(12), progress: 0, status: 'todo', blocked: false, blockNote: '' }
+      ]
+    }));
+
+    list.push(makeReq({
+      name: '会员等级折扣计算', stage: 'verify', priority: 'P0', assignee: '林薇', deadline: isoDaysFromNow(3), createdAt: isoDaysAgo(30),
+      acceptance: [
+        { id: uid('ac'), desc: '折扣计算精确到分，不因浮点误差偏差', result: '通过', failNote: '' },
+        { id: uid('ac'), desc: '等级变更后新订单实时生效', result: '不通过', failNote: '灰度环境延迟约 10 分钟才生效，超出验收标准要求的实时性' },
+        { id: uid('ac'), desc: '历史订单折扣不受等级变更影响', result: '未验证', failNote: '' }
+      ]
+    }));
+
+    list.push(makeReq({
+      name: '消息推送 Android 小米通道适配', stage: 'release', priority: 'P1', assignee: '吴桐', createdAt: isoDaysAgo(19),
+      releaseMethod: '灰度', releaseDate: isoDaysFromNow(2)
+    }));
+
+    list.push(makeReq({
+      name: '登录页面加载优化', stage: 'archive', priority: 'P1', assignee: '陈屿', createdAt: isoDaysAgo(60), closureType: 'completed', progress: 100,
+      transitions: [{ id: uid('tr'), from: 'release', to: 'archive', timestamp: isoDaysAgo(35) + 'T10:00', by: '陈屿' }]
+    }));
+    list.push(makeReq({
+      name: '第三方地图 SDK 接入', stage: 'archive', priority: 'P2', assignee: '林薇', createdAt: isoDaysAgo(50), closureType: 'abandoned',
+      transitions: [{ id: uid('tr'), from: 'design', to: 'archive', timestamp: isoDaysAgo(40) + 'T16:10', by: '林薇' }]
+    }));
+
+    return list;
+  }
+
+  function seedProjects() {
+    return [
+      { id: uid('proj'), name: '零售商城 App', requirements: seedRetailRequirements() },
+      { id: uid('proj'), name: '内部工单系统', requirements: [
+        makeReq({ name: '工单标签支持多选', stage: 'need', priority: 'P2', assignee: '孙悦', createdAt: isoDaysAgo(5) }),
+        makeReq({ name: '工单超时自动升级', stage: 'collect', createdAt: isoDaysAgo(1) })
+      ] }
+    ];
+  }
+
+  /* ================= 状态 ================= */
+  var state = {
+    projects: [],
+    currentProjectId: null,
+    selectedReqId: null,
+    detailMode: 'expanded', /* expanded | collapsed | fullscreen */
+    activeTab: 'body',
+    collapsedStages: {},
+    draftStage: null,
+    archiveSearch: '',
+    renamingProjectId: null,
+    produceAttachOpenId: null, /* 哪张产出卡片的"附加文件或链接"输入区展开中 */
+    taskDraftOpen: false, /* 任务列表顶部的新建行是否展开 */
+    taskEditFieldOpenId: null, /* 哪条任务的负责人/日期编辑态展开中（格式："taskId:field"） */
+    taskBlockNoteOpenId: null, /* 哪条任务的阻塞说明输入框展开中 */
+    acDraftOpen: false, /* 验收标准列表顶部的新建行是否展开 */
+    acEditDescOpenId: null, /* 哪条验收标准的描述编辑态展开中 */
+    acFailNoteOpenId: null, /* 哪条验收标准的"不通过原因"说明输入框展开中 */
+    activityNoteDraftAnchor: null, /* 活动 Tab：哪个节点间隙正在插入说明（锚点 key，见 renderActivityTab 顶部注释） */
+    activityNoteEditId: null, /* 活动 Tab：哪条已有说明正在编辑 */
+    activityCommentOpenId: null, /* 活动 Tab：哪个流转节点的评论输入框展开中（值为 transition.id） */
+    bodyTemplates: [], /* 正文模板，用户自定义，跨项目共享 */
+    templateEditingId: null, /* 当前正在用正文编辑器编辑哪个模板；null＝抽屉列表态。
+                                非空时强制展开抽屉，不受鼠标移出影响 */
+    boardSort: {}, /* 看板每个阶段独立一套排序配置，见 defaultStageSort()；归档阶段不用这套 */
+    sortPanelOpenStage: null, /* 哪个阶段的排序面板展开中 */
+    boardWidth: 821 /* 看板拖拽宽度，跟 --board-w 的默认值一致；拖拽时实时改这个值并写回 CSS 变量。
+                        默认值＝看板内容完全展开、右侧不留空的精确宽度（BOARD_DEFAULT_WIDTH），
+                        刷新后天然贴合、不依赖窗口尺寸——方案B 用"看板受拖拽控制、详情面板
+                        占满剩余空间"取代了方案A"详情面板受控、看板被动吃剩余"，因为后者的
+                        贴合程度会随窗口尺寸飘忽，是结构性问题不是数值问题。 */
+  };
+
+  /* 方案B：看板列直接受拖拽控制（宽度精确贴内容），详情面板永远是
+     1fr（占满剩余空间），内部内容用固定的 CSS 上限封顶——不再是
+     方案A"拖详情面板宽度、看板被动吃剩余空间"那套，那套在看板内容
+     收紧之后会随视口宽度飘出一段對不上的空白/遗漏，两轮尝试都验证
+     是结构性问题（见此前的诊断），不是数值没调对。
+
+     看板列宽度的上下限：
+     - 下限 BOARD_MIN_WIDTH=641px——看板需求行收紧到最窄（名称列压到
+       minmax 下限 140px）时的最小宽度 596px（140 + 7 个数据列 356px +
+       7 个 12px 列间距 84px + 需求行自身左右内边距 16px），再加上
+       .view-container 自己的左右内边距 44px（22px×2）和 .main-col 的
+       border-right 1px = 596+45=641。上一版的 600 漏算了这 45px，
+       这是本轮要修的根因之一。
+     - 默认/贴合宽度 BOARD_DEFAULT_WIDTH=821px——看板需求行完全展开
+       （名称列到 minmax 上限 320px）时的最大宽度 776px（css/styles.css
+       里的 --board-row-max-w，改那边记得同步这里），同样加上 45px
+       的容器内边距/边框，821px 正好让看板内容贴满整列、右侧不留空。
+       刷新后默认就是这个宽度，不依赖窗口尺寸。
+     - 拖拽上限：视口宽度 − 6px 分隔条 − DETAIL_MIN_WIDTH（详情面板的
+       下限，保证详情面板不会被挤没）。
+     这几个数值现在跟 css/styles.css 里 .req-row 的 grid-template-columns
+     / minmax / --board-row-max-w 是同一套，改了那边记得同步这里。 */
+  var BOARD_MIN_WIDTH = 641;
+  var BOARD_DEFAULT_WIDTH = 821;
+  var DETAIL_MIN_WIDTH = 360;
+  function boardWidthBounds() {
+    var vw = window.innerWidth;
+    var max = vw - 6 - DETAIL_MIN_WIDTH;
+    return { min: BOARD_MIN_WIDTH, max: Math.max(BOARD_MIN_WIDTH, max) };
+  }
+  function clampBoardWidth(w) {
+    var b = boardWidthBounds();
+    return Math.max(b.min, Math.min(b.max, w));
+  }
+
+  /* 正文编辑器最近一次已知的光标位置——点模板按钮会让编辑器失焦，
+     所以要在失焦前把光标位置记下来，点击后再插入到这个位置，而不是
+     插到看起来"正巧"的地方或者整段覆盖 */
+  var lastEditorRange = null;
+
+  /* 模板内容直接存 HTML（跟 req.body 同一种形状），编辑模板时复用的是
+     正文那个真正的 contenteditable 组件——打字即所见，不用额外学一套
+     Markdown 写法 */
+  function defaultBodyTemplates() {
+    return [
+      { id: uid('tpl'), name: '功能需求模板', body: '<h2>背景</h2><p></p><h2>方案</h2><ul><li></li></ul>' },
+      { id: uid('tpl'), name: '优化需求模板', body: '<h2>现状问题</h2><p></p><h2>优化目标</h2><p></p><h2>验证方式</h2><p></p>' }
+    ];
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.projects && parsed.projects.length) return parsed;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        projects: state.projects,
+        currentProjectId: state.currentProjectId,
+        bodyTemplates: state.bodyTemplates,
+        boardSort: state.boardSort,
+        boardWidth: state.boardWidth
+      }));
+    } catch (e) {}
+  }
+
+  /* 老数据（种子数据 + 已存在的用户数据）没有 manualOrder——按创建时间
+     倒序（跟手动模式"新建置顶"现有体感一致）一次性补上初始值，否则
+     手动模式下顺序会乱。只在 manualOrder 缺失时补，已有值的不动。 */
+  function migrateManualOrder() {
+    state.projects.forEach(function (proj) {
+      STAGES.forEach(function (s) {
+        var reqs = proj.requirements.filter(function (r) { return r.stage === s.key; });
+        if (!reqs.some(function (r) { return r.manualOrder == null; })) return;
+        /* manualOrder 越小排越靠前——按创建时间倒序排完再赋 0..n-1，
+           最新创建的拿到 0，跟现在"新建置顶"的体感一致 */
+        var sorted = reqs.slice().sort(function (a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
+        sorted.forEach(function (r, i) { if (r.manualOrder == null) r.manualOrder = i; });
+      });
+    });
+  }
+
+  function init() {
+    var saved = loadState();
+    if (saved) {
+      state.projects = saved.projects;
+      state.currentProjectId = saved.currentProjectId || saved.projects[0].id;
+      /* undefined 字段＝老数据从没存过模板，补默认值；显式空数组＝
+         用户自己把模板全删了，尊重这个选择，不强行塞回默认模板 */
+      state.bodyTemplates = saved.bodyTemplates !== undefined ? saved.bodyTemplates : defaultBodyTemplates();
+      state.boardSort = saved.boardSort || {};
+      /* 老数据存的是 detailWidth（方案A 的语义，"详情面板宽度"），跟
+         现在的 boardWidth（"看板宽度"）不是同一个量，直接复用数值没
+         意义——沿用不到就退回默认宽度，不做数值换算 */
+      state.boardWidth = clampBoardWidth(saved.boardWidth || BOARD_DEFAULT_WIDTH);
+    } else {
+      state.projects = seedProjects();
+      state.currentProjectId = state.projects[0].id;
+      state.bodyTemplates = defaultBodyTemplates();
+      state.boardSort = {};
+    }
+    migrateManualOrder();
+    state.selectedReqId = mostRecentReqId();
+    bindGlobalEvents();
+    render();
+  }
+
+  /* 某阶段的排序配置：没配过就是默认（手动模式），惰性写回 state.boardSort
+     而不是在 init 时一次性铺满，避免归档等阶段的用不到的配置污染存储 */
+  function stageSort(stageKey) {
+    if (!state.boardSort[stageKey]) state.boardSort[stageKey] = defaultStageSort();
+    return state.boardSort[stageKey];
+  }
+
+  /* 需求详情页 MUST 默认显示最近操作的需求：取当前项目里最近一次流转/创建的需求 */
+  function mostRecentReqId() {
+    var reqs = currentProject().requirements;
+    if (!reqs.length) return null;
+    return reqs.slice().sort(function (a, b) {
+      var ta = a.transitions.length ? a.transitions[a.transitions.length - 1].timestamp : a.createdAt;
+      var tb = b.transitions.length ? b.transitions[b.transitions.length - 1].timestamp : b.createdAt;
+      return tb.localeCompare(ta);
+    })[0].id;
+  }
+
+  function currentProject() {
+    for (var i = 0; i < state.projects.length; i++) {
+      if (state.projects[i].id === state.currentProjectId) return state.projects[i];
+    }
+    return state.projects[0];
+  }
+
+  function getReqs() { return currentProject().requirements; }
+
+  function findReq(id) {
+    var reqs = getReqs();
+    for (var i = 0; i < reqs.length; i++) if (reqs[i].id === id) return reqs[i];
+    return null;
+  }
+
+  function reqsByStage(stage) {
+    return getReqs().filter(function (r) { return r.stage === stage; });
+  }
+
+  var PRIORITY_RANK = { P0: 0, P1: 1, P2: 2 };
+
+  /* 排序字段取值——跟看板列展示用的同一套数据源（priBadge/stayDays/
+     totalDays 走的都是这几个原始字段），不新造一套计算 */
+  function sortFieldValue(req, fieldKey) {
+    if (fieldKey === 'priority') return PRIORITY_RANK[req.priority] != null ? PRIORITY_RANK[req.priority] : 2;
+    if (fieldKey === 'deadline') return req.deadline || '9999-99-99'; /* 没设截止日期的排到最后 */
+    if (fieldKey === 'stayDays') {
+      var d = diffDaysFromToday(req.transitions.length ? req.transitions[req.transitions.length - 1].timestamp.slice(0, 10) : req.createdAt);
+      return d == null ? -1 : d;
+    }
+    if (fieldKey === 'totalDays') {
+      var t = diffDaysFromToday(req.createdAt);
+      return t == null ? -1 : t;
+    }
+    if (fieldKey === 'createdAt') return req.createdAt || '';
+    return 0;
+  }
+
+  function compareByField(a, b, fieldKey, dir) {
+    var va = sortFieldValue(a, fieldKey);
+    var vb = sortFieldValue(b, fieldKey);
+    var result = va < vb ? -1 : va > vb ? 1 : 0;
+    return dir === 'desc' ? -result : result;
+  }
+
+  /* 阶段内排序：手动模式按 manualOrder（新建置顶的现有体感）；规则模式
+     按 主字段 + 主方向，相等时落到 次字段 + 次方向。归档阶段走的是
+     filterArchive 自己那套逻辑，不经过这里。 */
+  function sortReqsForStage(reqs, stageKey) {
+    var sort = stageSort(stageKey);
+    var list = reqs.slice();
+    if (sort.mode === 'manual') {
+      list.sort(function (a, b) { return (a.manualOrder || 0) - (b.manualOrder || 0); });
+      return list;
+    }
+    list.sort(function (a, b) {
+      var primary = compareByField(a, b, sort.primary, sort.primaryDir);
+      if (primary !== 0 || !sort.secondary) return primary;
+      return compareByField(a, b, sort.secondary, sort.secondaryDir);
+    });
+    return list;
+  }
+
+  /* ================= 变更操作 ================= */
+  function transitionReq(req, toStage, opts) {
+    opts = opts || {};
+    if (req.stage === toStage && toStage !== 'archive') return;
+    var from = req.stage;
+    req.stage = toStage;
+    if (toStage === 'archive') {
+      req.closureType = opts.abandoned ? 'abandoned' : 'completed';
+    } else if (from === 'archive') {
+      req.closureType = null;
+      req.progress = null;
+    }
+    /* 换阶段后 manualOrder 还是老阶段的值，跟新阶段里已有的值不是同一套
+       参照系——如果新阶段是手动模式，让它落到最前面（跟新建置顶一致），
+       避免插在中间某个跟排序意图无关的位置 */
+    if (toStage !== 'archive' && stageSort(toStage).mode === 'manual') {
+      var existing = reqsByStage(toStage).filter(function (r) { return r.id !== req.id; });
+      var minOrder = existing.reduce(function (min, r) { return Math.min(min, r.manualOrder || 0); }, 0);
+      req.manualOrder = minOrder - 1;
+    }
+    req.transitions.push({ id: uid('tr'), from: from, to: toStage, timestamp: new Date().toISOString().slice(0, 16), by: '我', note: '' });
+    saveState();
+  }
+
+  function createReq(stage, name) {
+    name = name.trim();
+    if (!name) return null;
+    /* manualOrder 越小排越靠前——比当前阶段里最小值还小，保证手动模式
+       下新建的还是排最前面，跟原有"新建置顶"体感一致 */
+    var existing = reqsByStage(stage);
+    var minOrder = existing.reduce(function (min, r) { return Math.min(min, r.manualOrder || 0); }, 0);
+    var req = makeReq({ name: name, stage: stage, createdAt: todayIso(), manualOrder: minOrder - 1 });
+    getReqs().unshift(req);
+    saveState();
+    return req;
+  }
+
+  function selectReq(id) {
+    state.selectedReqId = id;
+    state.activeTab = 'body';
+    state.templateEditingId = null;
+    state.taskDraftOpen = false;
+    state.taskEditFieldOpenId = null;
+    state.taskBlockNoteOpenId = null;
+    state.acDraftOpen = false;
+    state.acEditDescOpenId = null;
+    state.acFailNoteOpenId = null;
+    state.activityNoteDraftAnchor = null;
+    state.activityNoteEditId = null;
+    state.activityCommentOpenId = null;
+    if (state.detailMode === 'collapsed') {
+      state.detailMode = 'expanded';
+      applyDetailMode();
+      renderPanelToggle();
+    }
+    renderDetail();
+    renderMain();
+    persistUiOnly();
+  }
+
+  function persistUiOnly() { /* UI-only state intentionally not persisted across reload */ }
+
+  /* ================= 渲染：外壳 ================= */
+  var appEl, viewContainerEl, detailInnerEl, panelToggleBtn;
+
+  function render() {
+    appEl = document.getElementById('app');
+    viewContainerEl = document.getElementById('view-container');
+    detailInnerEl = document.getElementById('detail-inner');
+    panelToggleBtn = document.getElementById('panel-toggle-btn');
+    panelToggleBtn.addEventListener('click', function () {
+      /* 收起态 → 展开；展开态或全屏态 → 直接收起（全屏不先退回展开这个
+         中间态，一步到位让中栏撑满）。 */
+      state.detailMode = state.detailMode === 'collapsed' ? 'expanded' : 'collapsed';
+      applyDetailMode();
+      renderPanelToggle();
+    });
+    renderTopbarProject();
+    renderMain();
+    renderDetail();
+    applyDetailMode();
+    renderPanelToggle();
+    applyBoardWidth();
+    bindPanelResizer();
+  }
+
+  /* 把 state.boardWidth 写回 CSS 变量——收起/全屏两个按钮走的是各自的
+     grid-template-columns 覆盖规则，不经过这个变量，互不冲突 */
+  function applyBoardWidth() {
+    appEl.style.setProperty('--board-w', state.boardWidth + 'px');
+  }
+
+  /* 拖拽调整看板宽度：鼠标按在分隔条上开始，移动时实时算宽度、夹到
+     上下限、写回 CSS 变量（不走 renderMain/renderDetail，纯样式调整，
+     拖动过程中不用重新渲染整个看板/详情内容）；松手才落盘。视口尺寸
+     变化会改变上限（比如窗口缩小），所以每次 resize 也重新夹一遍
+     当前宽度，避免"曾经合法、现在超界"的宽度飘着不生效。 */
+  function bindPanelResizer() {
+    var resizer = document.getElementById('panel-resizer');
+    if (!resizer) return;
+    var appBodyEl = document.getElementById('app-body');
+    var dragging = false;
+    var startX = 0;
+    var startWidth = 0;
+
+    resizer.addEventListener('mousedown', function (e) {
+      if (state.detailMode !== 'expanded') return; /* 收起/全屏态没有可拖拽的中间列 */
+      dragging = true;
+      startX = e.clientX;
+      startWidth = state.boardWidth;
+      resizer.classList.add('dragging');
+      appBodyEl.classList.add('resizing');
+      document.body.classList.add('resizing-panel');
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function (e) {
+      if (!dragging) return;
+      /* 分隔条现在在看板右边——鼠标往右拖（deltaX 正）＝看板变宽 */
+      var deltaX = e.clientX - startX;
+      state.boardWidth = clampBoardWidth(startWidth + deltaX);
+      applyBoardWidth();
+    });
+    document.addEventListener('mouseup', function () {
+      if (!dragging) return;
+      dragging = false;
+      resizer.classList.remove('dragging');
+      appBodyEl.classList.remove('resizing');
+      document.body.classList.remove('resizing-panel');
+      saveState();
+    });
+    window.addEventListener('resize', function () {
+      var clamped = clampBoardWidth(state.boardWidth);
+      if (clamped !== state.boardWidth) {
+        state.boardWidth = clamped;
+        applyBoardWidth();
+        saveState();
+      }
+    });
+  }
+
+  /* 收起态 → 展开箭头 + "展开详情"；展开/全屏态 → 收起箭头 + "收起"。
+     全屏态点击直接收起（不先退回展开），中栏一步到位撑满。 */
+  function renderPanelToggle() {
+    var collapsed = state.detailMode === 'collapsed';
+    panelToggleBtn.setAttribute('aria-label', collapsed ? '展开详情' : '收起详情');
+    panelToggleBtn.innerHTML = collapsed
+      ? '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M7.5 4.5 13 10l-5.5 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M12 4.5 6 10l6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function renderTopbarProject() {
+    document.getElementById('topbar-project-name').textContent = currentProject().name;
+  }
+
+  function renderMain() {
+    viewContainerEl.innerHTML = renderBoardView();
+    bindMainEvents();
+  }
+
+  function applyDetailMode() {
+    appEl.classList.toggle('detail-collapsed', state.detailMode === 'collapsed');
+    appEl.classList.toggle('detail-fullscreen', state.detailMode === 'fullscreen');
+  }
+
+  /* ================= 看板视图 ================= */
+  function priBadge(req) {
+    var p = (req.priority || 'P2').toLowerCase();
+    return '<span class="pri-badge ' + p + '">' + esc(req.priority || 'P2') + '</span>';
+  }
+
+  function reqRowHtml(req, stageKey) {
+    var stayDays = diffDaysFromToday(req.transitions.length ? req.transitions[req.transitions.length - 1].timestamp.slice(0, 10) : req.createdAt);
+    var totalDays = diffDaysFromToday(req.createdAt);
+
+    var col4, col5, col6, col7; /* 创建时间 / 截止日期 / 停留天数 / 总耗时 — 发布阶段复用后两格为方式+时间 */
+    if (stageKey === 'release') {
+      col4 = '<div class="col-sub">' + fmtDate(req.createdAt) + '</div>';
+      col5 = '<div class="col-sub">' + fmtDate(req.deadline) + '</div>';
+      col6 = '<div><select class="release-select" data-edit-release-method="' + req.id + '" data-od-id="release-method-' + req.id + '">' +
+        [''].concat(RELEASE_METHODS).map(function (m) { return '<option value="' + m + '"' + (req.releaseMethod === m ? ' selected' : '') + '>' + (m || '未设置') + '</option>'; }).join('') + '</select></div>';
+      col7 = '<div class="col-sub release-date-cell"><span class="release-date-text">' + fmtDate(req.releaseDate) + '</span>' +
+        '<input type="date" class="release-date" value="' + esc(req.releaseDate) + '" data-edit-release-date="' + req.id + '" data-od-id="release-date-' + req.id + '" /></div>';
+    } else {
+      col4 = '<div class="col-sub">' + fmtDate(req.createdAt) + '</div>';
+      col5 = '<div class="col-sub">' + fmtDate(req.deadline) + '</div>';
+      col6 = '<div class="col-sub">' + (stayDays != null ? stayDays + 'd' : '—') + '</div>';
+      col7 = '<div class="col-sub">' + (totalDays != null ? totalDays + 'd' : '—') + '</div>';
+    }
+
+    var progressCell = stageKey === 'archive'
+      ? '<div class="col-progress">' + esc(req.closureType === 'abandoned' ? '废弃' : '完成') + '</div>'
+      : '<div class="col-progress"><input type="number" class="progress-input" min="0" max="100" placeholder="—" value="' + (req.progress == null ? '' : req.progress) + '" data-edit-progress="' + req.id + '" data-od-id="progress-input-' + req.id + '" />%</div>';
+
+    var html = '<div class="req-row' + (state.selectedReqId === req.id ? ' selected' : '') + '" draggable="true" data-req-id="' + req.id + '" data-od-id="req-row-' + req.id + '">' +
+        '<div class="col-name"><span>' + esc(req.name) + '</span></div>' +
+        '<div class="col-pri">' + priBadge(req) + '</div>' +
+        '<div class="col-sub">' + esc(req.assignee || '—') + '</div>' +
+        col4 + col5 + col6 + col7 +
+        progressCell +
+      '</div>';
+    return html;
+  }
+
+  function clampProgress(val) {
+    var n = parseInt(val, 10);
+    if (isNaN(n)) return null;
+    return Math.max(0, Math.min(100, n));
+  }
+
+  var BOARD_COLUMNS = ['名称', '优先级', '负责人', '创建时间', '截止日期', '停留天数', '总耗时', '进度'];
+
+  /* 排序图标：三条递减长度的横杠，经典"排序/筛选"意象，跟阶段标题行
+     里已有的其它线框图标同一套视觉语言 */
+  var SORT_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M4 6h12M6 10h8M8.5 14h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  var CHEV_DOWN_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var CHEV_UP_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M5 12l5-5 5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* "手动/规则"这两个词用户不需要知道——面板里只有排序字段。拖一拖
+     卡片，顺序就悄悄变成"手动"；面板一直显示的是拖之前选的那套字段，
+     所以想恢复排序不用去猜该选哪个，点提示按钮就是照面板当前显示的
+     字段重新排一遍。排序按钮的高亮代表"这个阶段不是默认排序"（拖过，
+     或者选了不是"创建时间新的在前"的规则），面板只在展开时渲染，跟
+     产出/任务 Tab 的点击展开面板同一套交互模式。 */
+  function renderStageSortControl(stageKey) {
+    var sort = stageSort(stageKey);
+    var open = state.sortPanelOpenStage === stageKey;
+    var html = '<div class="stage-sort" data-od-id="stage-sort-' + stageKey + '">';
+    html += '<button type="button" class="stage-sort-btn' + (isStageSortCustomized(sort) ? ' active' : '') + '" data-toggle-sort-panel="' + stageKey + '" title="排序" aria-label="排序">' + SORT_ICON_SVG + '</button>';
+    if (open) {
+      html += '<div class="sort-panel" data-od-id="sort-panel-' + stageKey + '">';
+      if (sort.mode === 'manual') {
+        html += '<div class="sort-manual-hint"><span>已手动调整顺序</span><button type="button" class="sort-restore-btn" data-restore-sort="' + stageKey + '">恢复排序</button></div>';
+      }
+      html += sortFieldRowHtml(stageKey, 'primary', '主排序', sort.primary, sort.primaryDir);
+      html += sortFieldRowHtml(stageKey, 'secondary', '次排序', sort.secondary, sort.secondaryDir, true);
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function sortFieldRowHtml(stageKey, slot, label, fieldVal, dirVal, allowNone) {
+    var opts = (allowNone ? ['<option value=""' + (!fieldVal ? ' selected' : '') + '>不设置</option>'] : [])
+      .concat(SORT_FIELDS.map(function (f) {
+        return '<option value="' + f.key + '"' + (fieldVal === f.key ? ' selected' : '') + '>' + f.label + '</option>';
+      })).join('');
+    var dirDisabled = allowNone && !fieldVal;
+    return '<div class="sort-field-row">' +
+      '<span class="sort-field-label">' + label + '</span>' +
+      '<select class="sort-field-select" data-set-sort-field="' + stageKey + ':' + slot + '">' + opts + '</select>' +
+      '<button type="button" class="sort-dir-btn"' + (dirDisabled ? ' disabled' : '') + ' data-toggle-sort-dir="' + stageKey + ':' + slot + '" title="' + (dirVal === 'desc' ? '降序' : '升序') + '">' + (dirVal === 'desc' ? CHEV_DOWN_ICON_SVG : CHEV_UP_ICON_SVG) + '</button>' +
+      '</div>';
+  }
+
+  function draftRowHtml(stageKey) {
+    return '<div class="draft-row" data-draft-row="' + stageKey + '">' +
+      '<div><input type="text" placeholder="需求名称，回车创建" data-draft-input="' + stageKey + '" data-od-id="draft-input-' + stageKey + '" /></div>' +
+      '<div></div><div></div><div></div><div></div><div></div><div></div><div></div>' +
+      '</div>';
+  }
+
+  function renderBoardView() {
+    if (!getReqs().length) return emptyStateHtml('还没有需求，点"收集"阶段的新建按钮记录你的第一个想法');
+    var html = '<div class="board-field-header" data-od-id="board-field-header">' +
+      BOARD_COLUMNS.map(function (c, i) { return '<div class="' + (i === 0 ? 'fh-name' : 'fh-mono') + '">' + c + '</div>'; }).join('') +
+      '</div>';
+    STAGES.forEach(function (s) {
+      var reqs = reqsByStage(s.key);
+      var collapsed = !!state.collapsedStages[s.key];
+      var draftOpen = state.draftStage === s.key;
+      html += '<section class="stage-section' + (collapsed ? ' collapsed' : '') + '" data-stage-section="' + s.key + '">';
+      html += '<div class="stage-head" data-od-id="stage-head-' + s.key + '">';
+      html += '<button type="button" class="stage-chip" data-toggle-stage="' + s.key + '">' +
+        '<svg class="icon icon-sm chev" viewBox="0 0 20 20" fill="none"><path d="M6 4l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '<span class="stage-name">' + s.label + '</span><span class="stage-count">' + reqs.length + '</span>' +
+        '</button>';
+      html += '<span class="stage-line"></span>';
+      if (s.key === 'archive') {
+        html += '<div class="stage-search" data-od-id="archive-search-wrap"><svg class="icon-sm" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M17 17l-3.6-3.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+          '<input type="text" placeholder="搜索归档需求…" value="' + esc(state.archiveSearch) + '" data-archive-search data-od-id="archive-search-input" /></div>';
+      } else {
+        html += renderStageSortControl(s.key);
+        html += '<button type="button" class="quick-add-toggle" data-draft-toggle="' + s.key + '" data-od-id="quick-add-toggle-' + s.key + '" aria-label="新建需求"><svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>新建</button>';
+      }
+      html += '</div>';
+
+      var visibleReqs = s.key === 'archive' ? filterArchive(reqs) : sortReqsForStage(reqs, s.key);
+      var bodyRows = (draftOpen ? draftRowHtml(s.key) : '') +
+        (s.key === 'archive' ? visibleReqs.map(archiveRowHtml).join('') : visibleReqs.map(function (r) { return reqRowHtml(r, s.key); }).join(''));
+
+      if (visibleReqs.length === 0 && !draftOpen) {
+        var emptyText = s.key === 'archive'
+          ? (state.archiveSearch ? '没有匹配的归档需求' : '还没有归档的需求')
+          : ('该阶段暂无需求' + (s.key === 'collect' ? '，点上方新建记录你的第一个想法' : ''));
+        html += '<div class="stage-empty" data-drop-stage="' + s.key + '">' + emptyText + '</div>';
+      } else {
+        html += '<div class="stage-body" data-drop-stage="' + s.key + '">' + bodyRows + '</div>';
+      }
+      html += '</section>';
+    });
+    return html;
+  }
+
+  function filterArchive(reqs) {
+    var sorted = reqs.slice().sort(function (a, b) {
+      var ta = a.transitions.length ? a.transitions[a.transitions.length - 1].timestamp : a.createdAt;
+      var tb = b.transitions.length ? b.transitions[b.transitions.length - 1].timestamp : b.createdAt;
+      return tb.localeCompare(ta);
+    });
+    var q = (state.archiveSearch || '').trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter(function (r) { return r.name.toLowerCase().indexOf(q) !== -1; });
+  }
+
+  function archiveRowHtml(r) {
+    var archTime = r.transitions.length ? r.transitions[r.transitions.length - 1].timestamp.slice(0, 10) : r.createdAt;
+    return '<div class="req-row archive-row" data-req-id="' + r.id + '" data-od-id="archive-row-' + r.id + '">' +
+      '<div class="col-name"><span>' + esc(r.name) + '</span></div>' +
+      '<div class="col-sub">' + (r.closureType === 'abandoned' ? '废弃' : '完成') + '</div>' +
+      '<div class="col-sub">' + fmtDate(archTime) + '</div>' +
+      '</div>';
+  }
+
+  function emptyStateHtml(text) {
+    return '<div class="empty-state"><svg class="icon empty-icon" style="width:32px;height:32px" viewBox="0 0 20 20" fill="none"><path d="M4 14.5V6a1 1 0 0 1 1-1h4l2 2h5a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z" stroke="currentColor" stroke-width="1.4"/></svg><p>' + esc(text) + '</p></div>';
+  }
+
+  /* ================= 详情面板 ================= */
+  function renderDetail() {
+    var req = state.selectedReqId ? findReq(state.selectedReqId) : null;
+    if (!req) {
+      detailInnerEl.innerHTML = '<div class="detail-empty"><svg class="icon" style="width:30px;height:30px;color:var(--border-strong)" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.4"/></svg><p>选择一条需求查看详情</p></div>';
+      return;
+    }
+    var html = '';
+    html += '<div class="detail-header" data-od-id="detail-header">';
+    html += '<input class="detail-title-input" value="' + esc(req.name) + '" data-edit-name="' + req.id + '" data-od-id="detail-title-input" />';
+    html += '<button class="detail-header-btn" data-fullscreen-toggle data-od-id="detail-fullscreen-btn" aria-label="全屏">' + (state.detailMode === 'fullscreen'
+      ? '<svg class="icon icon-sm" viewBox="0 0 20 20" fill="none"><path d="M8 12l-5 5M12 8l5-5M3 13v4h4M17 7V3h-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : '<svg class="icon icon-sm" viewBox="0 0 20 20" fill="none"><path d="M13 7h4V3M7 13H3v4M17 3l-5.5 5.5M3 17l5.5-5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>') + '</button>';
+    html += '</div>';
+
+    var slot = attrStageSlot(req);
+    html += '<div class="attr-grid" data-od-id="detail-attrs">';
+    html += attrRow('优先级', prioritySelectHtml(req));
+    html += attrRow('负责人', '<input class="attr-text-input" value="' + esc(req.assignee) + '" placeholder="未指定" data-edit-field="' + req.id + ':assignee" data-od-id="attr-assignee" />');
+    html += attrRow('来源', sourceSelectHtml(req));
+    html += attrRow('进度', req.stage === 'archive'
+      ? '<span class="attr-text-input readonly">' + (req.closureType === 'abandoned' ? '废弃' : '完成') + '</span>'
+      : '<input type="number" min="0" max="100" class="attr-text-input" value="' + (req.progress == null ? '' : req.progress) + '" placeholder="未填写" data-edit-progress="' + req.id + '" data-od-id="attr-progress" />');
+    html += attrRow('阶段', stageChipHtml(req));
+    html += attrRow(slot.label, slot.valueHtml);
+    html += attrRow('截止日期', '<input type="date" class="attr-text-input" value="' + esc(req.deadline) + '" data-edit-field="' + req.id + ':deadline" data-od-id="attr-deadline" />');
+    html += attrRow('创建时间', '<span class="attr-text-input readonly">' + fmtDate(req.createdAt) + '</span>');
+    html += '</div>';
+
+    html += '<div class="tab-bar" role="tablist" data-od-id="detail-tabs">';
+    html += '<div class="tab-bar-tabs">';
+    /* role="tablist" 只包了容器，标签按钮和面板缺 role="tab"/aria-selected/
+       role="tabpanel"/aria-controls——ARIA APG 的 tab 模式要求这一整套
+       同时出现，只挂容器角色而不补齐子节点，屏幕阅读器只会报"列表"，
+       听不出这是可切换的标签组，等于比完全不用 ARIA 更误导。这里补全
+       整套关系。 */
+    [['body', '正文'], ['produce', '产出'], ['tasks', '任务'], ['acceptance', '验收'], ['activity', '活动']].forEach(function (t) {
+      var isActive = state.activeTab === t[0];
+      html += '<button class="tab-btn' + (isActive ? ' active' : '') + '" role="tab" aria-selected="' + isActive + '" aria-controls="tab-panel-' + t[0] + '" id="tab-' + t[0] + '-btn" data-tab="' + t[0] + '" data-od-id="tab-' + t[0] + '">' + t[1] + '</button>';
+    });
+    html += '</div>';
+    html += renderTabBarSlot(req);
+    html += '</div>';
+
+    html += '<div class="detail-scroll">';
+    html += '<div class="tab-panel' + (state.activeTab === 'body' ? ' active' : '') + '" role="tabpanel" id="tab-panel-body" aria-labelledby="tab-body-btn" data-tab-panel="body">' + renderBodyTab(req) + '</div>';
+    html += '<div class="tab-panel' + (state.activeTab === 'produce' ? ' active' : '') + '" role="tabpanel" id="tab-panel-produce" aria-labelledby="tab-produce-btn" data-tab-panel="produce">' + renderProduceTab(req) + '</div>';
+    html += '<div class="tab-panel' + (state.activeTab === 'tasks' ? ' active' : '') + '" role="tabpanel" id="tab-panel-tasks" aria-labelledby="tab-tasks-btn" data-tab-panel="tasks">' + renderTasksTab(req) + '</div>';
+    html += '<div class="tab-panel' + (state.activeTab === 'acceptance' ? ' active' : '') + '" role="tabpanel" id="tab-panel-acceptance" aria-labelledby="tab-acceptance-btn" data-tab-panel="acceptance">' + renderAcceptanceTab(req) + '</div>';
+    html += '<div class="tab-panel' + (state.activeTab === 'activity' ? ' active' : '') + '" role="tabpanel" id="tab-panel-activity" aria-labelledby="tab-activity-btn" data-tab-panel="activity">' + renderActivityTab(req) + '</div>';
+    html += '</div>';
+
+    detailInnerEl.innerHTML = html;
+    bindDetailEvents(req);
+  }
+
+  function attrRow(label, valueHtml) {
+    return '<div class="attr-label">' + label + '</div><div class="attr-value">' + valueHtml + '</div>';
+  }
+
+  function prioritySelectHtml(req) {
+    var opts = ['P0', 'P1', 'P2'].map(function (p) {
+      return '<option value="' + p + '"' + (req.priority === p ? ' selected' : '') + '>' + p + '</option>';
+    }).join('');
+    return '<select class="attr-select" data-edit-field="' + req.id + ':priority" data-od-id="attr-priority">' + opts + '</select>';
+  }
+
+  function sourceSelectHtml(req) {
+    var options = SOURCES.slice();
+    if (req.source && options.indexOf(req.source) === -1) options.unshift(req.source);
+    var opts = options.map(function (s) {
+      return '<option value="' + esc(s) + '"' + (req.source === s ? ' selected' : '') + '>' + esc(s) + '</option>';
+    }).join('');
+    return '<select class="attr-select" data-edit-field="' + req.id + ':source" data-od-id="attr-source">' + opts + '</select>';
+  }
+
+  function stageChipHtml(req) {
+    var options = STAGES.map(function (s) { return s.key; }).concat(['abandon']).filter(function (k) { return k !== req.stage; });
+    var opts = options.map(function (k) {
+      var label = k === 'abandon' ? '废弃' : STAGE_LABEL[k];
+      return '<option value="' + k + '">' + label + '</option>';
+    }).join('');
+    return '<select class="attr-select" data-transition-select="' + req.id + '" data-od-id="attr-stage">' +
+      '<option value="" selected disabled hidden>' + STAGE_LABEL[req.stage] + (req.closureType === 'abandoned' ? '（废弃）' : '') + '</option>' + opts + '</select>';
+  }
+
+  /* 属性栏"阶段专属槪位"：标签和内容随当前阶段换，槪位只读展示，
+     可编辑的操作全部收口到对应 Tab（任务/验收/附件），避免在属性栏
+     重复造一套操作入口 */
+  function attrStageSlot(req) {
+    if (req.stage === 'design') {
+      var done = req.attachments.filter(function (a) { return a.checked; }).length;
+      return { label: '产出', valueHtml: '<span class="attr-text-input readonly">' + done + '/' + req.attachments.length + '</span>' };
+    }
+    if (req.stage === 'dev') {
+      var doneTasks = req.tasks.filter(function (t) { return t.status === 'done'; }).length;
+      return { label: '任务', valueHtml: '<span class="attr-text-input readonly">' + doneTasks + '/' + req.tasks.length + '</span>' };
+    }
+    if (req.stage === 'verify') {
+      var passed = req.acceptance.filter(function (a) { return a.result === '通过'; }).length;
+      return { label: '验收', valueHtml: '<span class="attr-text-input readonly">' + passed + '/' + req.acceptance.length + '</span>' };
+    }
+    if (req.stage === 'release') {
+      return { label: '方式', valueHtml: '<span class="attr-text-input readonly">' + (req.releaseMethod || '未设置') + '</span>' };
+    }
+    if (req.stage === 'archive') {
+      return { label: '结果', valueHtml: '<span class="attr-text-input readonly">' + (req.closureType === 'abandoned' ? '废弃' : '完成') + '</span>' };
+    }
+    return { label: '—', valueHtml: '<span class="attr-text-input readonly">—</span>' };
+  }
+
+  var TEMPLATE_TAG_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M4 4h6l6 6-6 6-6-6V4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="7.5" cy="7.5" r="1" fill="currentColor"/></svg>';
+  var BACK_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M12 4.5 6 10l6 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var PLUS_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+  /* Tab 栏右侧操作插槽：跟"正文/产出/任务/验收/活动"这一行标签齐平，
+     贴最右侧。不是每个 Tab 都有内容——产出/任务/验收放"新建"图标按钮
+     （hover 提示具体新建什么），正文放模板抽屉入口，活动暂时空着。
+     这样"新建"类操作不用各自散落在内容区顶部或列表末尾，统一收口到
+     一个固定位置，切 Tab 时找起来位置不变。 */
+  function renderTabBarSlot(req) {
+    if (state.activeTab === 'produce') {
+      return '<div class="tab-bar-slot"><button type="button" class="tab-slot-btn" data-add-produce="' + req.id + '" title="新建产出" aria-label="新建产出">' + PLUS_ICON_SVG + '</button></div>';
+    }
+    if (state.activeTab === 'tasks') {
+      return '<div class="tab-bar-slot"><button type="button" class="tab-slot-btn" data-toggle-task-draft title="添加任务" aria-label="添加任务">' + PLUS_ICON_SVG + '</button></div>';
+    }
+    if (state.activeTab === 'acceptance') {
+      return '<div class="tab-bar-slot"><button type="button" class="tab-slot-btn" data-toggle-ac-draft title="添加验收标准" aria-label="添加验收标准">' + PLUS_ICON_SVG + '</button></div>';
+    }
+    if (state.activeTab === 'body') {
+      return '<div class="tab-bar-slot">' + renderTemplateRail(req) + '</div>';
+    }
+    /* 活动 Tab 没有对应的新建/操作入口，但插槽本身（flex:none 固定宽度）
+       不能跟着消失——.tab-bar-tabs 是 flex:1，插槽一消失就会把这块宽度
+       吃掉，五个 Tab 按钮的宽度跟着跳动，切到活动 Tab 时看起来像"整体
+       结构变了一下"。返回一个空的占位 div，保持布局宽度不变，右侧就是
+       纯空白，不需要额外样式。 */
+    return '<div class="tab-bar-slot"></div>';
+  }
+
+  /* 模板抽屉：贴在正文 Tab 标签行最右侧的一个小把手，鼠标移上去（或正在
+     编辑某个模板时强制展开）才露出模板列表；列表态可以插入/新建/删除，
+     点编辑图标切到编辑态——编辑态复用的就是正文自己的 block-editor
+     组件，打字即所见，不需要另一套写法 */
+  function renderTemplateRail(req) {
+    var forceOpen = !!state.templateEditingId;
+    var html = '<div class="template-rail' + (forceOpen ? ' pinned' : '') + '" data-od-id="template-rail">';
+    html += '<button type="button" class="template-rail-handle" data-od-id="template-rail-handle" title="正文模板" aria-label="正文模板">' + TEMPLATE_TAG_ICON_SVG + '</button>';
+    html += '<div class="template-rail-drawer" data-od-id="template-rail-drawer">';
+    if (state.templateEditingId) {
+      var tpl = state.bodyTemplates.filter(function (t) { return t.id === state.templateEditingId; })[0];
+      if (tpl) {
+        html += '<div class="tpl-editor-head">' +
+          '<button type="button" class="tpl-back-btn" data-tpl-back aria-label="返回列表">' + BACK_ICON_SVG + '</button>' +
+          '<input type="text" class="tpl-editor-name" value="' + esc(tpl.name) + '" data-tpl-edit-name="' + tpl.id + '" placeholder="模板名称" data-od-id="tpl-editor-name" />' +
+          '</div>';
+        html += '<div class="block-editor tpl-editor-body" contenteditable="true" data-tpl-edit-body="' + tpl.id + '" data-placeholder="写模板内容，跟正文一样的编辑方式…" data-od-id="tpl-editor-body">' + (tpl.body || '') + '</div>';
+      }
+    } else {
+      html += '<div class="tpl-drawer-head">正文模板</div>';
+      if (state.bodyTemplates.length) {
+        html += '<div class="tpl-drawer-list">';
+        state.bodyTemplates.forEach(function (t) {
+          html += '<div class="tpl-drawer-row" data-od-id="tpl-drawer-row-' + t.id + '">' +
+            '<button type="button" class="tpl-drawer-name" data-fill-template="' + req.id + ':' + t.id + '" data-od-id="tpl-insert-' + t.id + '">' + esc(t.name || '未命名模板') + '</button>' +
+            '<button type="button" class="tpl-drawer-icon-btn" data-tpl-edit="' + t.id + '" aria-label="编辑模板">' + RENAME_ICON_SVG + '</button>' +
+            '<button type="button" class="tpl-drawer-icon-btn" data-tpl-del="' + t.id + '" aria-label="删除模板">' + DELETE_ICON_SVG + '</button>' +
+            '</div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="tpl-empty">还没有模板</div>';
+      }
+      html += '<button type="button" class="tpl-drawer-add" data-tpl-add><svg class="icon icon-sm" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>新建模板</button>';
+    }
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderBodyTab(req) {
+    return '<div class="block-editor" contenteditable="true" data-body-editor="' + req.id + '" data-placeholder="写下需求描述，或从 Tab 栏右侧模板插入…">' + (req.body || '') + '</div>';
+  }
+
+  var BLOCK_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M10 6.5v4M10 13.2h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.4"/></svg>';
+
+  /* 任务 / 验收标准现在是各自独立的 Tab，跟正文平级——原来"进度"Tab
+     的三段 checklist 拆开后，设计交付物并入"产出"Tab（见 renderProduceTab），
+     这里只剩任务和验收两类结构化清单。
+
+     任务行现在分两行：第一行名称+状态+阻塞开关+删除，第二行负责人/
+     截止日期/进度%——后三个字段以前创建后就永远锁死在默认值，现在
+     都能编辑。负责人/截止日期点击才展开成输入框（平时是纯文字，
+     不常改，不用一直占着输入框的视觉重量）；进度%直接是数字输入框
+     （改动频繁，值得常驻可编辑）。
+
+     "阻塞"不再挤在状态循环里（那个位置永远循环不到，是之前的真 bug）：
+     现在是一个独立的轻量开关，可以在待开始/进行中/完成任意状态下叠加
+     打开，勾了之后旁边露出一个可编辑的说明框，记录"为什么阻塞"。 */
+  function renderTasksTab(req) {
+    var html = '';
+    if (req.tasks.length) {
+      html += '<div class="tab-summary">' + req.tasks.filter(function (t) { return t.status === 'done'; }).length + '/' + req.tasks.length + ' 已完成</div>';
+    }
+    html += '<div class="task-list">';
+    if (state.taskDraftOpen) {
+      /* 新建走完整表单，没有单独的"创建"按钮——名称填了字，点哪儿（整块
+         表单失焦）或按回车都直接创建；名称是空的，点哪儿/回车都不会
+         创建，表单直接收起。负责人/截止日期/进度想填就填，不填就留空 */
+      html += '<div class="task-draft-row" data-od-id="task-draft-row">';
+      html += '<div class="task-draft-row-main">' +
+        '<input type="text" class="task-name-input" placeholder="任务名称（必填），填完点其他地方或回车即创建" data-task-draft-input="name" data-od-id="task-draft-name" /></div>';
+      html += '<div class="task-draft-row-meta">' +
+        '<input type="text" class="task-meta-input" placeholder="负责人" data-task-draft-input="assignee" data-od-id="task-draft-assignee" />' +
+        '<input type="date" class="task-meta-input" data-task-draft-input="deadline" data-od-id="task-draft-deadline" />' +
+        '<input type="number" class="task-progress-input" min="0" max="100" placeholder="—" data-task-draft-input="progress" data-od-id="task-draft-progress" />%' +
+        '</div>';
+      html += '</div>';
+    }
+    req.tasks.forEach(function (t) {
+      var editingAssignee = state.taskEditFieldOpenId === t.id + ':assignee';
+      var editingDeadline = state.taskEditFieldOpenId === t.id + ':deadline';
+      var noteOpen = state.taskBlockNoteOpenId === t.id;
+      html += '<div class="task-row' + (t.blocked ? ' blocked' : '') + '" data-od-id="task-row-' + t.id + '">';
+      html += '<div class="task-row-main">';
+      html += '<input type="text" class="task-name-input" value="' + esc(t.name) + '" placeholder="任务名称" data-edit-task-name="' + req.id + ':' + t.id + '" data-od-id="task-name-' + t.id + '" />';
+      html += '<button type="button" class="status-pill ' + t.status + '" data-cycle-task-status="' + req.id + ':' + t.id + '">' + TASK_STATUS_LABEL[t.status] + '</button>';
+      html += '<button type="button" class="task-blocked-toggle' + (t.blocked ? ' active' : '') + '" aria-pressed="' + t.blocked + '" data-toggle-task-blocked="' + req.id + ':' + t.id + '" title="标记阻塞" aria-label="标记阻塞">' + BLOCK_ICON_SVG + '</button>';
+      html += '<button type="button" class="task-row-del" data-del-task="' + req.id + ':' + t.id + '" aria-label="删除任务"><svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>';
+      html += '</div>';
+      html += '<div class="task-row-meta">';
+      html += editingAssignee
+        ? '<input type="text" class="task-meta-input" value="' + esc(t.assignee) + '" placeholder="负责人" data-edit-task-field="' + req.id + ':' + t.id + ':assignee" data-od-id="task-assignee-input-' + t.id + '" autofocus />'
+        : '<button type="button" class="task-meta-btn" data-open-task-field="' + t.id + ':assignee" data-od-id="task-assignee-btn-' + t.id + '">' + esc(t.assignee || '未指定负责人') + '</button>';
+      html += editingDeadline
+        ? '<input type="date" class="task-meta-input" value="' + esc(t.deadline) + '" data-edit-task-field="' + req.id + ':' + t.id + ':deadline" data-od-id="task-deadline-input-' + t.id + '" autofocus />'
+        : '<button type="button" class="task-meta-btn" data-open-task-field="' + t.id + ':deadline" data-od-id="task-deadline-btn-' + t.id + '">' + (t.deadline ? fmtDate(t.deadline) : '未设置截止日期') + '</button>';
+      html += '<input type="number" class="task-progress-input" min="0" max="100" placeholder="—" value="' + (t.progress == null ? '' : t.progress) + '" data-edit-task-progress="' + req.id + ':' + t.id + '" data-od-id="task-progress-' + t.id + '" />%';
+      html += '</div>';
+      if (t.blocked) {
+        html += noteOpen
+          ? '<textarea class="task-block-note-input" placeholder="为什么阻塞？" data-edit-task-blocknote="' + req.id + ':' + t.id + '" data-od-id="task-blocknote-input-' + t.id + '" autofocus>' + esc(t.blockNote) + '</textarea>'
+          : '<button type="button" class="task-block-note" data-open-task-blocknote="' + t.id + '" data-od-id="task-blocknote-btn-' + t.id + '">' + (t.blockNote ? esc(t.blockNote) : '点击说明阻塞原因…') + '</button>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    if (!req.tasks.length && !state.taskDraftOpen) html += '<div class="empty-state" style="padding:20px 0"><p>还没有开发任务，点右上角 + 添加</p></div>';
+    return html;
+  }
+
+  var AC_RESULTS = ['通过', '不通过', '未验证'];
+
+  /* 验收 Tab —— 跟任务 Tab 同一套交互语言：
+     - 新建走行内草稿行（不用 window.prompt），描述必填，其余没有额外字段
+     - 描述创建后可以点击编辑，不用删了重建
+     - 结果从"两个按钮+隐含未验证"改成三个都能点的明确按钮，未验证不再是
+       "两个按钮都没亮"这种要靠猜的状态
+     - 不通过时露出一个可点击展开的说明框，记录"为什么不通过"——跟任务
+       Tab 的阻塞说明是同一套形态，都是"结果需要留痕，不能只留一个结论"
+     - 补上删除入口 */
+  function renderAcceptanceTab(req) {
+    var html = '';
+    if (req.acceptance.length) {
+      html += '<div class="tab-summary">' + req.acceptance.filter(function (a) { return a.result === '通过'; }).length + '/' + req.acceptance.length + ' 通过</div>';
+    }
+    html += '<div class="ac-list">';
+    if (state.acDraftOpen) {
+      html += '<div class="ac-draft-row" data-od-id="ac-draft-row">' +
+        '<input type="text" class="ac-desc-input" placeholder="验收标准描述（必填），填完点其他地方或回车即创建" data-ac-draft-input data-od-id="ac-draft-input" /></div>';
+    }
+    req.acceptance.forEach(function (a) {
+      var editingDesc = state.acEditDescOpenId === a.id;
+      var failNoteOpen = state.acFailNoteOpenId === a.id;
+      html += '<div class="ac-row' + (a.result === '不通过' ? ' failed' : '') + '" data-od-id="ac-row-' + a.id + '">';
+      html += '<div class="ac-row-main">';
+      html += editingDesc
+        ? '<input type="text" class="ac-desc-input" value="' + esc(a.desc) + '" placeholder="验收标准描述" data-edit-ac-desc="' + req.id + ':' + a.id + '" data-od-id="ac-desc-input-' + a.id + '" autofocus />'
+        : '<button type="button" class="ac-desc-btn" data-open-ac-desc="' + a.id + '" data-od-id="ac-desc-btn-' + a.id + '">' + esc(a.desc) + '</button>';
+      html += '<div class="ac-result-toggle">';
+      AC_RESULTS.forEach(function (r) {
+        html += '<button type="button" class="ac-btn' + (r === '不通过' ? ' fail' : r === '通过' ? ' pass' : ' neutral') + (a.result === r ? ' on' : '') + '" data-set-ac="' + req.id + ':' + a.id + ':' + r + '">' + r + '</button>';
+      });
+      html += '</div>';
+      html += '<button type="button" class="ac-row-del" data-del-ac="' + req.id + ':' + a.id + '" aria-label="删除验收标准"><svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>';
+      html += '</div>';
+      if (a.result === '不通过') {
+        html += failNoteOpen
+          ? '<textarea class="ac-fail-note-input" placeholder="为什么不通过？" data-edit-ac-failnote="' + req.id + ':' + a.id + '" data-od-id="ac-failnote-input-' + a.id + '" autofocus>' + esc(a.failNote) + '</textarea>'
+          : '<button type="button" class="ac-fail-note" data-open-ac-failnote="' + a.id + '" data-od-id="ac-failnote-btn-' + a.id + '">' + (a.failNote ? esc(a.failNote) : '点击说明不通过原因…') + '</button>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+    if (!req.acceptance.length && !state.acDraftOpen) html += '<div class="empty-state" style="padding:20px 0"><p>验收标准为空，点右上角 + 添加</p></div>';
+    return html;
+  }
+
+  function produceAttachIconSvg(type) {
+    if (type === 'link') return '<svg class="icon icon-sm" viewBox="0 0 20 20" fill="none"><path d="M8 12l4-4M7.5 9.5 6 11a2.5 2.5 0 0 0 3.5 3.5l1.8-1.8M12.5 10.5 14 9a2.5 2.5 0 0 0-3.5-3.5l-1.8 1.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    return '<svg class="icon icon-sm" viewBox="0 0 20 20" fill="none"><path d="M5.5 3h6l3 3v10.5a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.4"/></svg>';
+  }
+
+  /* 产出 Tab：每条是一张独立卡片，勾选框 = "完成"标记（取代了之前
+     单独的"核心交付物"标记，两者语义本来就重叠），名称可编辑，
+     一张卡片最多挂一个附件（文件或链接，二选一，再挂新的会替换旧的）。
+     勾选完成和有没有附件是两件独立的事，完成后附件区仍可继续编辑——
+     不做互锁，个人使用的工具不需要这种限制。 */
+  var UPLOAD_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M10 13V4M6.5 7.5 10 4l3.5 3.5M4.5 15h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function renderProduceTab(req) {
+    var html = '';
+    req.attachments.forEach(function (a) {
+      var attachOpen = state.produceAttachOpenId === a.id;
+      html += '<div class="produce-card' + (a.checked ? ' checked' : '') + '" data-od-id="produce-card-' + a.id + '">';
+      /* 第一行：勾选完成 + 名称 + 删卡——跟第二行的附件操作分开，
+         名称输入框不再被附件挤宽度 */
+      html += '<div class="produce-row-1">';
+      html += '<button type="button" class="checkbox' + (a.checked ? ' checked' : '') + '" role="checkbox" aria-checked="' + a.checked + '" aria-label="' + (a.checked ? '标记为未完成' : '标记为完成') + '" data-toggle-produce-checked="' + req.id + ':' + a.id + '"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+      html += '<input type="text" class="produce-name-input" value="' + esc(a.name) + '" placeholder="名称" data-edit-produce-name="' + req.id + ':' + a.id + '" data-od-id="produce-name-' + a.id + '" />';
+      html += '<button type="button" class="produce-card-del" data-del-produce="' + req.id + ':' + a.id + '" aria-label="删除这条产出"><svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>';
+      html += '</div>';
+      /* 第二行：附件槽——单独一行，宽度是整张卡。点"附加"直接展开输入框
+         （粘贴链接自动识别，回车即添加），旁边一个小上传图标按钮——去掉了
+         "上传文件/粘贴链接"二选一菜单这一层中间点击 */
+      html += '<div class="produce-row-2">';
+      if (a.attach) {
+        html += '<a class="produce-attach-chip" href="' + esc(a.attach.url) + '" target="_blank" rel="noopener" data-od-id="produce-attach-chip-' + a.id + '">' + produceAttachIconSvg(a.attach.type) + '<span>' + esc(a.attach.label || a.attach.url) + '</span></a>';
+        html += '<button type="button" class="produce-attach-remove" data-remove-produce-attach="' + req.id + ':' + a.id + '" aria-label="移除附件（保留这条产出）"><svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>';
+      } else if (attachOpen) {
+        html += '<form class="produce-attach-inline" data-add-produce-link="' + req.id + ':' + a.id + '" data-od-id="produce-attach-inline-' + a.id + '">' +
+          '<input type="text" placeholder="粘贴链接，回车添加" data-produce-link-input="' + a.id + '" autofocus />' +
+          '<button type="button" class="produce-attach-upload-btn" data-upload-produce="' + req.id + ':' + a.id + '" title="上传文件" aria-label="上传文件">' + UPLOAD_ICON_SVG + '</button>' +
+          '</form>';
+      } else {
+        html += '<button type="button" class="produce-attach-add" data-open-produce-attach="' + a.id + '"><svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M10 5v10M5 10h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>附加文件或链接</button>';
+      }
+      html += '</div>';
+      html += '</div>';
+    });
+    if (!req.attachments.length) html += '<div class="empty-state" style="padding:20px 0"><p>还没有产出，点右上角 + 新建</p></div>';
+    return html;
+  }
+
+  /* 活动 Tab：每个节点对应一次阶段流转（req.transitions），节点自带一条
+     可点击展开编辑的"说明"（tr.note——为什么发生这次流转，跟任务 Tab 的
+     阻塞说明同一套形态），下面挂着任意条评论（req.comments，按
+     transitionId 关联，不再限定只能对最新节点评论）。节点右上角可删除
+     整条流转记录（连带说明和评论一起删，危险操作，二次确认）。 */
+  function renderActivityTab(req) {
+    if (!req.transitions.length) {
+      return '<div class="empty-state" style="padding:30px 0"><p>该需求还没有流转记录</p></div>';
+    }
+    var html = '<div class="timeline">';
+    req.transitions.forEach(function (tr, idx) {
+      var isCurrent = idx === req.transitions.length - 1;
+      var noteEditing = state.activityNoteEditId === tr.id;
+      var commentOpen = state.activityCommentOpenId === tr.id;
+      html += '<div class="tl-node' + (isCurrent ? ' current' : '') + '" data-od-id="tl-node-' + tr.id + '"><div class="tl-dot"></div>';
+      html += '<div class="tl-node-head"><span class="tl-stage">' + (tr.to === 'archive' && req.closureType === 'abandoned' ? '归档（废弃）' : STAGE_LABEL[tr.to]) + '</span><span class="tl-time">' + fmtDateTime(tr.timestamp) + ' · ' + esc(tr.by) + '</span><button type="button" class="tl-node-del" data-del-transition="' + req.id + ':' + tr.id + '" aria-label="删除该流转记录">' + DELETE_ICON_SVG + '</button></div>';
+      html += noteEditing
+        ? '<textarea class="tl-note-input" placeholder="补充这次流转的说明…" data-edit-tl-note="' + req.id + ':' + tr.id + '" data-od-id="tl-note-input-' + tr.id + '" autofocus>' + esc(tr.note || '') + '</textarea>'
+        : '<button type="button" class="tl-note" data-open-tl-note="' + tr.id + '" data-od-id="tl-note-btn-' + tr.id + '">' + (tr.note ? esc(tr.note) : '点击添加说明…') + '</button>';
+      var comments = req.comments.filter(function (c) { return c.transitionId === tr.id; });
+      comments.forEach(function (c) {
+        html += '<div class="tl-comment"><div class="tl-comment-meta">' + fmtDateTime(c.timestamp) + '</div>' + esc(c.content) + '</div>';
+      });
+      html += commentOpen
+        ? '<form class="tl-comment-form" data-add-tl-comment="' + req.id + ':' + tr.id + '" data-od-id="tl-comment-form-' + tr.id + '"><input type="text" placeholder="写评论，回车发送" data-tl-comment-input="' + tr.id + '" autofocus /></form>'
+        : '<button type="button" class="tl-comment-add-btn" data-open-tl-comment="' + tr.id + '" data-od-id="tl-comment-btn-' + tr.id + '">+ 评论</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  /* ================= 事件绑定：主内容区 ================= */
+  function bindMainEvents() {
+    viewContainerEl.querySelectorAll('[data-toggle-stage]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var k = el.getAttribute('data-toggle-stage');
+        state.collapsedStages[k] = !state.collapsedStages[k];
+        if (state.draftStage === k) state.draftStage = null;
+        renderMain();
+      });
+    });
+
+    /* 阶段胶囊上的 + ：在该阶段列表最上方插入一个跟需求行同网格的草稿行，
+       自动聚焦名称输入。未输入内容时失焦/点别处/切换阶段/切换视图都会
+       让草稿行消失，不写入任何数据——回车才真正创建。 */
+    viewContainerEl.querySelectorAll('[data-draft-toggle]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var k = el.getAttribute('data-draft-toggle');
+        state.draftStage = state.draftStage === k ? null : k;
+        renderMain();
+        if (state.draftStage === k) {
+          var input = viewContainerEl.querySelector('[data-draft-input="' + k + '"]');
+          if (input) setTimeout(function () { input.focus(); }, 0);
+        }
+      });
+    });
+
+    viewContainerEl.querySelectorAll('[data-draft-input]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { state.draftStage = null; renderMain(); return; }
+        if (e.key !== 'Enter') return;
+        var val = el.value;
+        if (!val.trim()) return;
+        var stageKey = el.getAttribute('data-draft-input');
+        var req = createReq(stageKey, val);
+        state.draftStage = null;
+        renderMain();
+        if (req) selectReq(req.id);
+      });
+      el.addEventListener('blur', function () {
+        if (!el.value.trim()) { state.draftStage = null; renderMain(); }
+      });
+    });
+
+    viewContainerEl.querySelectorAll('[data-req-id]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        if (e.target.closest('[data-edit-progress]') ||
+            e.target.closest('[data-edit-release-method]') || e.target.closest('[data-edit-release-date]')) return;
+        var id = el.getAttribute('data-req-id');
+        selectReq(id);
+        renderMain();
+      });
+    });
+
+    viewContainerEl.querySelectorAll('[data-edit-progress]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      el.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+      var commit = function () {
+        var req = findReq(el.getAttribute('data-edit-progress'));
+        if (!req) return;
+        req.progress = clampProgress(el.value);
+        saveState();
+        if (state.selectedReqId === req.id) renderDetail();
+      };
+      el.addEventListener('change', commit);
+      el.addEventListener('keydown', function (e) { if (e.key === 'Enter') el.blur(); });
+    });
+
+    /* 发布阶段行内可编辑：方式下拉 + 日期选择器 */
+    viewContainerEl.querySelectorAll('[data-edit-release-method]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      el.addEventListener('change', function () {
+        var req = findReq(el.getAttribute('data-edit-release-method'));
+        if (!req) return;
+        req.releaseMethod = el.value;
+        saveState();
+      });
+    });
+    viewContainerEl.querySelectorAll('[data-edit-release-date]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      el.addEventListener('change', function () {
+        var req = findReq(el.getAttribute('data-edit-release-date'));
+        if (!req) return;
+        req.releaseDate = el.value;
+        saveState();
+        renderMain();
+      });
+    });
+
+    /* 归档区域搜索：输入即时过滤，不写入任何数据 */
+    var archiveSearchInput = viewContainerEl.querySelector('[data-archive-search]');
+    if (archiveSearchInput) {
+      archiveSearchInput.addEventListener('click', function (e) { e.stopPropagation(); });
+      archiveSearchInput.addEventListener('input', function () {
+        state.archiveSearch = archiveSearchInput.value;
+        renderMain();
+        var refocus = viewContainerEl.querySelector('[data-archive-search]');
+        if (refocus) { refocus.focus(); refocus.selectionStart = refocus.selectionEnd = refocus.value.length; }
+      });
+    }
+
+    bindInlineOpEvents(viewContainerEl);
+
+    /* 拖拽：同一个 dragstart 服务两种目的地——拖到别的阶段＝流转
+       （走 transitionReq，不关心落点位置），拖到同一阶段的另一张卡片
+       上＝调整手动顺序。用一条插入线表示"要插进这两张卡片之间"，跟
+       "拖到整个阶段区域＝换阶段"的整块高亮反馈区分开。
+       浏览器规范里 dataTransfer.getData() 在 dragover/dragenter 阶段
+       读不出数据（安全限制，只有 dragstart 和 drop 才能真正读到）——
+       之前在 dragover 里调它，拿到的永远是空字符串，导致行级判断提前
+       return，事件从没被 preventDefault/stopPropagation，一路冒泡到
+       阶段容器，看起来就是"整个阶段都高亮，排序不生效"。改成在
+       dragstart 时把被拖需求 id 存到下面这个跟 bindMainEvents 同生命
+       周期的变量里，dragover/drop 都读它，不再依赖 dataTransfer。 */
+    var draggingReqId = null;
+    function clearDropIndicators() {
+      viewContainerEl.querySelectorAll('.drop-indicator-before, .drop-indicator-after').forEach(function (el) {
+        el.classList.remove('drop-indicator-before', 'drop-indicator-after');
+      });
+    }
+
+    viewContainerEl.querySelectorAll('.req-row[draggable="true"]').forEach(function (el) {
+      el.addEventListener('dragstart', function (e) {
+        draggingReqId = el.getAttribute('data-req-id');
+        e.dataTransfer.setData('text/plain', draggingReqId);
+        el.classList.add('dragging');
+      });
+      el.addEventListener('dragend', function () {
+        draggingReqId = null;
+        el.classList.remove('dragging');
+        clearDropIndicators();
+      });
+      el.addEventListener('dragover', function (e) {
+        var draggedReq = findReq(draggingReqId);
+        var targetReq = findReq(el.getAttribute('data-req-id'));
+        if (!draggedReq || !targetReq || draggedReq.id === targetReq.id || draggedReq.stage !== targetReq.stage) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var before = (e.clientY - el.getBoundingClientRect().top) < el.getBoundingClientRect().height / 2;
+        el.classList.toggle('drop-indicator-before', before);
+        el.classList.toggle('drop-indicator-after', !before);
+      });
+      el.addEventListener('dragleave', function () {
+        el.classList.remove('drop-indicator-before', 'drop-indicator-after');
+      });
+      el.addEventListener('drop', function (e) {
+        var draggedReq = findReq(draggingReqId);
+        var targetReq = findReq(el.getAttribute('data-req-id'));
+        if (!draggedReq || !targetReq || draggedReq.id === targetReq.id) return;
+        e.preventDefault();
+        e.stopPropagation();
+        clearDropIndicators();
+        if (draggedReq.stage !== targetReq.stage) {
+          transitionReq(draggedReq, targetReq.stage);
+        } else {
+          var before = (e.clientY - el.getBoundingClientRect().top) < el.getBoundingClientRect().height / 2;
+          reorderManual(targetReq.stage, draggedReq.id, targetReq.id, before);
+        }
+        renderMain();
+        if (state.selectedReqId === draggedReq.id) renderDetail();
+      });
+    });
+    viewContainerEl.querySelectorAll('[data-drop-stage]').forEach(function (el) {
+      el.addEventListener('dragover', function (e) { e.preventDefault(); el.classList.add('stage-drop-target'); });
+      el.addEventListener('dragleave', function () { el.classList.remove('stage-drop-target'); });
+      el.addEventListener('drop', function (e) {
+        e.preventDefault();
+        el.classList.remove('stage-drop-target');
+        clearDropIndicators();
+        var target = el.getAttribute('data-drop-stage');
+        var req = findReq(draggingReqId);
+        if (req && req.stage !== target) {
+          transitionReq(req, target);
+          renderMain();
+          if (state.selectedReqId === req.id) renderDetail();
+        }
+      });
+    });
+
+    /* 排序面板：点入口切展开/收起，选主/次字段和方向；跟产出/任务 Tab
+       的点击展开面板同一套点外部+Esc 收起交互。面板里不再有"手动/规则"
+       切换——选字段（哪怕选的还是原来那个）或点"恢复排序"都会让该阶段
+       退出手动态，改回按字段规则排 */
+    viewContainerEl.querySelectorAll('[data-toggle-sort-panel]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var k = el.getAttribute('data-toggle-sort-panel');
+        state.sortPanelOpenStage = state.sortPanelOpenStage === k ? null : k;
+        renderMain();
+      });
+    });
+    viewContainerEl.querySelectorAll('[data-restore-sort]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        stageSort(el.getAttribute('data-restore-sort')).mode = 'rule';
+        saveState(); renderMain();
+      });
+    });
+    viewContainerEl.querySelectorAll('[data-set-sort-field]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      el.addEventListener('change', function () {
+        var parts = el.getAttribute('data-set-sort-field').split(':');
+        var sort = stageSort(parts[0]);
+        if (parts[1] === 'primary') sort.primary = el.value;
+        else sort.secondary = el.value || null;
+        sort.mode = 'rule';
+        saveState(); renderMain();
+      });
+    });
+    viewContainerEl.querySelectorAll('[data-toggle-sort-dir]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var parts = el.getAttribute('data-toggle-sort-dir').split(':');
+        var sort = stageSort(parts[0]);
+        var dirKey = parts[1] === 'primary' ? 'primaryDir' : 'secondaryDir';
+        sort[dirKey] = sort[dirKey] === 'desc' ? 'asc' : 'desc';
+        sort.mode = 'rule';
+        saveState(); renderMain();
+      });
+    });
+    if (state.sortPanelOpenStage) {
+      var closeSortPanel = function (e) {
+        if (e.target.closest && e.target.closest('[data-toggle-sort-panel], .sort-panel')) return;
+        state.sortPanelOpenStage = null;
+        renderMain();
+      };
+      document.addEventListener('click', closeSortPanel, { once: true });
+      var escSortPanel = function (e) {
+        if (e.key === 'Escape') { state.sortPanelOpenStage = null; renderMain(); }
+      };
+      document.addEventListener('keydown', escSortPanel, { once: true });
+    }
+  }
+
+  /* 阶段内拖拽调顺序：以拖拽发生那一刻屏幕上显示的顺序（不管当时是
+     手动还是按规则排的）为底子，把拖动项插到目标项前面/后面，其余项
+     顺移，重新按 0..n-1 赋值 manualOrder，并把该阶段悄悄切成手动——
+     用户不用先去面板里选"手动"才能拖，拖了就自动是手动 */
+  function reorderManual(stageKey, draggedId, targetId, before) {
+    var list = sortReqsForStage(reqsByStage(stageKey), stageKey);
+    var dragged = list.filter(function (r) { return r.id === draggedId; })[0];
+    if (!dragged) return;
+    list = list.filter(function (r) { return r.id !== draggedId; });
+    var targetIdx = -1;
+    list.forEach(function (r, idx) { if (r.id === targetId) targetIdx = idx; });
+    if (targetIdx === -1) list.push(dragged);
+    else list.splice(before ? targetIdx : targetIdx + 1, 0, dragged);
+    list.forEach(function (r, idx) { r.manualOrder = idx; });
+    stageSort(stageKey).mode = 'manual';
+    saveState();
+  }
+
+  var TASK_STATUS_ORDER = ['todo', 'progress', 'done'];
+
+  function bindInlineOpEvents(root) {
+    root.querySelectorAll('[data-cycle-task-status]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var parts = el.getAttribute('data-cycle-task-status').split(':');
+        var req = findReq(parts[0]);
+        var t = req.tasks.filter(function (x) { return x.id === parts[1]; })[0];
+        if (!t) return;
+        t.status = TASK_STATUS_ORDER[(TASK_STATUS_ORDER.indexOf(t.status) + 1) % TASK_STATUS_ORDER.length];
+        if (t.status === 'done') t.progress = 100;
+        saveState(); renderMain(); if (state.selectedReqId === req.id) renderDetail();
+      });
+    });
+    /* 三个结果按钮都是明确可点的态，直接切到点的那个态——不再是"再点
+       一次亮着的按钮退回未验证"，因为未验证现在自己就是一个可以直接点
+       选的按钮，不需要靠"取消选中"这种间接方式回到它 */
+    root.querySelectorAll('[data-set-ac]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var parts = el.getAttribute('data-set-ac').split(':');
+        var req = findReq(parts[0]);
+        var a = req.acceptance.filter(function (x) { return x.id === parts[1]; })[0];
+        if (a) {
+          a.result = parts[2];
+          /* 切走"不通过"时只是隐藏说明框，不清空 failNote——万一是手滑
+             点错，切回"不通过"时原因说明还在，不用重新写一遍 */
+          if (a.result !== '不通过') state.acFailNoteOpenId = null;
+          saveState(); renderMain(); if (state.selectedReqId === req.id) renderDetail();
+        }
+      });
+    });
+  }
+
+  /* ================= 事件绑定：详情面板 ================= */
+  function bindDetailEvents(req) {
+    detailInnerEl.querySelector('[data-edit-name]').addEventListener('change', function (e) {
+      req.name = e.target.value.trim() || req.name;
+      saveState(); renderMain(); renderDetail();
+    });
+    detailInnerEl.querySelector('[data-fullscreen-toggle]').addEventListener('click', function () {
+      state.detailMode = state.detailMode === 'fullscreen' ? 'expanded' : 'fullscreen';
+      applyDetailMode(); renderPanelToggle(); renderMain(); renderDetail();
+    });
+
+    detailInnerEl.querySelectorAll('[data-edit-field]').forEach(function (el) {
+      var handler = function (e) {
+        var parts = el.getAttribute('data-edit-field').split(':');
+        req[parts[1]] = e.target.value;
+        saveState();
+        if (parts[1] === 'priority') renderMain();
+      };
+      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'blur', handler);
+    });
+
+    var progressField = detailInnerEl.querySelector('[data-edit-progress]');
+    if (progressField) {
+      progressField.addEventListener('change', function () {
+        req.progress = clampProgress(progressField.value);
+        saveState();
+        renderMain();
+      });
+      progressField.addEventListener('keydown', function (e) { if (e.key === 'Enter') progressField.blur(); });
+    }
+
+    detailInnerEl.querySelector('[data-transition-select]').addEventListener('change', function (e) {
+      var val = e.target.value;
+      if (!val) return;
+      if (val === 'abandon') transitionReq(req, 'archive', { abandoned: true });
+      else transitionReq(req, val);
+      renderMain(); renderDetail();
+    });
+
+    detailInnerEl.querySelectorAll('[data-tab]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        state.activeTab = el.getAttribute('data-tab');
+        state.produceAttachOpenId = null;
+        state.templateEditingId = null;
+        state.taskDraftOpen = false;
+        state.taskEditFieldOpenId = null;
+        state.taskBlockNoteOpenId = null;
+        state.acDraftOpen = false;
+        state.acEditDescOpenId = null;
+        state.acFailNoteOpenId = null;
+        state.activityNoteDraftAnchor = null;
+        state.activityNoteEditId = null;
+        state.activityCommentOpenId = null;
+        renderDetail();
+      });
+    });
+
+    var editor = detailInnerEl.querySelector('[data-body-editor]');
+    if (editor) {
+      editor.addEventListener('input', function () {
+        req.body = editor.innerHTML;
+        saveState();
+        applyMarkdownLiteShortcut(editor);
+      });
+      /* 记住光标位置：点模板按钮的一瞬间编辑器会失焦，选区就没了，
+         所以要在失焦前存一份，插入模板时再还原到这个位置 */
+      editor.addEventListener('blur', function () { lastEditorRange = captureEditorRange(editor); });
+      editor.addEventListener('keyup', function () { lastEditorRange = captureEditorRange(editor); });
+      editor.addEventListener('mouseup', function () { lastEditorRange = captureEditorRange(editor); });
+    }
+    detailInnerEl.querySelectorAll('[data-fill-template]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var parts = el.getAttribute('data-fill-template').split(':');
+        var tpl = state.bodyTemplates.filter(function (t) { return t.id === parts[1]; })[0];
+        if (!tpl || !editor) return;
+        insertHtmlAtRange(editor, tpl.body || '');
+        req.body = editor.innerHTML;
+        saveState();
+      });
+    });
+
+    /* 模板抽屉：新建/编辑/删除，编辑态复用真正的 block-editor 组件 */
+    var tplAddBtn = detailInnerEl.querySelector('[data-tpl-add]');
+    if (tplAddBtn) tplAddBtn.addEventListener('click', function () {
+      var tpl = { id: uid('tpl'), name: '未命名模板', body: '' };
+      state.bodyTemplates.push(tpl);
+      state.templateEditingId = tpl.id;
+      saveState(); renderDetail();
+      var nameInput = detailInnerEl.querySelector('[data-tpl-edit-name]');
+      if (nameInput) { nameInput.focus(); nameInput.select(); }
+    });
+    detailInnerEl.querySelectorAll('[data-tpl-edit]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.templateEditingId = el.getAttribute('data-tpl-edit');
+        renderDetail();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-tpl-del]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var id = el.getAttribute('data-tpl-del');
+        state.bodyTemplates = state.bodyTemplates.filter(function (t) { return t.id !== id; });
+        saveState(); renderDetail();
+      });
+    });
+    var tplBackBtn = detailInnerEl.querySelector('[data-tpl-back]');
+    if (tplBackBtn) tplBackBtn.addEventListener('click', function () {
+      state.templateEditingId = null;
+      renderDetail();
+    });
+    var tplNameInput = detailInnerEl.querySelector('[data-tpl-edit-name]');
+    if (tplNameInput) tplNameInput.addEventListener('input', function () {
+      var tpl = state.bodyTemplates.filter(function (t) { return t.id === tplNameInput.getAttribute('data-tpl-edit-name'); })[0];
+      if (tpl) { tpl.name = tplNameInput.value; saveState(); }
+    });
+    var tplBodyEditor = detailInnerEl.querySelector('[data-tpl-edit-body]');
+    if (tplBodyEditor) tplBodyEditor.addEventListener('input', function () {
+      var tpl = state.bodyTemplates.filter(function (t) { return t.id === tplBodyEditor.getAttribute('data-tpl-edit-body'); })[0];
+      if (tpl) { tpl.body = tplBodyEditor.innerHTML; saveState(); }
+      applyMarkdownLiteShortcut(tplBodyEditor);
+    });
+
+    bindInlineOpEvents(detailInnerEl);
+
+    /* 任务 Tab：新建走完整表单的行内草稿行（跟产出卡片一致的交互语言，
+       不再用浏览器原生 prompt）——名称必填，负责人/截止日期/进度都能
+       在创建前一次填完，不填就留空，不强制。 */
+    var taskDraftToggle = detailInnerEl.querySelector('[data-toggle-task-draft]');
+    if (taskDraftToggle) taskDraftToggle.addEventListener('click', function () {
+      state.taskDraftOpen = true;
+      renderDetail();
+      var nameInput = detailInnerEl.querySelector('[data-task-draft-input="name"]');
+      if (nameInput) nameInput.focus();
+    });
+    var taskDraftRow = detailInnerEl.querySelector('[data-od-id="task-draft-row"]');
+    if (taskDraftRow) {
+      var draftNameInput = taskDraftRow.querySelector('[data-task-draft-input="name"]');
+      /* 没有单独的"创建"按钮——名称有字，点哪儿（表单整体失焦）或回车
+         都直接创建；名称是空的，点哪儿/回车都只是收起表单，不创建 */
+      var resolveTaskDraft = function () {
+        var name = draftNameInput.value.trim();
+        state.taskDraftOpen = false;
+        if (!name) { renderDetail(); return; }
+        var assignee = taskDraftRow.querySelector('[data-task-draft-input="assignee"]').value.trim();
+        var deadline = taskDraftRow.querySelector('[data-task-draft-input="deadline"]').value;
+        var progress = clampProgress(taskDraftRow.querySelector('[data-task-draft-input="progress"]').value);
+        req.tasks.push({ id: uid('t'), name: name, assignee: assignee, deadline: deadline, progress: progress == null ? 0 : progress, status: 'todo', blocked: false, blockNote: '' });
+        saveState(); renderMain(); renderDetail();
+      };
+      taskDraftRow.addEventListener('click', function (e) { e.stopPropagation(); });
+      taskDraftRow.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { state.taskDraftOpen = false; renderDetail(); return; }
+        if (e.key === 'Enter') { e.preventDefault(); resolveTaskDraft(); }
+      });
+      /* 表单整体失去焦点（点了表单以外的任何地方）就落定这次新建的
+         结果——有名称就创建，没名称就放弃，两种情况都不用额外点确认 */
+      taskDraftRow.addEventListener('focusout', function (e) {
+        if (taskDraftRow.contains(e.relatedTarget)) return;
+        resolveTaskDraft();
+      });
+    }
+    detailInnerEl.querySelectorAll('[data-edit-task-name]').forEach(function (el) {
+      el.addEventListener('change', function () {
+        var parts = el.getAttribute('data-edit-task-name').split(':');
+        var t = req.tasks.filter(function (x) { return x.id === parts[1]; })[0];
+        if (t) { t.name = el.value.trim() || t.name; saveState(); }
+      });
+      el.addEventListener('keydown', function (e) { if (e.key === 'Enter') el.blur(); });
+    });
+    detailInnerEl.querySelectorAll('[data-del-task]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var parts = el.getAttribute('data-del-task').split(':');
+        req.tasks = req.tasks.filter(function (t) { return t.id !== parts[1]; });
+        saveState(); renderMain(); renderDetail();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-open-task-field]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.taskEditFieldOpenId = el.getAttribute('data-open-task-field');
+        renderDetail();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-edit-task-field]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      var commit = function () {
+        var parts = el.getAttribute('data-edit-task-field').split(':');
+        var t = req.tasks.filter(function (x) { return x.id === parts[1]; })[0];
+        if (t) { t[parts[2]] = el.value.trim(); saveState(); renderMain(); }
+        state.taskEditFieldOpenId = null;
+        renderDetail();
+      };
+      el.addEventListener('change', commit);
+      el.addEventListener('keydown', function (e) { if (e.key === 'Enter') el.blur(); });
+    });
+    detailInnerEl.querySelectorAll('[data-edit-task-progress]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      el.addEventListener('change', function () {
+        var parts = el.getAttribute('data-edit-task-progress').split(':');
+        var t = req.tasks.filter(function (x) { return x.id === parts[1]; })[0];
+        if (t) { t.progress = clampProgress(el.value); saveState(); renderMain(); }
+      });
+      el.addEventListener('keydown', function (e) { if (e.key === 'Enter') el.blur(); });
+    });
+    detailInnerEl.querySelectorAll('[data-toggle-task-blocked]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var parts = el.getAttribute('data-toggle-task-blocked').split(':');
+        var t = req.tasks.filter(function (x) { return x.id === parts[1]; })[0];
+        if (!t) return;
+        t.blocked = !t.blocked;
+        if (!t.blocked) state.taskBlockNoteOpenId = null;
+        saveState(); renderMain(); renderDetail();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-open-task-blocknote]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.taskBlockNoteOpenId = el.getAttribute('data-open-task-blocknote');
+        renderDetail();
+        var noteInput = detailInnerEl.querySelector('[data-edit-task-blocknote]');
+        if (noteInput) noteInput.focus();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-edit-task-blocknote]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      var commit = function () {
+        var parts = el.getAttribute('data-edit-task-blocknote').split(':');
+        var t = req.tasks.filter(function (x) { return x.id === parts[1]; })[0];
+        if (t) { t.blockNote = el.value.trim(); saveState(); }
+        state.taskBlockNoteOpenId = null;
+        renderDetail();
+      };
+      el.addEventListener('blur', commit);
+      el.addEventListener('keydown', function (e) { if (e.key === 'Escape') { state.taskBlockNoteOpenId = null; renderDetail(); } });
+    });
+    /* 退出逻辑：负责人/日期编辑态、阻塞说明编辑态，点外部或 Esc 都要收起 */
+    if (state.taskEditFieldOpenId || state.taskBlockNoteOpenId) {
+      var closeTaskEdit = function (e) {
+        if (e.target.closest && e.target.closest('[data-open-task-field], [data-edit-task-field], [data-open-task-blocknote], [data-edit-task-blocknote]')) return;
+        state.taskEditFieldOpenId = null;
+        state.taskBlockNoteOpenId = null;
+        renderDetail();
+      };
+      document.addEventListener('click', closeTaskEdit, { once: true });
+      var escTaskEdit = function (e) {
+        if (e.key === 'Escape') { state.taskEditFieldOpenId = null; state.taskBlockNoteOpenId = null; renderDetail(); }
+      };
+      document.addEventListener('keydown', escTaskEdit, { once: true });
+    }
+
+    /* 验收 Tab：新建走行内草稿行（不用 window.prompt），描述必填；
+       描述创建后可点击编辑；结果三态改成三个都能点的明确按钮；
+       不通过时露出可点击展开的说明框，记录原因；补上删除入口 */
+    var acDraftToggle = detailInnerEl.querySelector('[data-toggle-ac-draft]');
+    if (acDraftToggle) acDraftToggle.addEventListener('click', function () {
+      state.acDraftOpen = true;
+      renderDetail();
+      var input = detailInnerEl.querySelector('[data-ac-draft-input]');
+      if (input) input.focus();
+    });
+    var acDraftInput = detailInnerEl.querySelector('[data-ac-draft-input]');
+    if (acDraftInput) {
+      acDraftInput.addEventListener('click', function (e) { e.stopPropagation(); });
+      var resolveAcDraft = function () {
+        var desc = acDraftInput.value.trim();
+        state.acDraftOpen = false;
+        if (!desc) { renderDetail(); return; }
+        req.acceptance.push({ id: uid('ac'), desc: desc, result: '未验证', failNote: '' });
+        saveState(); renderMain(); renderDetail();
+      };
+      acDraftInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { state.acDraftOpen = false; renderDetail(); return; }
+        if (e.key === 'Enter') { e.preventDefault(); resolveAcDraft(); }
+      });
+      acDraftInput.addEventListener('blur', resolveAcDraft);
+    }
+    detailInnerEl.querySelectorAll('[data-open-ac-desc]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.acEditDescOpenId = el.getAttribute('data-open-ac-desc');
+        renderDetail();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-edit-ac-desc]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      var commit = function () {
+        var parts = el.getAttribute('data-edit-ac-desc').split(':');
+        var a = req.acceptance.filter(function (x) { return x.id === parts[1]; })[0];
+        if (a) { a.desc = el.value.trim() || a.desc; saveState(); }
+        state.acEditDescOpenId = null;
+        renderDetail();
+      };
+      el.addEventListener('blur', commit);
+      el.addEventListener('keydown', function (e) { if (e.key === 'Enter') el.blur(); });
+    });
+    detailInnerEl.querySelectorAll('[data-del-ac]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var parts = el.getAttribute('data-del-ac').split(':');
+        req.acceptance = req.acceptance.filter(function (a) { return a.id !== parts[1]; });
+        saveState(); renderMain(); renderDetail();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-open-ac-failnote]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.acFailNoteOpenId = el.getAttribute('data-open-ac-failnote');
+        renderDetail();
+        var noteInput = detailInnerEl.querySelector('[data-edit-ac-failnote]');
+        if (noteInput) noteInput.focus();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-edit-ac-failnote]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      var commit = function () {
+        var parts = el.getAttribute('data-edit-ac-failnote').split(':');
+        var a = req.acceptance.filter(function (x) { return x.id === parts[1]; })[0];
+        if (a) { a.failNote = el.value.trim(); saveState(); }
+        state.acFailNoteOpenId = null;
+        renderDetail();
+      };
+      el.addEventListener('blur', commit);
+      el.addEventListener('keydown', function (e) { if (e.key === 'Escape') { state.acFailNoteOpenId = null; renderDetail(); } });
+    });
+    /* 退出逻辑：描述编辑态、不通过说明编辑态，点外部或 Esc 都要收起 */
+    if (state.acEditDescOpenId || state.acFailNoteOpenId) {
+      var closeAcEdit = function (e) {
+        if (e.target.closest && e.target.closest('[data-open-ac-desc], [data-edit-ac-desc], [data-open-ac-failnote], [data-edit-ac-failnote]')) return;
+        state.acEditDescOpenId = null;
+        state.acFailNoteOpenId = null;
+        renderDetail();
+      };
+      document.addEventListener('click', closeAcEdit, { once: true });
+      var escAcEdit = function (e) {
+        if (e.key === 'Escape') { state.acEditDescOpenId = null; state.acFailNoteOpenId = null; renderDetail(); }
+      };
+      document.addEventListener('keydown', escAcEdit, { once: true });
+    }
+
+    /* 产出 Tab：新建卡片、改名、勾选完成、挂/移除附件——完成状态和
+       附件是两件独立的事，勾选后附件区照样能继续加/换/删，不锁定 */
+    var addProduce = detailInnerEl.querySelector('[data-add-produce]');
+    if (addProduce) addProduce.addEventListener('click', function () {
+      req.attachments.unshift({ id: uid('a'), name: '', checked: false, attach: null, createdAt: todayIso(), createdBy: '我' });
+      saveState(); renderMain(); renderDetail();
+      var input = detailInnerEl.querySelector('[data-edit-produce-name="' + req.id + ':' + req.attachments[0].id + '"]');
+      if (input) { input.focus(); }
+    });
+    detailInnerEl.querySelectorAll('[data-edit-produce-name]').forEach(function (el) {
+      el.addEventListener('change', function () {
+        var parts = el.getAttribute('data-edit-produce-name').split(':');
+        var a = req.attachments.filter(function (x) { return x.id === parts[1]; })[0];
+        if (a) { a.name = el.value.trim(); saveState(); renderMain(); }
+      });
+      el.addEventListener('keydown', function (e) { if (e.key === 'Enter') el.blur(); });
+    });
+    detailInnerEl.querySelectorAll('[data-toggle-produce-checked]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var parts = el.getAttribute('data-toggle-produce-checked').split(':');
+        var a = req.attachments.filter(function (x) { return x.id === parts[1]; })[0];
+        if (a) { a.checked = !a.checked; saveState(); renderMain(); renderDetail(); }
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-del-produce]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var parts = el.getAttribute('data-del-produce').split(':');
+        req.attachments = req.attachments.filter(function (a) { return a.id !== parts[1]; });
+        saveState(); renderMain(); renderDetail();
+      });
+    });
+    /* 附加交互：点"附加文件或链接"直接展开输入框（不再经过上传/链接
+       二选一菜单），粘贴链接回车即添加，旁边小图标按钮走上传 */
+    detailInnerEl.querySelectorAll('[data-open-produce-attach]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.produceAttachOpenId = el.getAttribute('data-open-produce-attach');
+        renderDetail();
+        var input = detailInnerEl.querySelector('[data-produce-link-input]');
+        if (input) input.focus();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-upload-produce]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var parts = el.getAttribute('data-upload-produce').split(':');
+        var a = req.attachments.filter(function (x) { return x.id === parts[1]; })[0];
+        if (a) { a.attach = { type: 'file', url: '#', label: '需求说明-' + Math.floor(Math.random() * 900 + 100) + '.pdf' }; }
+        state.produceAttachOpenId = null;
+        saveState(); renderDetail();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-add-produce-link]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      el.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var parts = el.getAttribute('data-add-produce-link').split(':');
+        var input = el.querySelector('[data-produce-link-input]');
+        var val = input.value.trim();
+        if (!val) return;
+        var a = req.attachments.filter(function (x) { return x.id === parts[1]; })[0];
+        if (a) a.attach = { type: 'link', url: val };
+        state.produceAttachOpenId = null;
+        saveState(); renderDetail();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-remove-produce-attach]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.preventDefault();
+        var parts = el.getAttribute('data-remove-produce-attach').split(':');
+        var a = req.attachments.filter(function (x) { return x.id === parts[1]; })[0];
+        if (a) a.attach = null;
+        saveState(); renderDetail();
+      });
+    });
+    /* 退出逻辑：附加输入框展开后，点击它自身以外的任何地方，或按 Esc，
+       都要收起——之前这里完全没有关闭机制，是个真 bug */
+    if (state.produceAttachOpenId) {
+      var closeProduceAttach = function (e) {
+        if (e.target.closest && e.target.closest('[data-open-produce-attach], [data-add-produce-link]')) return;
+        state.produceAttachOpenId = null;
+        renderDetail();
+      };
+      document.addEventListener('click', closeProduceAttach, { once: true });
+      var escProduceAttach = function (e) {
+        if (e.key === 'Escape') { state.produceAttachOpenId = null; renderDetail(); }
+      };
+      document.addEventListener('keydown', escProduceAttach, { once: true });
+    }
+
+    /* 活动 Tab：说明——常态是一行灰字按钮，点击展开成小文本框，跟任务
+       Tab 的阻塞说明同一套形态；blur/Enter 提交，Esc 取消不保存 */
+    detailInnerEl.querySelectorAll('[data-open-tl-note]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.activityNoteEditId = el.getAttribute('data-open-tl-note');
+        renderDetail();
+        var noteInput = detailInnerEl.querySelector('[data-edit-tl-note]');
+        if (noteInput) noteInput.focus();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-edit-tl-note]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      var commit = function () {
+        var parts = el.getAttribute('data-edit-tl-note').split(':');
+        var tr = req.transitions.filter(function (x) { return x.id === parts[1]; })[0];
+        if (tr) { tr.note = el.value.trim(); saveState(); }
+        state.activityNoteEditId = null;
+        renderDetail();
+      };
+      el.addEventListener('blur', commit);
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { state.activityNoteEditId = null; renderDetail(); }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+      });
+    });
+
+    /* 活动 Tab：对任意节点评论——点"+ 评论"展开输入框，回车发送并收起 */
+    detailInnerEl.querySelectorAll('[data-open-tl-comment]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.activityCommentOpenId = el.getAttribute('data-open-tl-comment');
+        renderDetail();
+        var input = detailInnerEl.querySelector('[data-tl-comment-input]');
+        if (input) input.focus();
+      });
+    });
+    detailInnerEl.querySelectorAll('[data-add-tl-comment]').forEach(function (form) {
+      form.addEventListener('click', function (e) { e.stopPropagation(); });
+      form.addEventListener('submit', function (e) { e.preventDefault(); });
+      var input = form.querySelector('[data-tl-comment-input]');
+      var submit = function () {
+        var parts = form.getAttribute('data-add-tl-comment').split(':');
+        var trId = parts[1];
+        var val = input.value.trim();
+        state.activityCommentOpenId = null;
+        if (!val) { renderDetail(); return; }
+        req.comments.push({ id: uid('c'), transitionId: trId, content: val, timestamp: new Date().toISOString().slice(0, 16) });
+        saveState(); renderDetail();
+      };
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); submit(); }
+        if (e.key === 'Escape') { state.activityCommentOpenId = null; renderDetail(); }
+      });
+      input.addEventListener('blur', function () {
+        if (!input.value.trim()) { state.activityCommentOpenId = null; renderDetail(); }
+      });
+    });
+
+    /* 退出逻辑：说明编辑态、评论输入态，点外部要收起（Esc 已在各自输入框上处理） */
+    if (state.activityNoteEditId || state.activityCommentOpenId) {
+      var closeActivityEdit = function (e) {
+        if (e.target.closest && e.target.closest('[data-open-tl-note], [data-edit-tl-note], [data-open-tl-comment], [data-add-tl-comment]')) return;
+        state.activityNoteEditId = null;
+        state.activityCommentOpenId = null;
+        renderDetail();
+      };
+      document.addEventListener('click', closeActivityEdit, { once: true });
+    }
+
+    /* 删除流转节点：连带这个节点下的说明和评论一起删，是危险操作，走
+       二次确认弹窗（跟删除项目同一套 showConfirm） */
+    detailInnerEl.querySelectorAll('[data-del-transition]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var parts = el.getAttribute('data-del-transition').split(':');
+        var trId = parts[1];
+        showConfirm('删除这条流转记录？', '该节点的说明和评论会一并删除，此操作无法撤销。', function () {
+          req.transitions = req.transitions.filter(function (t) { return t.id !== trId; });
+          req.comments = req.comments.filter(function (c) { return c.transitionId !== trId; });
+          saveState(); renderMain(); renderDetail();
+        });
+      });
+    });
+  }
+
+  /* ================= 全局事件：顶部条 · 项目切换 / 搜索 / 设置 ================= */
+  function bindGlobalEvents() {
+    var overlay = document.getElementById('overlay');
+    function closePopovers() {
+      document.getElementById('proj-popover').hidden = true;
+      overlay.hidden = true;
+      state.renamingProjectId = null;
+    }
+    overlay.addEventListener('click', closePopovers);
+
+    document.getElementById('topbar-project').addEventListener('click', function (e) {
+      e.stopPropagation();
+      var pop = document.getElementById('proj-popover');
+      if (!pop.hidden) { closePopovers(); return; }
+      renderProjectPopover();
+      pop.hidden = false;
+      overlay.hidden = false;
+    });
+
+    /* 搜索是顶部条常驻控件（不再是可展开的悬浮面板），输入即出结果，
+       结果渲染进搜索框正下方的内嵌下拉里 */
+    var searchInput = document.getElementById('topbar-search-input');
+    var searchDropdown = document.getElementById('topbar-search-dropdown');
+    searchInput.addEventListener('click', function (e) { e.stopPropagation(); });
+    searchInput.addEventListener('focus', renderTopbarSearchResults);
+    searchInput.addEventListener('input', renderTopbarSearchResults);
+    document.addEventListener('click', function () { searchDropdown.hidden = true; });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { closePopovers(); searchDropdown.hidden = true; }
+    });
+
+    window.__closePopovers = closePopovers;
+  }
+
+  function renderTopbarSearchResults() {
+    var searchInput = document.getElementById('topbar-search-input');
+    var dropdown = document.getElementById('topbar-search-dropdown');
+    var q = searchInput.value.trim().toLowerCase();
+    if (!q) { dropdown.hidden = true; return; }
+    var matches = getReqs().filter(function (r) { return r.name.toLowerCase().indexOf(q) !== -1; });
+    dropdown.innerHTML = matches.length
+      ? matches.map(function (r) {
+          return '<div class="search-result-item" data-jump-req="' + r.id + '"><span class="sr-name">' + esc(r.name) + '</span><span class="sr-stage">' + STAGE_LABEL[r.stage] + '</span></div>';
+        }).join('')
+      : '<div class="search-empty">没有找到匹配的需求</div>';
+    dropdown.hidden = false;
+    dropdown.querySelectorAll('[data-jump-req]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var r = findReq(el.getAttribute('data-jump-req'));
+        dropdown.hidden = true;
+        searchInput.value = '';
+        if (r.stage === 'archive') state.archiveSearch = '';
+        if (state.collapsedStages[r.stage]) state.collapsedStages[r.stage] = false;
+        selectReq(r.id);
+        renderMain();
+      });
+    });
+  }
+
+  /* 干净的方形铅笔轮廓（笔身矩形 + 削尖三角 + 底部笔尖点），比一笔连画的
+     铅笔形状在 14px 小尺寸下更容易辨认 */
+  var RENAME_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M4 16l.7-3L13.3 4.4a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4L7.1 15.3 4 16Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M11.7 6l2.3 2.3" stroke="currentColor" stroke-width="1.4"/></svg>';
+  var DELETE_ICON_SVG = '<svg class="icon-sm" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+
+  function renderProjectPopover() {
+    var pop = document.getElementById('proj-popover');
+    var html = '';
+    state.projects.forEach(function (p) {
+      var isActive = p.id === state.currentProjectId;
+      var isRenaming = state.renamingProjectId === p.id;
+      var nameCell = isRenaming
+        ? '<input type="text" class="pop-rename-input" value="' + esc(p.name) + '" data-rename-input="' + p.id + '" data-od-id="pop-rename-input-' + p.id + '" />'
+        : '<span class="pop-name">' + esc(p.name) + '</span>';
+      var actions = isRenaming ? '' : (
+        '<span class="pop-actions">' +
+        '<button type="button" class="pop-action-btn" data-rename-project="' + p.id + '" aria-label="重命名项目">' + RENAME_ICON_SVG + '</button>' +
+        (state.projects.length > 1 ? '<button type="button" class="pop-action-btn danger" data-del-project="' + p.id + '" aria-label="删除项目">' + DELETE_ICON_SVG + '</button>' : '') +
+        '</span>'
+      );
+      html += '<div class="pop-item' + (isActive ? ' active' : '') + '" data-switch-project="' + p.id + '">' +
+        nameCell + actions +
+        '</div>';
+    });
+    html += '<div class="pop-divider"></div>';
+    html += '<form class="pop-new-form" data-new-project-form><input type="text" placeholder="新建项目名称" data-new-project-input /><button type="submit" aria-label="创建"><svg class="icon icon-sm" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></form>';
+    pop.innerHTML = html;
+
+    pop.querySelectorAll('[data-switch-project]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        if (e.target.closest('[data-del-project]') || e.target.closest('[data-rename-project]') || e.target.closest('[data-rename-input]')) return;
+        state.currentProjectId = el.getAttribute('data-switch-project');
+        state.selectedReqId = mostRecentReqId();
+        saveState();
+        window.__closePopovers();
+        renderTopbarProject(); renderMain(); renderDetail();
+      });
+    });
+    pop.querySelectorAll('[data-del-project]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var pid = el.getAttribute('data-del-project');
+        var proj = state.projects.filter(function (p) { return p.id === pid; })[0];
+        showConfirm('删除项目「' + proj.name + '」？', '项目文件夹及全部需求数据将被永久删除，此操作无法撤销。', function () {
+          state.projects = state.projects.filter(function (p) { return p.id !== pid; });
+          if (state.currentProjectId === pid) state.currentProjectId = state.projects[0].id;
+          saveState();
+          renderProjectPopover();
+          renderTopbarProject(); renderMain(); renderDetail();
+        });
+      });
+    });
+    /* 改名：点击改名图标切换成内联输入框，回车/失焦提交，Escape 取消 */
+    pop.querySelectorAll('[data-rename-project]').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        state.renamingProjectId = el.getAttribute('data-rename-project');
+        renderProjectPopover();
+        var input = pop.querySelector('[data-rename-input]');
+        if (input) { input.focus(); input.select(); }
+      });
+    });
+    pop.querySelectorAll('[data-rename-input]').forEach(function (el) {
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+      var commit = function () {
+        var pid = el.getAttribute('data-rename-input');
+        var proj = state.projects.filter(function (p) { return p.id === pid; })[0];
+        var name = el.value.trim();
+        if (proj && name) proj.name = name;
+        state.renamingProjectId = null;
+        saveState();
+        renderProjectPopover();
+        renderTopbarProject();
+      };
+      el.addEventListener('blur', commit);
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+        else if (e.key === 'Escape') { state.renamingProjectId = null; renderProjectPopover(); }
+      });
+    });
+    pop.querySelector('[data-new-project-form]').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var input = pop.querySelector('[data-new-project-input]');
+      var name = input.value.trim();
+      if (!name) return;
+      var proj = { id: uid('proj'), name: name, requirements: [] };
+      state.projects.push(proj);
+      state.currentProjectId = proj.id;
+      state.selectedReqId = null;
+      saveState();
+      window.__closePopovers();
+      renderTopbarProject(); renderMain(); renderDetail();
+    });
+  }
+
+  /* ================= 正文编辑器：光标记忆 + 插入 + Markdown 式快捷转换 ================= */
+
+  function captureEditorRange(editor) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    var range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return null;
+    return range.cloneRange();
+  }
+
+  /* 模板按钮点击时编辑器已经失焦，选区会被清空，所以插入位置以
+     lastEditorRange 为准；如果从来没记录过（比如正文还是空的），
+     就退化成插到编辑器末尾，而不是覆盖已有内容 */
+  function insertHtmlAtRange(editor, html) {
+    editor.focus();
+    var range = lastEditorRange;
+    var sel = window.getSelection();
+    if (range && editor.contains(range.commonAncestorContainer)) {
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    var frag = range.createContextualFragment(html);
+    var lastNode = frag.lastChild;
+    range.deleteContents();
+    range.insertNode(frag);
+    if (lastNode) {
+      var after = document.createRange();
+      after.setStartAfter(lastNode);
+      after.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(after);
+    }
+    lastEditorRange = captureEditorRange(editor);
+  }
+
+  /* 输入时的 Markdown 式快捷转换：光标所在行如果以 "## "/"- "/"> " 开头，
+     敲完那个空格就把当前行转换成对应的标签，不需要工具栏按钮 */
+  function applyMarkdownLiteShortcut(editor) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !sel.isCollapsed) return;
+    var node = sel.anchorNode;
+    if (!node || node.nodeType !== Node.TEXT_NODE) return;
+    if (sel.anchorOffset !== node.textContent.length) return;
+    var text = node.textContent;
+    var convert = null;
+    if (/^##\s$/.test(text)) convert = 'h2';
+    else if (/^[-*]\s$/.test(text)) convert = 'ul';
+    else if (/^>\s$/.test(text)) convert = 'blockquote';
+    if (!convert) return;
+    /* 第一行在还没按过 Enter 时，文本节点直接挂在编辑器根节点下，没有
+       包一层 div/p——这种情况下要连文本节点一起替换，其余情况替换
+       文本节点所在的那个块级容器 */
+    var target = node.parentElement === editor ? node : node.parentElement;
+    var newEl = document.createElement(convert === 'ul' ? 'ul' : convert);
+    var inner = convert === 'ul' ? document.createElement('li') : newEl;
+    if (convert === 'ul') newEl.appendChild(inner);
+    target.replaceWith(newEl);
+    var r = document.createRange();
+    r.selectNodeContents(inner);
+    r.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+
+  function showConfirm(title, body, onConfirm) {
+    var wrap = document.createElement('div');
+    wrap.className = 'confirm-modal';
+    wrap.innerHTML = '<div class="confirm-box"><h4>' + esc(title) + '</h4><p>' + esc(body) + '</p>' +
+      '<div class="confirm-actions"><button data-cancel>取消</button><button class="danger" data-confirm>删除</button></div></div>';
+    document.body.appendChild(wrap);
+    wrap.querySelector('[data-cancel]').addEventListener('click', function () { wrap.remove(); });
+    wrap.querySelector('[data-confirm]').addEventListener('click', function () { wrap.remove(); onConfirm(); });
+  }
+
+  init();
+})();
+
+</script>
+</body>
+</html>
