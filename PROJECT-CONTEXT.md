@@ -24,11 +24,14 @@
 | 产品需求发生过的变化 | `Product-Spec-CHANGELOG.md` | 历史解释材料，不可覆盖当前 Spec。 |
 | UI、交互和视觉 | 设计稿 → `Design-Brief.md` → `Product-Spec.md` | 优先级从左到右递减。 |
 | 当前开发范围、分期与验证 | `DEV-PLAN.md` | 仅未完成工作可作为执行指令。 |
+| 审查、修复与整改计划 | `docs/audits/AUDIT-REGISTER.md` | 当前问题状态的唯一入口；先读总账，再按其中链接读取本次任务必要的详细报告。总账不是产品事实或开发计划。 |
 | AI 表格助手独立实现 | `initiatives/ai-assistant/Product-Spec.md`、`initiatives/ai-assistant/DEV-PLAN.md` | 独立工作流事实；状态冲突时结合该单元 Git 与所有者交接判断，不由根计划猜测。 |
 | AI 与主产品接入边界 | `initiatives/ai-assistant/INTEGRATION-CONTRACT.md` | 只约束双方边界；当前字段类型映射仍需在接入前与 v3 表模型对齐。 |
 | 具体实现 | 目标代码、直接调用方、对应测试 | 先定位再读取，禁止先加载整个 `reqflow/src`。 |
 
 当前开发默认完整读取 `Product-Spec.md` 与本次 Phase 关联的条目；只有调查旧行为或定位历史回归时，才读取 `docs/archive/Product-Spec-v2.md` 与 `docs/archive/Design-Brief-v2.md`。
+
+审查、缺陷修复或整改计划任务先读取 `docs/audits/AUDIT-REGISTER.md`，再按总账中的来源链接读取必要报告。产品行为仍由 Product Spec 和既定设计优先级决定，总账只决定当前问题状态，`DEV-PLAN.md` 只决定已批准执行范围。
 
 ## 3. 默认不读取
 
@@ -101,8 +104,9 @@
 1. 读取 `AGENTS.md` 和本文件。
 2. 检查 Git 当前分支、最近提交和工作区状态；不覆盖未提交或未追踪文件。
 3. 读取 `Product-Spec.md`、`Design-Brief.md` 和 `DEV-PLAN.md` 当前状态；不得读取 `docs/archive/` 或 `docs/future/` 猜测当前需求。
-4. 根据当前状态路由：当前无待确认产品需求，根计划已定稿；Phase 32～44 已完成，可进入发布或维护。
-5. 只加载本次主题涉及的 Spec 条目、设计章节、代码和直接测试。
+4. 若任务属于审查、缺陷修复或整改计划，读取 `docs/audits/AUDIT-REGISTER.md`，再按来源链接读取必要报告。
+5. 根据当前状态路由：当前无待确认产品需求，根计划已定稿；Phase 32～44 已完成，可进入发布或维护。
+6. 只加载本次主题涉及的 Spec 条目、设计章节、代码和直接测试。
 
 建议用户在新 Session 只需发送：
 

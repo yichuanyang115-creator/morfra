@@ -12,6 +12,7 @@ const data: TableDataSnapshot = {
   fields: [
     { id: "title", tableId: "table", groupId: null, name: "标题", fieldType: "text", isTitle: true, position: 0, config: {}, options: [] },
     { id: "status", tableId: "table", groupId: null, name: "状态", fieldType: "select", isTitle: false, position: 1, config: {}, options: [] },
+    { id: "owner", tableId: "table", groupId: null, name: "负责人", fieldType: "text", isTitle: false, position: 2, config: {}, options: [] },
   ],
   records: [],
 };
@@ -22,8 +23,9 @@ function renderManager() {
   const anchor = document.createElement("button"); anchor.dataset.testid = "field-manager-anchor"; document.body.append(anchor);
   Object.defineProperty(anchor, "getBoundingClientRect", { value: () => ({ left: 500, right: 600, top: 80, bottom: 110 }) });
   const onClose = vi.fn();
-  render(<FieldManager tableId="table" data={data} anchor={anchor} onClose={onClose} onError={vi.fn()} viewLayout={{ visibleFieldIds: ["title", "status"], fieldOrder: ["title", "status"], onChange: vi.fn(), onFieldCreated: vi.fn(), onReset: vi.fn() }} />);
-  return { anchor, onClose };
+  const onChange = vi.fn();
+  render(<FieldManager tableId="table" data={data} anchor={anchor} onClose={onClose} onError={vi.fn()} viewLayout={{ visibleFieldIds: ["title", "status", "owner"], fieldOrder: ["title", "status", "owner"], onChange, onFieldCreated: vi.fn(), onReset: vi.fn() }} />);
+  return { anchor, onClose, onChange };
 }
 
 describe("FieldManager", () => {
@@ -45,5 +47,17 @@ describe("FieldManager", () => {
     const { onClose } = renderManager();
     fireEvent.pointerDown(document.body);
     expect(onClose).toHaveBeenCalledWith(false);
+  });
+
+  it("普通字段提供紧凑拖拽把手和键盘排序，主标题保持首位", () => {
+    const { onChange } = renderManager();
+    const handle = screen.getByRole("button", { name: "拖动 状态 字段排序" });
+    expect(handle).toHaveClass("morfra-field-drag-handle");
+    expect(handle.querySelector("svg")).toHaveAttribute("width", "10");
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "拖动 负责人 字段排序" }), { altKey: true, key: "ArrowUp" });
+
+    expect(onChange).toHaveBeenCalledWith(["title", "owner", "status"], ["title", "status", "owner"]);
+    expect(screen.queryByLabelText("拖动 标题 字段排序")).toBeNull();
   });
 });

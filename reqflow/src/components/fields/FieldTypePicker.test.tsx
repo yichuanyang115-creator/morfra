@@ -19,4 +19,26 @@ describe("FieldTypePicker", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("写入失败");
     expect(screen.getByRole("dialog", { name: "选择字段类型" })).toBeTruthy();
   });
+
+  it("焦点离开选择器时收起，焦点在内部移动时保持打开", () => {
+    const onClose = vi.fn();
+    render(<><FieldTypePicker onCreate={vi.fn().mockResolvedValue(undefined)} onClose={onClose} /><button type="button">外部操作</button></>);
+    const dialog = screen.getByRole("dialog", { name: "选择字段类型" });
+    const internalOption = screen.getByRole("option", { name: "文本" });
+
+    fireEvent.blur(dialog, { relatedTarget: internalOption });
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.blur(dialog, { relatedTarget: screen.getByRole("button", { name: "外部操作" }) });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("点击选择器外部时收起", () => {
+    const onClose = vi.fn();
+    render(<><FieldTypePicker onCreate={vi.fn().mockResolvedValue(undefined)} onClose={onClose} /><button type="button">外部操作</button></>);
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "外部操作" }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

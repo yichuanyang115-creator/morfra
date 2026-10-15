@@ -49,6 +49,19 @@ describe("DataGrid Phase 37 交互", () => {
     expect(useGridInteractionStore.getState().selection?.active).toEqual({ row: 0, column: 0 });
   });
 
+  it("标题文本失焦时提交并退出编辑态", async () => {
+    const onUpdateCell = vi.fn().mockResolvedValue(undefined);
+    render(<DataGrid viewId="title-blur" data={data} config={config} onConfigChange={vi.fn()} onCreate={vi.fn()} onOpenDetail={vi.fn()} onUpdateCell={onUpdateCell} />);
+    fireEvent.doubleClick(screen.getByRole("gridcell", { name: /第 1 行，名称，旧标题/ }));
+    const input = screen.getByRole("textbox", { name: /编辑第 1 行名称/ });
+    fireEvent.change(input, { target: { value: "失焦后保存" } });
+    fireEvent.blur(input);
+
+    await waitFor(() => expect(onUpdateCell).toHaveBeenCalledWith("record-1", "title", "失焦后保存"));
+    await waitFor(() => expect(useGridInteractionStore.getState().editing).toBeNull());
+    expect(onUpdateCell).toHaveBeenCalledTimes(1);
+  });
+
   it("复选框是直接操作例外，只读字段保持可选并给出原因", async () => {
     const onUpdateCell = vi.fn().mockResolvedValue(undefined);
     render(<DataGrid viewId="readonly" data={data} config={config} onConfigChange={vi.fn()} onCreate={vi.fn()} onOpenDetail={vi.fn()} onUpdateCell={onUpdateCell} />);

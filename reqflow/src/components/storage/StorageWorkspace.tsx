@@ -111,7 +111,7 @@ export function StorageWorkspace({ embedded = false }: StorageWorkspaceProps = {
   }, [activeTable, activeTableByProject, activeViewByTable, project, setActiveTable, setActiveView]);
 
   useEffect(() => {
-    if (activeTable && !tableData && !tableDataLoading) void loadTableData(activeTable.id).catch(() => setError("字段和记录读取失败，请重试"));
+    if (activeTable && !tableData && !tableDataLoading) void loadTableData(activeTable.id).catch((error) => setError(error instanceof Error ? error.message : "字段和记录读取失败，请重试"));
   }, [activeTable, loadTableData, tableData, tableDataLoading]);
 
   useEffect(() => {

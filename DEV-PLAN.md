@@ -831,6 +831,30 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 - 操作列随字段区域横向滚动，绝不固定胆位、持久化、参与字段管理或任何筛选、排序、分组、条件填色；点击与键盘激活复用已有字段类型选择与创建流程，取消后焦点返回加号。
 - 末尾加号常态使用中性灰，悬停或键盘聚焦才呈现冷蓝反馈；不改变工具栏“新建记录”的主操作样式。
 
+## 字段管理修正项：可见拖拽把手与主标题位置保护
+
+**状态：已批准，开发中**
+
+**关联需求：** TABLE-024、TABLE-028；Design Brief「字段管理与新增字段」
+
+**交付内容：**
+
+- 用 dnd-kit 指针传感器替换原生拖放：每个普通字段行显示 12px 六点图标、20×28px 热区的紧凑把手，移动少量距离后开始拖拽；拖动行轻微抬起，其他行连续让位。
+- 主标题不显示把手且始终位于首位；拖放不得将普通字段置于主标题之前。
+
+**关键文件：**
+
+- `reqflow/src/components/fields/FieldManager.tsx`、`FieldEditor.tsx`、`FieldManager.test.tsx`、`reqflow/src/styles/global/05-table.css`。
+
+**完成标准：**
+
+- 用户可从普通字段行把手发起拖拽，并在放至另一普通字段前后后立即看到当前视图顺序更新。
+- 主标题不提供拖拽把手，任意拖放或键盘排序都不能将其移出首位；字段数据、字段定义顺序和其他视图不受影响。
+
+**本轮验证边界：**
+
+- 用户说“通过”前：只运行字段管理定向测试、必要 TypeScript 检查、`git diff --check`，随后在真实 Morfra 应用人工验收；不执行全套门禁、不派 `code-reviewer`、不提交或推送。
+
 **关键文件：**
 
 - `reqflow/src/components/table/GridHeader.tsx`、`GridBody.tsx`、`DataGrid.tsx` — 虚拟列投影、结构与交互。
@@ -919,6 +943,33 @@ Phase 42 的底层备份机制可在 Phase 33–41 期间独立开发，但默�
 **本轮验证边界：**
 
 - 用户说“通过”前：只运行网格单元格与选择交互的定向测试、必要 TypeScript 检查、`git diff --check`，随后使用真实 Morfra 应用人工验收；不执行全套门禁、不派 `code-reviewer`、不提交或推送。
+
+## 字段表头重命名与空名称兼容修正
+
+**状态：已批准，开发中**
+
+**关联需求：** FIELD-001、FIELD-020、TABLE-031；Design Brief「表头、分组与行」
+
+**交付内容：**
+
+- 通过带保护备份的 SQLite 迁移移除 `fields.name` 的非空约束，同时保留字段 ID、表关联、类型、顺序和全部字段相关引用。
+- 将字段名称校验收窄为最长 200 个字符，允许主标题及普通字段保存空字符串；项目、表、视图和选项名称仍维持原有非空规则。
+- 字段表头重命名只在既有名称文本槽位原位编辑；提交空值后退出编辑态并保持空白，不显示占位名称，且不改变任何表头或列几何。
+
+**关键文件：**
+
+- `reqflow/src-tauri/migrations/011_allow_empty_field_names.sql`、`reqflow/src-tauri/src/storage/{migrations,field_repository_data,field_repository_validation}.rs`。
+- `reqflow/src/components/table/GridHeader.tsx`、`GridHeader.test.tsx`、`reqflow/src/styles/global/05-table.css`。
+
+**完成标准：**
+
+- 既有项目升级前自动生成备份；升级后 `PRAGMA foreign_key_check` 为零，字段、选项、记录值、活动记录、详情配置和附件引用完整保留。
+- 标题字段及普通字段均可重命名为空；失焦、Enter、Esc、保存失败与新建字段自动重命名遵守既有焦点和回滚规则。
+- 进入和退出字段表头编辑态时，表头高度、列宽、图标、更多按钮及相邻列边界不发生可见变化。
+
+**本轮验证边界：**
+
+- 仅运行迁移、字段仓储和 GridHeader 定向测试、必要 TypeScript/Rust 编译检查、`git diff --check`；使用隔离数据目录启动开发窗口供人工验收，不运行全套门禁、不派 `code-reviewer`、不提交或推送。
 
 ## 8. 每个 Phase 的统一验证门禁
 

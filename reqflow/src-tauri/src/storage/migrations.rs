@@ -34,6 +34,10 @@ const MIGRATIONS: &[(i64, &str)] = &[
         include_str!("../../migrations/008_allow_duplicate_field_names.sql"),
     ),
     (9, include_str!("../../migrations/009_remove_field_groups.sql")),
+    (
+        10,
+        include_str!("../../migrations/010_repair_field_foreign_keys.sql"),
+    ),
 ];
 
 pub fn configure_connection(connection: &Connection) -> Result<(), StorageError> {
@@ -253,7 +257,7 @@ mod tests {
                 row.get(0)
             })
             .expect("version");
-        assert_eq!(version, 9);
+        assert_eq!(version, 10);
         let has_group_column: i64 = connection
             .query_row(
                 "SELECT COUNT(*) FROM pragma_table_info('fields') WHERE name = 'group_id'",
@@ -305,6 +309,29 @@ mod tests {
         assert!(config.contains("[\"title\",\"second\",\"first\"]"));
         assert!(!config.contains("groupOrder"));
         assert_eq!(connection.query_row::<i64, _, _>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'field_groups'", [], |row| row.get(0)).expect("groups"), 0);
+    }
+
+    #[test]
+    fn repairs_field_foreign_keys_after_duplicate_name_upgrade() {
+        let mut connection = Connection::open_in_memory().expect("database");
+        configure_connection(&connection).expect("configure");
+        connection.execute_batch("CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);").expect("ledger");
+        for (version, sql) in MIGRATIONS.iter().take(7) {
+            connection.execute_batch(sql).expect("legacy schema");
+            connection.execute("INSERT INTO schema_migrations (version, applied_at) VALUES (?1, 'before')", [version]).expect("version");
+        }
+        connection.execute_batch("INSERT INTO project_meta (id, project_id, name, format_version, created_at, updated_at) VALUES ('project', 'p', 'P', 1, '1', '1'); INSERT INTO data_tables (id, project_id, name, icon, emoji, position, created_at, updated_at) VALUES ('t', 'project', 'T', 'grid', '📋', 0, '1', '1'); INSERT INTO fields (id, table_id, group_id, name, field_type, is_title, position, config_json, created_at, updated_at) VALUES ('title', 't', NULL, '标题', 'text', 1, 0, '{}', '1', '1'), ('tags', 't', NULL, '标签', 'multi_select', 0, 1, '{}', '1', '1'); INSERT INTO views (id, table_id, name, view_type, position, created_at, updated_at) VALUES ('v', 't', '表格', 'table', 0, '1', '1'); INSERT INTO view_configs (view_id, version, config_json, created_at, updated_at) VALUES ('v', 1, '{\"fieldIds\":[\"title\",\"tags\"]}', '1', '1'); INSERT INTO table_configs (table_id, detail_field_ids_json, activity_field_id, activity_tab_enabled, detail_tabs_json, updated_at) VALUES ('t', '[]', 'tags', 1, '[]', '1'); INSERT INTO records (id, table_id, position, auto_number, created_at, updated_at) VALUES ('r', 't', 0, 1, '1', '1'); INSERT INTO field_options (id, field_id, name, color, position, created_at, updated_at) VALUES ('option', 'tags', '重要', 'blue', 0, '1', '1'); INSERT INTO cell_values (record_id, field_id, value_json, updated_at) VALUES ('r', 'title', '\"可编辑标题\"', '1'); INSERT INTO multi_select_values (record_id, field_id, option_id, position) VALUES ('r', 'tags', 'option', 0); INSERT INTO activity_events (id, record_id, field_id, field_name_snapshot, occurred_at) VALUES ('event', 'r', 'tags', '标签', '1'); INSERT INTO activity_comments (id, event_id, content, created_at, updated_at) VALUES ('comment', 'event', '已记录', '1', '1'); INSERT INTO attachments (id, record_id, field_id, relative_path, original_name, media_type, byte_size, created_at) VALUES ('attachment', 'r', 'title', 'attachments/a.txt', 'a.txt', 'text/plain', 1, '1');").expect("legacy data");
+
+        apply_pending_migrations(&mut connection, None).expect("repair foreign keys");
+
+        let issues: i64 = connection.query_row("SELECT COUNT(*) FROM pragma_foreign_key_check", [], |row| row.get(0)).expect("foreign key check");
+        assert_eq!(issues, 0);
+        let title: String = connection.query_row("SELECT value_json FROM cell_values WHERE record_id = 'r' AND field_id = 'title'", [], |row| row.get(0)).expect("preserved value");
+        assert_eq!(title, "\"可编辑标题\"");
+        for table in ["field_options", "multi_select_values", "table_configs", "activity_events", "activity_comments", "attachments"] {
+            let count: i64 = connection.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0)).expect("preserved dependent data");
+            assert_eq!(count, 1, "{table}");
+        }
     }
 
     #[test]
